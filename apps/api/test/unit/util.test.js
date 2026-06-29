@@ -1,7 +1,7 @@
 // Unit tests for the pure helpers. Run: `npm test` (node:test, no deps, no DB).
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { escapeHtml, isSafeHttpUrl, pgEnvFrom, milestoneFor } = require('../src/util');
+const { escapeHtml, isSafeHttpUrl, pgEnvFrom, milestoneFor } = require('../../src/util');
 
 test('escapeHtml neutralizes markup-significant characters', () => {
   assert.equal(escapeHtml(`<script>alert('x')&"`), '&lt;script&gt;alert(&#39;x&#39;)&amp;&quot;');

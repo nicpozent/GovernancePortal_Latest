@@ -22,6 +22,37 @@ function getKey(header, callback) {
   });
 }
 
+// ── Token hardening (pure, unit-testable) ────────────────────
+// Given the already-signature-verified JWT claims, apply the tenant + token-type
+// + scope checks and project the trusted Principal. Returns either
+// { ok:true, user } or { ok:false, status, error, detail }. Kept separate from
+// the jwt.verify wiring so the security rules can be tested without JWKS.
+function principalFromClaims(claims) {
+  // 1) must be issued by OUR tenant
+  if (claims.tid && claims.tid !== cfg.tenantId) {
+    return { ok: false, status: 401, error: 'invalid_token', detail: 'wrong_tenant' };
+  }
+  const scopes = (claims.scp || '').split(' ').filter(Boolean);
+  const roles = claims.roles || [];
+  // 2) Must be a DELEGATED user token carrying our API scope.
+  //    App-only (client-credentials) tokens have no `scp` and set idtyp='app' —
+  //    reject them even if they carry app roles, so a service principal granted
+  //    an app role can't act as a user/admin. (SCIM uses its own bearer.)
+  if (claims.idtyp === 'app' || !scopes.includes('access_as_user')) {
+    return { ok: false, status: 403, error: 'insufficient_scope', detail: 'delegated access_as_user token required' };
+  }
+  return {
+    ok: true,
+    user: {
+      oid: claims.oid,                          // stable Entra object id
+      name: claims.name,                        // display name
+      upn: claims.preferred_username,           // user principal name / email
+      roles,                                    // App Roles (e.g. ['Governance.Admin'])
+      scopes,
+    },
+  };
+}
+
 // Require a valid signed-in user.
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -39,28 +70,9 @@ function requireAuth(req, res, next) {
     },
     (err, claims) => {
       if (err) return res.status(401).json({ error: 'invalid_token', ...(cfg.exposeAuthErrors ? { detail: err.message } : {}) });
-      // ── Token hardening ──────────────────────────────────────
-      // 1) must be issued by OUR tenant
-      if (claims.tid && claims.tid !== cfg.tenantId) {
-        return res.status(401).json({ error: 'invalid_token', detail: 'wrong_tenant' });
-      }
-      const scopes = (claims.scp || '').split(' ').filter(Boolean);
-      const roles = claims.roles || [];
-      // 2) Must be a DELEGATED user token carrying our API scope.
-      //    App-only (client-credentials) tokens have no `scp` and set
-      //    idtyp='app' — reject them here even if they carry app roles, so a
-      //    service principal granted an app role can't act as a user/admin.
-      //    (SCIM provisioning uses its own bearer at /scim/v2, not this guard.)
-      if (claims.idtyp === 'app' || !scopes.includes('access_as_user')) {
-        return res.status(403).json({ error: 'insufficient_scope', detail: 'delegated access_as_user token required' });
-      }
-      req.user = {
-        oid: claims.oid,                          // stable Entra object id
-        name: claims.name,                        // display name
-        upn: claims.preferred_username,           // user principal name / email
-        roles,                                    // App Roles (e.g. ['Governance.Admin'])
-        scopes,
-      };
+      const out = principalFromClaims(claims);
+      if (!out.ok) return res.status(out.status).json({ error: out.error, detail: out.detail });
+      req.user = out.user;
       next();
     }
   );
@@ -82,4 +94,4 @@ function requireManager(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin, requireManager };
+module.exports = { requireAuth, requireAdmin, requireManager, principalFromClaims };

@@ -12,6 +12,21 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: governance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_SUPER_DATABASE_URL: postgres://postgres:postgres@localhost:5432/governance
+      DATABASE_URL: postgres://governance_app:apppw@localhost:5432/governance
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,6 +37,8 @@ jobs:
       - run: npm ci
       - name: Unit tests
         run: npm test
+      - name: Integration tests (unit + DB + API against Postgres)
+        run: npm run test:all
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 

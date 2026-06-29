@@ -8,7 +8,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node --test",
+    "test": "node --test 'test/unit/**/*.test.js'",
+    "test:integration": "node --test --test-concurrency=1 'test/integration/**/*.test.js'",
+    "test:all": "node --test --test-concurrency=1 'test/**/*.test.js'",
     "migrate": "psql \"$DATABASE_URL\" -f db/schema.sql"
   },
   "dependencies": {
@@ -28,6 +30,7 @@
     "pino-http": "^10.3.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "supertest": "^7.2.2"
   }
 }
