@@ -9,6 +9,18 @@ docker compose logs --tail=40 api
 docker compose logs --tail=40 db
 ```
 
+## Fastest first step: automated diagnostics
+Before reading logs by hand, run the diagnostics — they localise a problem to a
+subsystem (config / db / identity / api / graph / integration / backups / web)
+with a remediation hint for each finding, and exit non-zero on failure:
+```powershell
+docker compose exec api npm run diagnose                                 # check everything
+docker compose exec api node tools/diagnostics/diagnose.js db identity   # a subset
+docker compose exec api node tools/diagnostics/diagnose.js --json        # for a ticket
+```
+See `apps/api/tools/diagnostics/README.md`. The sections below explain individual
+errors in more depth.
+
 ---
 
 ## Startup / containers

@@ -17,7 +17,7 @@ grant select, insert, update, delete
 grant usage, select on all sequences in schema public to governance_app;
 
 -- Read-only authorization / rollup views.
-grant select on platform_group_members, admin_users, group_effective_members to governance_app;
+grant select on platform_group_members, admin_users, group_effective_members, effective_group_membership to governance_app;
 
 -- ── Append-only ledgers: corrections are new rows, never edits/removals ──
 revoke update, delete on signatures    from governance_app;

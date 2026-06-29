@@ -6,6 +6,7 @@
 //    external API (webhook), fire-and-forget, batched per call.
 // ============================================================
 const pino = require('pino');
+const { isSafeHttpUrl } = require('./util');
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -26,6 +27,12 @@ const logger = pino({
 // cfgRow = { forward_url, forward_token, forward_enabled } from integration_config.
 async function forwardEvent(cfgRow, event) {
   if (!cfgRow || !cfgRow.forward_enabled || !cfgRow.forward_url) return { skipped: true };
+  // Defense in depth: never forward to loopback/link-local (SSRF). The URL is
+  // also validated when an admin saves it, but re-check here at send time.
+  if (!isSafeHttpUrl(cfgRow.forward_url)) {
+    logger.warn({ url: cfgRow.forward_url }, 'log-forward blocked: unsafe url');
+    return { ok: false, error: 'unsafe_url' };
+  }
   const headers = { 'content-type': 'application/json' };
   if (cfgRow.forward_token) headers['authorization'] = 'Bearer ' + cfgRow.forward_token;
   const ctrl = new AbortController();

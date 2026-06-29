@@ -45,7 +45,7 @@ All three tiers run as containers (`web`, `api`, `db`) on a single Docker host; 
 - **Identity & directory** — `employees` (synced from Entra/AD, with legal + functional managers), `groups` (Platform / Directory / Local), `employee_groups`, `group_mappings`, and the `group_effective_members` roll-up. Owns "who exists and who belongs where."
 - **Policy management** — `policies` (name, type, version, SharePoint refs, deadlines), `policy_groups` (assignment), archive lifecycle. Owns "what must be acknowledged and by whom."
 - **Knowledge checks** — `quizzes`, `quiz_questions`, `quiz_attempts`. Owns "comprehension gating before signing."
-- **Compliance ledger** — `signatures` (append-only, version-stamped). The system of record; "required = members of assigned groups (or everyone if unassigned); signed = signed the current version."
+- **Compliance ledger** — `signatures` (append-only, version-stamped). The system of record; "required = effective members of the groups a policy is assigned to; signed = signed the current version." A policy with **no** group assignment is private (admin/owner only) and is required of no one — company-wide reach is done by assigning the **All Employees** group (see ADR-010 / ARCHITECTURE-AND-DECISIONS.md).
 - **Notifications** — `notifications_sent` + the reminder engine. Owns "who has been told, and when."
 - **Audit & operations** — `audit_log` (append-only admin actions), `sync_runs`, backups. Owns "accountability and recoverability."
 
@@ -54,7 +54,7 @@ Cross-cutting: directory sync (Graph → directory layer), SharePoint resolution
 ## 5. Key flows
 - **Acknowledge:** read (SharePoint) → pass quiz (if any, server-graded) → sign → append-only `signatures` row (version + timestamp + identity from token).
 - **Sync:** scheduled/manual Graph read of app-assigned users & groups → upsert `employees`/`groups`/`employee_groups`.
-- **Compliance:** `required = eff_members(assigned groups) ∪ all-active(if unassigned)`; `signed = signatures at current version`; surfaced by policy / unit / group and exported as CSV.
+- **Compliance:** `required = eff_members(assigned groups)` (unassigned ⇒ required of no one, private); `signed = signatures at current version`; surfaced by policy / unit / group and exported as CSV.
 - **Reminders:** daily engine computes each required-unsigned employee's personal due date and sends the due-milestone email once (idempotent via `notifications_sent`).
 
 ## 6. Security posture (enterprise view)

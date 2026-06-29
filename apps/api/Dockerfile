@@ -1,6 +1,7 @@
 # ── Birgma Governance API ───────────────────────────────────
 # Linux container (runs on your Docker-in-VMware host via WSL2/Docker)
-FROM node:18-alpine
+# Node 22 (current LTS); Node 18 is end-of-life.
+FROM node:22-alpine
 
 # postgresql-client (v16, matching the db image) provides pg_dump for backups.
 RUN apk add --no-cache postgresql16-client
@@ -9,9 +10,9 @@ RUN apk add --no-cache postgresql16-client
 WORKDIR /app
 
 # Install production deps first for better layer caching.
-COPY package.json ./
-# No package-lock.json in the repo, so use install (switch to `npm ci` once you commit a lockfile).
-RUN npm install --omit=dev && npm cache clean --force
+COPY package.json package-lock.json ./
+# Reproducible install from the committed lockfile.
+RUN npm ci --omit=dev && npm cache clean --force
 
 # App source.
 COPY . .

@@ -8,6 +8,11 @@ const pool = new Pool({
   ssl: cfg.pgSsl ? { rejectUnauthorized: true } : false,
   max: 10,
   idleTimeoutMillis: 30000,
+  // Don't let a slow/stuck query pin a pooled connection indefinitely.
+  connectionTimeoutMillis: 10000,
+  statement_timeout: 30000,
+  query_timeout: 30000,
+  idle_in_transaction_session_timeout: 30000,
 });
 
 pool.on('error', (err) => console.error('pg pool error', err));

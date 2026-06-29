@@ -1,0 +1,28 @@
+# ── Secrets — NEVER commit ───────────────────────────────────
+**/.env
+*.env
+!**/.env.example
+certs/
+**/privkey.pem
+**/fullchain.pem
+**/*.pfx
+**/*.key
+
+# ── Backups (contain secrets + full DB dumps) ────────────────
+backups/
+uploads/
+*.sql.gz
+governance-full-*.zip
+pre-reset-*.sql
+
+# ── Dependencies / build ─────────────────────────────────────
+**/node_modules/
+**/dist/
+*.log
+
+# ── OS / editor cruft ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
