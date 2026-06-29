@@ -187,10 +187,12 @@ async function canRead(req, policyId) {
 That `employee_groups ∪ group_effective_members` union is **effective
 membership** — direct local-group membership plus directory groups rolled up
 through platform-group mappings. It is the single most important expression in the
-domain, and it recurs in ~7 queries (the dashboard, reports, reminders, the
-employee policy list). That repetition is a known maintainability tension
-(see §11 and the cross-cutting notes) — and it was the root cause of finding M-1,
-where one copy diverged and emailed reminders to people who couldn't read the doc.
+domain. It was originally inlined in ~11 queries (the dashboard, reports,
+reminders, the employee policy list, `canRead`), and one copy diverging was the
+root cause of finding M-1 — reminders to people who couldn't read the doc. It is
+now defined **once** as the database view `effective_group_membership`
+(`db/migration_018_effective_membership.sql`), and every query selects from it, so
+the semantics can no longer drift.
 
 ## 6. Data model & domain layers
 
@@ -300,6 +302,33 @@ rebuild to repoint a tenant.
   forwarding) are wrapped so they can never fail the primary request.
 - **Health probe** (`/healthz`) backs the Docker `HEALTHCHECK` and platform
   liveness.
+
+## 12. Capabilities (ABBs) this architecture realizes
+
+Each component above realizes one or more **Architecture Building Blocks** —
+technology-neutral capabilities — implemented by the concrete **Solution Building
+Blocks** named here. The full catalogue (with interfaces, dependencies, standards
+and maturity) lives in the
+[Architecture Repository](../architecture-repository/CATALOG.md); this table is the
+quick bridge from "where it is in the code" to "what capability it provides".
+
+| Component / tier (this doc) | Capabilities needed (ABBs) | Realizing SBB |
+|---|---|---|
+| §4 Token validation | A1 Identity Federation/Token Validation | `auth.js` + Entra (T1) |
+| §5 Authorization | A2 Policy Decision Point; B5 Delegated Management | `requireAdmin/Manager`, `canRead/canManage`, `teamOids` |
+| §3 Edge / proxy | A3 Edge/API Gateway | nginx + helmet + rate limiting (T2) |
+| SPA | A4 Presentation/Experience | React + MSAL (T1 to sign in) |
+| §7 Integrity | D3 Attestation Ledger; D4 Audit Ledger; B2 Attestation; B8 Accountability | `signatures`, `audit_log` (append-only via grants, T4) |
+| §6 Domain data | D1 Identity Master; D2 Obligation Catalogue; B1 Policy Lifecycle; B4 Targeting | `employees`/`groups`, `policies`/`policy_groups`, `effective_group_membership` |
+| Quizzes | B3 Competency Verification; D5 Results Store | `quizzes`/`quiz_attempts` |
+| §9 Background work | A10 Scheduling; B6 Notification; A9 Backup | in-process timers, reminder engine, `pg_dump` |
+| Integrations | A5 Directory Sync; A6 Content Broker; A7 Notification; A8 Eventing; A11 Observability | Graph sync/SharePoint/sendMail (T6), feed/forward, pino (T8) |
+| Platform | T1 IdP · T3 Runtime · T4 RDBMS · T5 Storage · T6 Directory/Collab · T7 Secrets · T8 SIEM | Entra · Node/Docker · PostgreSQL · volume · Graph · Key Vault (target) · SIEM |
+
+Reading guide: **T-domain ABBs are enterprise-shared services this solution
+*consumes*** (IdP, directory/collab, secrets, SIEM); the **Business and Data ABBs
+are the solution-specific value**; the **Application ABBs (A1/A2/A5/A9…) are
+reusable building blocks** other Birgma solutions can adopt.
 
 ---
 
@@ -589,10 +618,10 @@ move.
   append-only-by-grant model (ADR-109) favour code you can read and audit over
   framework magic — appropriate when the thing being protected is compliance
   evidence.
-- **DRY vs. drift in SQL.** The effective-membership union (§5) is duplicated
-  across queries; this is the one place the codebase is *under*-abstracted, and it
-  has already bitten once (M-1). Extracting it into a single view/function is the
-  highest-value maintainability change.
+- **DRY vs. drift in SQL.** The effective-membership union (§5) was duplicated
+  across ~11 queries and had already bitten once (M-1); it is now consolidated into
+  the single `effective_group_membership` view, removing that class of drift. The
+  remaining structural item is the size of `routes.js` (per-domain router split).
 - **On-prem now vs. Azure-native later.** Every on-prem weak point (secrets on
   disk, host DB access) has a documented Azure-native answer the code already
   supports — the migration is a hosting change, not a rewrite.

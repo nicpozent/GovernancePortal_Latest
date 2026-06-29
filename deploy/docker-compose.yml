@@ -39,6 +39,7 @@ services:
       - ../apps/api/db/migration_015_owner_user.sql:/docker-entrypoint-initdb.d/160-owneruser.sql:ro
       - ../apps/api/db/migration_016_trainings.sql:/docker-entrypoint-initdb.d/170-trainings.sql:ro
       - ../apps/api/db/migration_017_integrations.sql:/docker-entrypoint-initdb.d/180-integrations.sql:ro
+      - ../apps/api/db/migration_018_effective_membership.sql:/docker-entrypoint-initdb.d/190-effmembers.sql:ro
       - ../apps/api/db/docker-grants.sql:/docker-entrypoint-initdb.d/900-grants.sql:ro
     # Loopback-only publish: DB not exposed on the VM network. Remove for prod.
     ports:

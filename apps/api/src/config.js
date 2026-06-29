@@ -39,6 +39,12 @@ module.exports = {
   quizMaxAttempts: parseInt(process.env.QUIZ_MAX_ATTEMPTS, 10) || 3,
   backupRetention: parseInt(process.env.BACKUP_RETENTION, 10) || 14,
 
+  // In-process daily jobs (backup, directory sync + reminders) run on timers.
+  // They are NOT safe to run in more than one instance (duplicate dumps/emails),
+  // so when scaling the API horizontally set SCHEDULERS_ENABLED=false on every
+  // replica except one. Defaults to enabled (single-instance deployment).
+  schedulersEnabled: process.env.SCHEDULERS_ENABLED !== 'false',
+
   // Only echo token-validation error detail to clients outside production
   // (it's useful in dev, but leaks "jwt expired" / "audience invalid" otherwise).
   exposeAuthErrors: process.env.NODE_ENV !== 'production',

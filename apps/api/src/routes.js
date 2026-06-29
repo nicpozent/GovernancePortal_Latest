@@ -116,9 +116,7 @@ r.get('/policies', async (req, res) => {
           and exists (
               select 1 from policy_groups x
                 join (
-                  select eg.group_id, eg.employee_oid from employee_groups eg join groups gg on gg.id=eg.group_id and gg.archived_at is null
-                  union
-                  select gem.group_id, gem.employee_oid from group_effective_members gem join groups gg on gg.id=gem.group_id and gg.archived_at is null
+                  select group_id, employee_oid from effective_group_membership
                 ) em on em.group_id = x.group_id
                where x.policy_id = p.id and em.employee_oid = $1
             )
@@ -371,9 +369,7 @@ r.get('/manager/dashboard', requireManager, async (req, res) => {
   const q = await pool.query(`
     with team as (select oid from employees where oid = any($1::uuid[])),
     eff as (
-      select eg.group_id, eg.employee_oid as oid from employee_groups eg join groups gg on gg.id=eg.group_id and gg.archived_at is null
-      union
-      select gem.group_id, gem.employee_oid as oid from group_effective_members gem join groups gg on gg.id=gem.group_id and gg.archived_at is null
+      select group_id, employee_oid as oid from effective_group_membership
     ),
     required as (
       select distinct pg.policy_id, t.oid
@@ -464,9 +460,7 @@ async function canRead(req, policyId) {
      where exists (
           select 1 from policy_groups x
             join (
-              select eg.group_id, eg.employee_oid from employee_groups eg join groups gg on gg.id=eg.group_id and gg.archived_at is null
-              union
-              select gem.group_id, gem.employee_oid from group_effective_members gem join groups gg on gg.id=gem.group_id and gg.archived_at is null
+              select group_id, employee_oid from effective_group_membership
             ) em on em.group_id = x.group_id
            where x.policy_id = $1 and em.employee_oid = $2
         )
@@ -487,9 +481,7 @@ r.get('/groups/reach', requireManager, async (req, res) => {
   if (!ids.length) return res.json({ count: 0 });
   const r = await pool.query(`
     select count(distinct em.oid)::int as count from (
-      select eg.group_id, eg.employee_oid as oid from employee_groups eg join groups gg on gg.id=eg.group_id and gg.archived_at is null
-      union
-      select gem.group_id, gem.employee_oid as oid from group_effective_members gem join groups gg on gg.id=gem.group_id and gg.archived_at is null
+      select group_id, employee_oid as oid from effective_group_membership
     ) em join employees e on e.oid=em.oid and e.status='Active'
      where em.group_id = any($1::uuid[])`, [ids]);
   res.json({ count: r.rows[0].count });
@@ -504,9 +496,7 @@ r.get('/trainings', requireManager, async (req, res) => {
   const params = isAdmin(req) ? [] : [req.user.oid];
   res.json((await pool.query(
     `with eff as (
-       select eg.group_id, eg.employee_oid as oid from employee_groups eg join groups gg on gg.id=eg.group_id and gg.archived_at is null
-       union
-       select gem.group_id, gem.employee_oid as oid from group_effective_members gem join groups gg on gg.id=gem.group_id and gg.archived_at is null
+       select group_id, employee_oid as oid from effective_group_membership
      )
      select p.*, coalesce(array_agg(distinct g.name) filter (where g.id is not null), '{}') as groups,
             coalesce(array_agg(distinct pg.group_id::text) filter (where pg.group_id is not null), '{}') as group_ids,
@@ -1055,9 +1045,7 @@ r.get('/audit', requireAdmin, async (req, res) => {
 r.get('/dashboard', requireAdmin, async (_req, res) => {
   const rows = (await pool.query(`
     with eff_members as (
-      select eg.group_id, eg.employee_oid as oid from employee_groups eg join groups gg on gg.id = eg.group_id and gg.archived_at is null
-      union
-      select gem.group_id, gem.employee_oid as oid from group_effective_members gem join groups gg on gg.id = gem.group_id and gg.archived_at is null
+      select group_id, employee_oid as oid from effective_group_membership
     ),
     required as (
       select distinct pg.policy_id, em.oid
@@ -1085,9 +1073,7 @@ r.get('/dashboard', requireAdmin, async (_req, res) => {
 r.get('/dashboard/by-department', requireAdmin, async (_req, res) => {
   const rows = (await pool.query(`
     with eff_members as (
-      select eg.group_id, eg.employee_oid as oid from employee_groups eg join groups gg on gg.id = eg.group_id and gg.archived_at is null
-      union
-      select gem.group_id, gem.employee_oid as oid from group_effective_members gem join groups gg on gg.id = gem.group_id and gg.archived_at is null
+      select group_id, employee_oid as oid from effective_group_membership
     ),
     required as (
       select distinct pg.policy_id, em.oid, e.department
@@ -1118,9 +1104,7 @@ r.get('/dashboard/by-department', requireAdmin, async (_req, res) => {
 r.get('/dashboard/by-group', requireAdmin, async (_req, res) => {
   const rows = (await pool.query(`
     with eff as (
-      select eg.group_id, eg.employee_oid as oid from employee_groups eg join groups gg on gg.id = eg.group_id and gg.archived_at is null
-      union
-      select gem.group_id, gem.employee_oid as oid from group_effective_members gem join groups gg on gg.id = gem.group_id and gg.archived_at is null
+      select group_id, employee_oid as oid from effective_group_membership
     ),
     pairs as (
       select pg.group_id, pg.policy_id, em.oid, p.version
@@ -1145,9 +1129,7 @@ r.get('/dashboard/by-group', requireAdmin, async (_req, res) => {
 r.get('/dashboard/group/:id', requireAdmin, async (req, res) => {
   const rows = (await pool.query(`
     with eff as (
-      select eg.group_id, eg.employee_oid as oid from employee_groups eg join groups gg on gg.id = eg.group_id and gg.archived_at is null
-      union
-      select gem.group_id, gem.employee_oid as oid from group_effective_members gem join groups gg on gg.id = gem.group_id and gg.archived_at is null
+      select group_id, employee_oid as oid from effective_group_membership
     ),
     members as (
       select distinct em.oid from eff em
@@ -1187,9 +1169,7 @@ r.get('/reports/compliance', requireAdmin, async (req, res) => {
   }
   const rows = (await pool.query(`
     with eff as (
-      select eg.group_id, eg.employee_oid as oid from employee_groups eg join groups gg on gg.id = eg.group_id and gg.archived_at is null
-      union
-      select gem.group_id, gem.employee_oid as oid from group_effective_members gem join groups gg on gg.id = gem.group_id and gg.archived_at is null
+      select group_id, employee_oid as oid from effective_group_membership
     ),
     req as (
       select distinct pg.policy_id, em.oid

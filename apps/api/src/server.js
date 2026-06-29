@@ -97,7 +97,9 @@ app.use((err, req, res, _next) => {
 app.listen(cfg.port, () => logger.info({ port: cfg.port }, 'Governance API listening'));
 
 // ── Scheduled daily backup → /backups (mounted volume), keep last 14 ──
+// Gated by SCHEDULERS_ENABLED so only one instance runs it when scaled out.
 (function scheduleBackups() {
+  if (!cfg.schedulersEnabled) { logger.info('schedulers disabled; skipping auto-backup'); return; }
   const { spawn } = require('child_process');
   const fs = require('fs');
   const dir = '/backups';
@@ -130,6 +132,7 @@ app.listen(cfg.port, () => logger.info({ port: cfg.port }, 'Governance API liste
 // ── Scheduled daily directory sync + reminder emails ────────
 (function scheduleDaily() {
   const cfg = require('./config');
+  if (!cfg.schedulersEnabled) { logger.info('schedulers disabled; skipping auto-sync/reminders'); return; }
   const { runSync } = require('./services/sync');
   const { runReminders } = require('./services/reminders');
   const tick = async () => {

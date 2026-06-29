@@ -199,8 +199,8 @@ Deriving ABBs also exposes where a needed capability is **present but immature**
 
 | ABB | Maturity | Note / target |
 |-----|----------|---------------|
-| A2 Policy Decision Point | **Embedded** | Correct and consistent, but spread across handlers as helpers, not a discrete PDP. A reusable policy module (or externalized PDP) would let other apps share it. The duplicated effective-membership query is the symptom (root cause of finding M-1). |
-| A10 Scheduling | **Single-instance** | In-process timers can't run in >1 replica (ADR-114). Target: platform scheduler / singleton job before horizontal scale. |
+| A2 Policy Decision Point | **Consolidated** (was embedded) | Still helper-based rather than a standalone PDP service, but the duplicated effective-membership query — the root cause of M-1 — has been extracted into a single DB view (`effective_group_membership`, migration 018) that all ~11 queries now use. Externalizing the PDP entirely remains a future option. |
+| A10 Scheduling | **Single-instance, flag-gated** | In-process timers still can't all run in >1 replica (ADR-114), but `SCHEDULERS_ENABLED=false` now lets you run them in exactly one instance when scaling out. Target: platform scheduler / singleton job. |
 | T7 Secrets Management | **Weak** | Secrets on disk (`.env`). Target: Key Vault + Managed Identity — the code already supports `DefaultAzureCredential`. |
 | T5 Object Storage | **Local** | Volume on one host; no replication. Target: Azure Blob. |
 | A8 Integration / Eventing | **Basic** | Fire-and-forget webhook + pull feed; no delivery guarantees/retry/DLQ. Adequate for audit forwarding; would need hardening if used for critical integration. |

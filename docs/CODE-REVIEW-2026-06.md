@@ -29,7 +29,7 @@ All findings below were addressed in this branch unless marked _deferred_.
 | L-5 | ✅ Fixed | `uncaughtException` now logs and exits(1) so the container recycles cleanly. |
 | L-6 | ✅ Fixed | `clockTolerance` on JWT verify; token error detail gated to non-prod; DB pool connection/statement/idle-txn timeouts. |
 | L-7 | ◑ Accepted | Owner confirms these are public client IDs (documented as such in `.env.example`); left as-is. |
-| Structure | ⏸ Deferred | Splitting `routes.js` and extracting the shared membership view are non-defect refactors — safer once broader test coverage exists. |
+| Structure | ◑ Partly done | The shared effective-membership query is now a single DB view (`effective_group_membership`, migration 018) used by all ~11 call sites — removing the M-1 drift class. Splitting `routes.js` into per-domain routers remains deferred (non-defect; safer with broader test coverage). |
 
 > The web app was migrated to **Vite 8** (rolldown), which clears the previous dev-server esbuild advisory (GHSA-67mh-4wv8-2f99); `npm audit` is now clean for both apps including dev dependencies. Vite 8 requires Node ≥20.19/22.12, so the web Dockerfile **build stage** and the CI web job were bumped to Node 22. The **API** image and CI job were also moved to Node 22 (Node 18 is end-of-life); `postgresql16-client` remains available on the newer Alpine base, so `pg_dump` still matches the postgres:16 DB.
 

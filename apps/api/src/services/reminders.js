@@ -51,9 +51,7 @@ async function runReminders(opts) {
   // with the employee's personal due date and which milestones were already sent.
   const rows = (await pool.query(`
     with eff as (
-      select eg.group_id, eg.employee_oid as oid from employee_groups eg join groups gg on gg.id=eg.group_id and gg.archived_at is null
-      union
-      select gem.group_id, gem.employee_oid as oid from group_effective_members gem join groups gg on gg.id=gem.group_id and gg.archived_at is null
+      select group_id, employee_oid as oid from effective_group_membership
     ),
     -- A policy is "required" only for effective members of a group it's assigned
     -- to. Unassigned policies are private (admin/owner only, see canRead) and must
