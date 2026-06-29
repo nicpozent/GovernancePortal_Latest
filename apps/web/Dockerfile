@@ -1,6 +1,8 @@
 # ── Birgma Governance Portal — web (Vite build, served by nginx) ────
 # Stage 1: build the SPA bundle (precompiled JSX, self-hosted React/MSAL).
-FROM node:18-alpine AS build
+# Node 22 (current LTS) — required by Vite 8's engines. Build-stage only;
+# the production image below is nginx, so this has no runtime footprint.
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 # Reproducible install from the committed lockfile (includes devDeps for the build).

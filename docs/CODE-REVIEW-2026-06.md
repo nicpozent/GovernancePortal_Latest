@@ -25,13 +25,13 @@ All findings below were addressed in this branch unless marked _deferred_.
 | L-1 | ✅ Fixed | UUID route params (`id`/`oid`/`adId`/`pgId`) validated → 400 instead of 500. |
 | L-2 | ✅ Fixed | Quiz-attempt read+insert wrapped in a transaction with a per-(user,policy) advisory lock; limit is now `cfg.quizMaxAttempts`. |
 | L-3 | ✅ Fixed | `pg_dump` receives DB creds via `PG*` env (`pgEnvFrom()`), never argv. |
-| L-4 | ✅ Fixed | Committed `package-lock.json` for both apps; Dockerfiles use `npm ci`; added `node:test` unit tests + GitHub Actions CI (test + build + prod-scoped `npm audit`); bumped `multer`→2.x and `vite`→5.4.21. |
+| L-4 | ✅ Fixed | Committed `package-lock.json` for both apps; Dockerfiles use `npm ci`; added `node:test` unit tests + GitHub Actions CI (test + build + prod-scoped `npm audit`); bumped `multer`→2.x and migrated `vite`→8 (rolldown). `npm audit` is now fully clean (incl. dev deps). |
 | L-5 | ✅ Fixed | `uncaughtException` now logs and exits(1) so the container recycles cleanly. |
 | L-6 | ✅ Fixed | `clockTolerance` on JWT verify; token error detail gated to non-prod; DB pool connection/statement/idle-txn timeouts. |
 | L-7 | ◑ Accepted | Owner confirms these are public client IDs (documented as such in `.env.example`); left as-is. |
 | Structure | ⏸ Deferred | Splitting `routes.js` and extracting the shared membership view are non-defect refactors — safer once broader test coverage exists. |
 
-> One residual `npm audit` item remains for the web app: a **dev-server-only** esbuild/vite advisory (GHSA-67mh-4wv8-2f99). It is **not** in the shipped artifact (nginx serves the static `vite build` output; the dev server never runs in production), and the only fix is a breaking major bump to vite 8 — deferred. Production-scoped audit (`--omit=dev`) is clean for both apps.
+> The web app was migrated to **Vite 8** (rolldown), which clears the previous dev-server esbuild advisory (GHSA-67mh-4wv8-2f99); `npm audit` is now clean for both apps including dev dependencies. Vite 8 requires Node ≥20.19/22.12, so the web Dockerfile **build stage** and the CI web job were bumped to Node 22. This is build-time only — the production image is unchanged (nginx serving the static bundle).
 
 ---
 
