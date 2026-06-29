@@ -1,6 +1,7 @@
 # ── Birgma Governance API ───────────────────────────────────
 # Linux container (runs on your Docker-in-VMware host via WSL2/Docker)
-FROM node:18-alpine
+# Node 22 (current LTS); Node 18 is end-of-life.
+FROM node:22-alpine
 
 # postgresql-client (v16, matching the db image) provides pg_dump for backups.
 RUN apk add --no-cache postgresql16-client

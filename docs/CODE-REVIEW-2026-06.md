@@ -31,7 +31,7 @@ All findings below were addressed in this branch unless marked _deferred_.
 | L-7 | ◑ Accepted | Owner confirms these are public client IDs (documented as such in `.env.example`); left as-is. |
 | Structure | ⏸ Deferred | Splitting `routes.js` and extracting the shared membership view are non-defect refactors — safer once broader test coverage exists. |
 
-> The web app was migrated to **Vite 8** (rolldown), which clears the previous dev-server esbuild advisory (GHSA-67mh-4wv8-2f99); `npm audit` is now clean for both apps including dev dependencies. Vite 8 requires Node ≥20.19/22.12, so the web Dockerfile **build stage** and the CI web job were bumped to Node 22. This is build-time only — the production image is unchanged (nginx serving the static bundle).
+> The web app was migrated to **Vite 8** (rolldown), which clears the previous dev-server esbuild advisory (GHSA-67mh-4wv8-2f99); `npm audit` is now clean for both apps including dev dependencies. Vite 8 requires Node ≥20.19/22.12, so the web Dockerfile **build stage** and the CI web job were bumped to Node 22. The **API** image and CI job were also moved to Node 22 (Node 18 is end-of-life); `postgresql16-client` remains available on the newer Alpine base, so `pg_dump` still matches the postgres:16 DB.
 
 ---
 
