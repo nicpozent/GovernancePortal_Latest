@@ -132,8 +132,10 @@ last.
 - **Key attributes.** Decisions recomputed server-side every call; never inferred
   from client state; private-by-default for unscoped resources.
 - **Standards.** RBAC (NIST), ABAC concepts (XACML-style PEP/PDP separation).
-- **Realized here by.** middleware + `canRead`/`canManage` in `routes.js`. *Note:
-  currently an embedded PDP, not a standalone service — see §5.*
+- **Realized here by.** middleware (`requireAdmin`/`requireManager`) + the
+  `canRead`/`canManage` helpers, now consolidated in `src/authz.js` (a discrete
+  authorization module) and consumed by the per-domain route modules under
+  `src/routes/`. *Note: a shared module, not yet a fully externalized PDP — see §5.*
 
 ### ABB D3/D4 — Immutable Ledger (Attestation & Audit)
 - **Fundamental functionality.** Persist domain-significant events as an

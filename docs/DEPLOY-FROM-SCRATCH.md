@@ -35,7 +35,7 @@ No manual `ALTER`/`GRANT` needed — that's only required when upgrading an
 ```powershell
 docker compose ps                       # db, api, web healthy
 curl.exe -k https://localhost/healthz   # {"ok":true}
-docker compose exec api grep -c eff_members src/routes.js   # > 0 = new code
+docker compose exec api grep -rc effective_group_membership src/routes   # > 0 = new code
 ```
 
 ## 4. Entra / SharePoint (one-time, in Azure)

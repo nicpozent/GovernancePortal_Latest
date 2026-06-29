@@ -128,6 +128,24 @@ test('quiz attempt cap is race-safe: concurrent submissions never exceed the lim
   assert.equal(count, cfg.quizMaxAttempts, 'no more than the cap may be persisted');
 });
 
+test('groups: admin creates a local group, lists it, and adds a member', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const admin = await db.seedEmployee({ name: 'Admin' });
+  const person = await db.seedEmployee({ name: 'Joiner' });
+  h.asAdmin(admin);
+
+  const created = await request(h.app).post('/api/groups').send({ name: 'Finance', description: 'Finance team' });
+  assert.equal(created.status, 201);
+  const gid = created.body.id;
+
+  const list = (await request(h.app).get('/api/groups')).body;
+  assert.ok(list.find((g) => g.id === gid), 'new group should appear in the list');
+
+  assert.equal((await request(h.app).post(`/api/groups/${gid}/members`).send({ employeeOid: person })).status, 204);
+  const members = (await request(h.app).get(`/api/groups/${gid}/members`)).body;
+  assert.ok(members.find((m) => m.oid === person), 'added member should be listed');
+});
+
 test('admin dashboard reflects required vs signed at the current version', async (t) => {
   if (!dbUp) return t.skip('no test database');
   const admin = await db.seedEmployee({ name: 'Admin' });

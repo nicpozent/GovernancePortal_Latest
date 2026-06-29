@@ -98,7 +98,7 @@ client for identity or authorization — those are recomputed every call.
 
 **(f) Errors converge on one handler.** Route handlers are wrapped so a rejected
 promise becomes a clean 500 with a correlation id rather than crashing the process
-(`apps/api/src/routes.js`):
+(`apps/api/src/routes/index.js`):
 
 ```js
 ['get', 'post', 'put', 'delete', 'patch'].forEach((m) => {
@@ -162,7 +162,7 @@ layers, and a handler picks the ones it needs:
    to them, enforced by `canRead`.
 
 `canRead` is where the "private-by-default" rule (ADR-010) lives
-(`apps/api/src/routes.js`):
+(`apps/api/src/authz.js`):
 
 ```js
 async function canRead(req, policyId) {
@@ -238,7 +238,7 @@ The API is stateless and shares a single bounded connection pool
 can't pin a connection). Most endpoints are single statements and rely on
 Postgres for atomicity. Where a check-then-write spans statements and a race would
 violate an invariant, the code takes an explicit lock. The quiz-attempt cap is the
-clearest example (`apps/api/src/routes.js`):
+clearest example (`apps/api/src/routes/quizzes.js`):
 
 ```js
 const client = await pool.connect();
@@ -441,10 +441,12 @@ ubiquity and middleware ecosystem won for a team-maintained internal app. (b)
 options, but JS keeps one language across web and API and matches the MSAL/Graph
 JS SDKs.
 **Trade-offs.** Express gives little structure for free — hence the explicit
-async-wrapper, the hand-rolled auth, and a large `routes.js`. The simplicity is the
-point; the discipline is on us.
-**Consequence / known debt.** `routes.js` is ~1.2k lines; splitting into per-domain
-routers is the recommended next refactor (deferred until broader tests exist).
+async-wrapper and the hand-rolled auth. The simplicity is the point; the
+discipline is on us.
+**Consequence.** The former ~1.2k-line `routes.js` has been split into per-domain
+modules under `src/routes/` (mounted by `routes/index.js`), with shared authz
+helpers in `src/authz.js` — verified behaviour-preserving by an identical route
+inventory and the test suite (`docs/TESTING.md`).
 
 ## ADR-108 — PostgreSQL 16 as the only datastore
 **Context.** The domain is inherently relational (people ↔ groups ↔ policies ↔
@@ -621,7 +623,8 @@ move.
 - **DRY vs. drift in SQL.** The effective-membership union (§5) was duplicated
   across ~11 queries and had already bitten once (M-1); it is now consolidated into
   the single `effective_group_membership` view, removing that class of drift. The
-  remaining structural item is the size of `routes.js` (per-domain router split).
+  former `routes.js` monolith has since been split into per-domain modules under
+  `src/routes/` with shared helpers in `src/authz.js`.
 - **On-prem now vs. Azure-native later.** Every on-prem weak point (secrets on
   disk, host DB access) has a documented Azure-native answer the code already
   supports — the migration is a hosting change, not a rewrite.
