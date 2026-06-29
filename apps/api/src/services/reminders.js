@@ -14,6 +14,7 @@
 const graph = require('../graph');
 const { pool } = require('../db');
 const cfg = require('../config');
+const { escapeHtml, milestoneFor } = require('../util');
 
 async function sendMail(to, subject, html) {
   if (!cfg.graph.mailSender) throw new Error('GRAPH_MAIL_SENDER not configured');
@@ -35,23 +36,11 @@ function emailHtml({ name, policy, version, due, milestone }) {
       ? `has been assigned to you${due ? ` and is due by <strong>${due}</strong>` : ''}`
       : `is due by <strong>${due}</strong>`;
   return `<div style="font-family:Segoe UI,Arial,sans-serif;color:#23283a;line-height:1.6">
-    <p>Hello ${name || 'there'},</p>
-    <p>The policy <strong>${policy}</strong> (${version}) ${when}. Please read and acknowledge it in the Governance Portal.</p>
+    <p>Hello ${escapeHtml(name || 'there')},</p>
+    <p>The policy <strong>${escapeHtml(policy)}</strong> (${escapeHtml(version)}) ${when}. Please read and acknowledge it in the Governance Portal.</p>
     ${link ? `<p><a href="${link}" style="background:#213a9e;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block">Open the Governance Portal</a></p>` : ''}
     <p style="color:#8a92a6;font-size:12px">This is an automated reminder from the Birgma Governance Portal.</p>
   </div>`;
-}
-
-// Decide which single milestone (if any) applies today for a required, unsigned policy.
-function milestoneFor(daysToDue, assignedSent) {
-  if (!assignedSent) return 'assigned';
-  if (daysToDue == null) return null;            // no deadline → only the assigned mail
-  if (daysToDue < 0) return 'overdue';
-  if (daysToDue <= 1) return 'due-1';
-  if (daysToDue <= 7) return 'due-7';
-  if (daysToDue <= 15) return 'due-15';
-  if (daysToDue <= 20) return 'due-20';
-  return null;
 }
 
 // Core run: returns { sent, skipped, errors }. opts.onlyOids restricts to a team.
@@ -66,15 +55,16 @@ async function runReminders(opts) {
       union
       select gem.group_id, gem.employee_oid as oid from group_effective_members gem join groups gg on gg.id=gem.group_id and gg.archived_at is null
     ),
+    -- A policy is "required" only for effective members of a group it's assigned
+    -- to. Unassigned policies are private (admin/owner only, see canRead) and must
+    -- NOT generate reminders to the whole workforce — keep this consistent with
+    -- the employee policy list and the compliance dashboard.
     req as (
       select distinct pg.policy_id, em.oid
         from policy_groups pg
         join policies p on p.id=pg.policy_id and p.archived_at is null
         join eff em on em.group_id=pg.group_id
         join employees e on e.oid=em.oid and e.status='Active'
-      union
-      select p.id, e.oid from policies p join employees e on e.status='Active'
-       where p.archived_at is null and not exists (select 1 from policy_groups x where x.policy_id=p.id)
     )
     select r.policy_id, r.oid, p.name as policy, p.version,
            e.display_name, coalesce(e.email, e.upn) as email,
@@ -125,8 +115,8 @@ async function runReminders(opts) {
     const days = Math.ceil((new Date(rv.review_date) - new Date(new Date().toDateString())) / 86400000);
     const when = days < 0 ? `was due for review on ${new Date(rv.review_date).toDateString()}` : `is due for review by ${new Date(rv.review_date).toDateString()}`;
     const html = `<div style="font-family:Segoe UI,Arial,sans-serif;color:#23283a;line-height:1.6">
-      <p>Hello ${rv.owner_name || 'there'},</p>
-      <p>As the owner of <strong>${rv.name}</strong> (${rv.version}), please note it ${when}. Review the document and publish a new version if needed.</p>
+      <p>Hello ${escapeHtml(rv.owner_name || 'there')},</p>
+      <p>As the owner of <strong>${escapeHtml(rv.name)}</strong> (${escapeHtml(rv.version)}), please note it ${when}. Review the document and publish a new version if needed.</p>
       ${cfg.frontendUrl ? `<p><a href="${cfg.frontendUrl}" style="background:#213a9e;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block">Open the Governance Portal</a></p>` : ''}
       <p style="color:#8a92a6;font-size:12px">Automated review reminder from the Birgma Governance Portal.</p></div>`;
     try {

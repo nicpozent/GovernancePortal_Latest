@@ -10,6 +10,7 @@ const cfg = require('./config');
 const { runSync } = require('./services/sync');
 const { runReminders, sendMail } = require('./services/reminders');
 const { getPolicyDocument, resolveSharingUrl, listLibraries, listFolder } = require('./services/sharepoint');
+const { escapeHtml, isSafeHttpUrl, pgEnvFrom } = require('./util');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -33,6 +34,14 @@ const r = express.Router();
 });
 
 r.use(requireAuth);
+
+// Reject malformed UUID route params up front with a clean 400 instead of
+// letting a Postgres cast error surface as a generic 500. (Queries are
+// parameterized, so this is input hygiene — not an injection fix.)
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuidParam = (req, res, next, value) =>
+  UUID_RE.test(value) ? next() : res.status(400).json({ error: 'bad_id' });
+['id', 'oid', 'adId', 'pgId'].forEach((p) => r.param(p, uuidParam));
 
 const isAdmin = (req) => req.user.roles.includes(cfg.adminAppRole);
 const isManager = (req) => req.user.roles.includes(cfg.managerAppRole);
@@ -173,12 +182,12 @@ r.post('/signatures', async (req, res) => {
         `select pol.name as policy, pol.doc_type, coalesce(e.email, e.upn) as email, e.display_name
            from policies pol, employees e where pol.id = $1 and e.oid = $2`, [policyId, req.user.oid])).rows[0];
       if (!row || !row.email) return;
-      const kind = (row.doc_type || 'document').toLowerCase();
-      const when = new Date().toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' });
+      const kind = escapeHtml((row.doc_type || 'document').toLowerCase());
+      const when = escapeHtml(new Date().toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' }));
       const html = `<div style="font-family:Segoe UI,Arial,sans-serif;color:#23283a;line-height:1.6">
-        <p>Hello ${row.display_name || 'there'},</p>
-        <p>This confirms you have read and acknowledged the ${kind} <strong>${row.policy}</strong> (${p.version}) on <strong>${when}</strong>.</p>
-        <p>Signed as: ${fullName.trim()}. This acknowledgement has been recorded in the Birgma Governance Portal.</p>
+        <p>Hello ${escapeHtml(row.display_name || 'there')},</p>
+        <p>This confirms you have read and acknowledged the ${kind} <strong>${escapeHtml(row.policy)}</strong> (${escapeHtml(p.version)}) on <strong>${when}</strong>.</p>
+        <p>Signed as: ${escapeHtml(fullName.trim())}. This acknowledgement has been recorded in the Birgma Governance Portal.</p>
         ${cfg.frontendUrl ? `<p><a href="${cfg.frontendUrl}" style="background:#213a9e;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block">Open the Governance Portal</a></p>` : ''}
         <p style="color:#8a92a6;font-size:12px">Automated confirmation — please keep for your records.</p></div>`;
       await sendMail(row.email, `Acknowledgement confirmed: ${row.policy}`, html);
@@ -603,7 +612,7 @@ r.get('/policies/:id/quiz', async (req, res) => {
       'select attempt_no, score, max_score, pct, passed, at from quiz_attempts where policy_id = $1 and user_oid = $2 order by attempt_no',
       [req.params.id, req.user.oid])).rows;
   }
-  res.json({ quiz: { id: quiz.id, title: quiz.title, passPct: quiz.pass_pct, archived: !!quiz.archived_at }, questions, attempts, attemptsUsed: attempts.length, maxAttempts: 3, passed: attempts.some((a) => a.passed) });
+  res.json({ quiz: { id: quiz.id, title: quiz.title, passPct: quiz.pass_pct, archived: !!quiz.archived_at }, questions, attempts, attemptsUsed: attempts.length, maxAttempts: cfg.quizMaxAttempts, passed: attempts.some((a) => a.passed) });
 });
 
 // Create or replace the quiz for a policy (admin, or manager who owns it).
@@ -658,10 +667,8 @@ r.post('/policies/:id/quiz/attempt', async (req, res) => {
   const answers = (req.body && req.body.answers) || {};
   const quiz = (await pool.query('select * from quizzes where policy_id = $1 and archived_at is null', [req.params.id])).rows[0];
   if (!quiz) return res.status(404).json({ error: 'no_quiz' });
-  const prior = (await pool.query(
-    'select attempt_no, passed from quiz_attempts where policy_id = $1 and user_oid = $2 order by attempt_no', [req.params.id, req.user.oid])).rows;
-  if (prior.some((a) => a.passed)) return res.status(409).json({ error: 'already_passed' });
-  if (prior.length >= 3) return res.status(403).json({ error: 'no_attempts_left', detail: 'No attempts remaining. Contact your administrator.' });
+
+  // Grading is a pure read of the question set — do it before the lock.
   const qs = (await pool.query('select id, prompt, correct_index, points from quiz_questions where quiz_id = $1', [quiz.id])).rows;
   let score = 0, max = 0; const review = [];
   for (const q of qs) {
@@ -673,13 +680,33 @@ r.post('/policies/:id/quiz/attempt', async (req, res) => {
   }
   const pct = max ? Math.round((score / max) * 100) : 0;
   const passed = pct >= quiz.pass_pct;
-  const attemptNo = prior.length + 1;
-  await pool.query(
-    `insert into quiz_attempts (quiz_id, policy_id, user_oid, attempt_no, score, max_score, pct, passed, answers)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-    [quiz.id, req.params.id, req.user.oid, attemptNo, score, max, pct, passed, JSON.stringify(answers)]);
-  await audit(req, 'quiz.attempt', req.params.id, { attemptNo, pct, passed });
-  res.json({ score, maxScore: max, pct, passed, attemptNo, remaining: Math.max(0, 3 - attemptNo), passPct: quiz.pass_pct, review });
+
+  // The "already-passed / attempts-left" check and the insert must be atomic,
+  // or concurrent submissions could exceed the cap. Serialize per (user, policy)
+  // with a transaction-scoped advisory lock.
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    await client.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`${req.user.oid}:${req.params.id}`]);
+    const prior = (await client.query(
+      'select attempt_no, passed from quiz_attempts where policy_id = $1 and user_oid = $2 order by attempt_no',
+      [req.params.id, req.user.oid])).rows;
+    if (prior.some((a) => a.passed)) { await client.query('rollback'); return res.status(409).json({ error: 'already_passed' }); }
+    if (prior.length >= cfg.quizMaxAttempts) { await client.query('rollback'); return res.status(403).json({ error: 'no_attempts_left', detail: 'No attempts remaining. Contact your administrator.' }); }
+    const attemptNo = prior.length + 1;
+    await client.query(
+      `insert into quiz_attempts (quiz_id, policy_id, user_oid, attempt_no, score, max_score, pct, passed, answers)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [quiz.id, req.params.id, req.user.oid, attemptNo, score, max, pct, passed, JSON.stringify(answers)]);
+    await client.query('commit');
+    await audit(req, 'quiz.attempt', req.params.id, { attemptNo, pct, passed });
+    res.json({ score, maxScore: max, pct, passed, attemptNo, remaining: Math.max(0, cfg.quizMaxAttempts - attemptNo), passPct: quiz.pass_pct, review });
+  } catch (e) {
+    try { await client.query('rollback'); } catch (_) {}
+    throw e;
+  } finally {
+    client.release();
+  }
 });
 
 // Quiz analytics for admins — attempts, pass rate, per-question difficulty.
@@ -905,7 +932,7 @@ r.get('/admin/backup', requireAdmin, async (req, res) => {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   res.setHeader('Content-Type', 'application/sql');
   res.setHeader('Content-Disposition', `attachment; filename="governance-backup-${stamp}.sql"`);
-  const dump = spawn('pg_dump', [cfg.databaseUrl, '--no-owner', '--clean', '--if-exists']);
+  const dump = spawn('pg_dump', ['--no-owner', '--clean', '--if-exists'], { env: pgEnvFrom(cfg.databaseUrl, process.env) });
   dump.stdout.pipe(res);
   let errOut = '';
   dump.stderr.on('data', (d) => { errOut += d.toString(); });
@@ -935,7 +962,7 @@ r.post('/admin/backups', requireAdmin, async (req, res) => {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const file = path.join(BACKUP_DIR, `governance-${stamp}.sql`);
   const out = fs.createWriteStream(file);
-  const dump = spawn('pg_dump', [cfg.databaseUrl, '--no-owner', '--clean', '--if-exists']);
+  const dump = spawn('pg_dump', ['--no-owner', '--clean', '--if-exists'], { env: pgEnvFrom(cfg.databaseUrl, process.env) });
   let errOut = '';
   dump.stdout.pipe(out);
   dump.stderr.on('data', (d) => { errOut += d.toString(); });
@@ -981,6 +1008,10 @@ r.get('/integrations', requireAdmin, async (_req, res) => {
 });
 r.put('/integrations', requireAdmin, async (req, res) => {
   const { forwardEnabled, forwardUrl, forwardToken, feedEnabled } = req.body || {};
+  // Reject loopback/link-local/non-http(s) forward targets up front (anti-SSRF).
+  if (forwardUrl && !isSafeHttpUrl(forwardUrl)) {
+    return res.status(400).json({ error: 'bad_url', detail: 'Forward URL must be http(s) and not a loopback/link-local address.' });
+  }
   // forwardToken: undefined = leave as-is, '' = clear, string = set.
   await pool.query(
     `update integration_config set

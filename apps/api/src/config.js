@@ -34,4 +34,12 @@ module.exports = {
   // Credentials. In production these are BLANK and Managed Identity is used.
   graphClientId: process.env.GRAPH_CLIENT_ID || null,
   clientSecret: process.env.AZURE_CLIENT_SECRET || null,
+
+  // Operational tunables (centralized so policy isn't buried in handlers).
+  quizMaxAttempts: parseInt(process.env.QUIZ_MAX_ATTEMPTS, 10) || 3,
+  backupRetention: parseInt(process.env.BACKUP_RETENTION, 10) || 14,
+
+  // Only echo token-validation error detail to clients outside production
+  // (it's useful in dev, but leaks "jwt expired" / "audience invalid" otherwise).
+  exposeAuthErrors: process.env.NODE_ENV !== 'production',
 };

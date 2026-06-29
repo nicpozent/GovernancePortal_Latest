@@ -9,9 +9,9 @@ RUN apk add --no-cache postgresql16-client
 WORKDIR /app
 
 # Install production deps first for better layer caching.
-COPY package.json ./
-# No package-lock.json in the repo, so use install (switch to `npm ci` once you commit a lockfile).
-RUN npm install --omit=dev && npm cache clean --force
+COPY package.json package-lock.json ./
+# Reproducible install from the committed lockfile.
+RUN npm ci --omit=dev && npm cache clean --force
 
 # App source.
 COPY . .

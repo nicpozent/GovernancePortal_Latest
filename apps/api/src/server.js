@@ -6,13 +6,19 @@ const rateLimit = require('express-rate-limit');
 const pinoHttp = require('pino-http');
 const { logger } = require('./logger');
 const cfg = require('./config');
+const { pgEnvFrom } = require('./util');
 const routes = require('./routes');
 
 const app = express();
 
-// Safety net: never let a stray async rejection take down the API process.
+// Log unhandled rejections. After a truly-uncaught exception the process may be
+// in an undefined state — log it, then exit so the container restart policy
+// (restart: unless-stopped) recycles us into a clean process.
 process.on('unhandledRejection', (err) => logger.error({ err }, 'unhandledRejection'));
-process.on('uncaughtException', (err) => logger.error({ err }, 'uncaughtException'));
+process.on('uncaughtException', (err) => {
+  logger.error({ err }, 'uncaughtException');
+  setTimeout(() => process.exit(1), 100).unref();   // brief delay to flush the log
+});
 
 // Behind Azure Front Door / App Gateway: trust the proxy so req.ip is the real client.
 app.set('trust proxy', 1);
@@ -43,6 +49,9 @@ app.use(express.json({ limit: '256kb' }));
 app.use('/api', rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false }));
 // Directory sync is expensive — cap it hard.
 app.use('/api/sync', rateLimit({ windowMs: 5 * 60_000, max: 5, standardHeaders: true, legacyHeaders: false }));
+// The consumer feed lives outside /api and authenticates with an API key —
+// give it its own limiter so it can't be hammered / brute-forced.
+app.use('/feed', rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false }));
 
 // Liveness probe for the platform.
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
@@ -57,7 +66,10 @@ app.get('/feed/audit', async (req, res) => {
     if (!c || !c.feed_enabled || !c.feed_api_key) return res.status(404).json({ error: 'feed_disabled' });
     // constant-time compare
     const a = Buffer.from(auth), b = Buffer.from(c.feed_api_key);
-    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'unauthorized' });
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      logger.warn({ ip: req.ip }, 'feed/audit unauthorized');
+      return res.status(401).json({ error: 'unauthorized' });
+    }
     const limit = Math.min(parseInt(req.query.limit, 10) || 200, 1000);
     const since = req.query.since ? new Date(req.query.since) : null;
     const rows = (await pool.query(
@@ -95,16 +107,18 @@ app.listen(cfg.port, () => logger.info({ port: cfg.port }, 'Governance API liste
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       const file = `${dir}/governance-${stamp}.sql`;
       const out = fs.createWriteStream(file);
-      const dump = spawn('pg_dump', [cfg.databaseUrl, '--no-owner', '--clean', '--if-exists']);
+      // Pass DB credentials via env (PG* vars), never as argv — argv is visible
+      // in the host process list.
+      const dump = spawn('pg_dump', ['--no-owner', '--clean', '--if-exists'], { env: pgEnvFrom(cfg.databaseUrl, process.env) });
       dump.stdout.pipe(out);
       dump.stderr.on('data', (d) => console.error('[auto-backup]', d.toString()));
       dump.on('close', (code) => {
         if (code !== 0) { console.error('[auto-backup] failed, exit', code); return; }
         console.log('[auto-backup] wrote', file);
-        // retention: keep the 14 most recent
+        // retention: keep the most recent N
         try {
           const files = fs.readdirSync(dir).filter((f) => f.startsWith('governance-') && f.endsWith('.sql')).sort();
-          while (files.length > 14) { fs.unlinkSync(`${dir}/${files.shift()}`); }
+          while (files.length > cfg.backupRetention) { fs.unlinkSync(`${dir}/${files.shift()}`); }
         } catch (e) { console.error('[auto-backup] retention', e.message); }
       });
     } catch (e) { console.error('[auto-backup] error', e.message); }

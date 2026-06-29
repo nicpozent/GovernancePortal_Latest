@@ -11,6 +11,30 @@ The findings below are mostly **medium/low** correctness, consistency, and hygie
 
 ---
 
+## Resolution status (branch `claude/code-review-best-practices-ozyf6l`)
+
+All findings below were addressed in this branch unless marked _deferred_.
+
+| ID | Status | What changed |
+|----|--------|--------------|
+| H-1 | ✅ Fixed | Added repo-root `.gitignore`, root `.env.example`, and `apps/api/.env.example`. |
+| M-1 | ✅ Fixed | `reminders.js` no longer fans out unassigned (private) policies to all employees; "required" now means group-assigned everywhere. |
+| M-2 | ✅ Fixed | Added `escapeHtml()` (`src/util.js`); all email interpolations in `reminders.js` and the sign-confirm mail are escaped. |
+| M-3 | ✅ Fixed | `/feed` now has its own rate limiter; failed feed auth is logged. |
+| M-4 | ✅ Fixed | `isSafeHttpUrl()` rejects loopback/link-local/non-http(s) targets at save time (`PUT /integrations`) and at send time (`forwardEvent`). |
+| L-1 | ✅ Fixed | UUID route params (`id`/`oid`/`adId`/`pgId`) validated → 400 instead of 500. |
+| L-2 | ✅ Fixed | Quiz-attempt read+insert wrapped in a transaction with a per-(user,policy) advisory lock; limit is now `cfg.quizMaxAttempts`. |
+| L-3 | ✅ Fixed | `pg_dump` receives DB creds via `PG*` env (`pgEnvFrom()`), never argv. |
+| L-4 | ✅ Fixed | Committed `package-lock.json` for both apps; Dockerfiles use `npm ci`; added `node:test` unit tests + GitHub Actions CI (test + build + prod-scoped `npm audit`); bumped `multer`→2.x and `vite`→5.4.21. |
+| L-5 | ✅ Fixed | `uncaughtException` now logs and exits(1) so the container recycles cleanly. |
+| L-6 | ✅ Fixed | `clockTolerance` on JWT verify; token error detail gated to non-prod; DB pool connection/statement/idle-txn timeouts. |
+| L-7 | ◑ Accepted | Owner confirms these are public client IDs (documented as such in `.env.example`); left as-is. |
+| Structure | ⏸ Deferred | Splitting `routes.js` and extracting the shared membership view are non-defect refactors — safer once broader test coverage exists. |
+
+> One residual `npm audit` item remains for the web app: a **dev-server-only** esbuild/vite advisory (GHSA-67mh-4wv8-2f99). It is **not** in the shipped artifact (nginx serves the static `vite build` output; the dev server never runs in production), and the only fix is a breaking major bump to vite 8 — deferred. Production-scoped audit (`--omit=dev`) is clean for both apps.
+
+---
+
 ## Findings
 
 ### H-1 · `.gitignore` and `.env.example` are missing, but documented as present

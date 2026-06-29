@@ -2,9 +2,9 @@
 # Stage 1: build the SPA bundle (precompiled JSX, self-hosted React/MSAL).
 FROM node:18-alpine AS build
 WORKDIR /app
-COPY package.json ./
-# No lockfile committed; install from package.json. Add package-lock.json for reproducible builds.
-RUN npm install
+COPY package.json package-lock.json ./
+# Reproducible install from the committed lockfile (includes devDeps for the build).
+RUN npm ci
 COPY index.html vite.config.js ./
 COPY src/ ./src/
 COPY public/ ./public/

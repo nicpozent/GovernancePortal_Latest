@@ -35,9 +35,10 @@ function requireAuth(req, res, next) {
       audience: [cfg.apiClientId, cfg.apiAudience],
       issuer: cfg.issuer,
       algorithms: ['RS256'],
+      clockTolerance: 5,   // tolerate small clock skew (seconds)
     },
     (err, claims) => {
-      if (err) return res.status(401).json({ error: 'invalid_token', detail: err.message });
+      if (err) return res.status(401).json({ error: 'invalid_token', ...(cfg.exposeAuthErrors ? { detail: err.message } : {}) });
       // ── Token hardening ──────────────────────────────────────
       // 1) must be issued by OUR tenant
       if (claims.tid && claims.tid !== cfg.tenantId) {
