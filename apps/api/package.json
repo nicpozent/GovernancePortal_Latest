@@ -1,0 +1,32 @@
+{
+  "name": "birgma-governance-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Birgma Governance Portal — backend API (Entra ID SSO, Microsoft Graph sync, SharePoint, PostgreSQL)",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "migrate": "psql \"$DATABASE_URL\" -f db/schema.sql"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.4.1",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "isomorphic-fetch": "^3.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.12.0",
+    "pino": "^9.3.2",
+    "pino-http": "^10.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

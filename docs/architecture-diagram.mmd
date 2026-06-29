@@ -1,0 +1,51 @@
+%% Birgma Governance Portal — Architecture
+%% HOW TO OPEN IN LUCIDCHART:
+%%   Lucidchart → File → Import Diagram → Mermaid  (paste this whole file)
+%%   (or use the "Mermaid" shape-library / "Import Data > Mermaid" option).
+%% Also renders on github.com, mermaid.live, VS Code Mermaid preview, and
+%% the companion architecture-diagram.html in this folder.
+
+flowchart TB
+    subgraph CLIENT["👤 Client"]
+        BROWSER["Browser<br/>React SPA + MSAL.js"]
+    end
+
+    subgraph ENTRA["☁️ Microsoft Entra ID / Microsoft 365"]
+        SPAAPP["App registration:<br/>Governance Portal (SPA, PKCE)"]
+        APIAPP["App registration:<br/>Governance API<br/>roles: Admin / Manager"]
+        GRAPH["Microsoft Graph<br/>users · groups · managers"]
+        SP["SharePoint<br/>policy documents"]
+    end
+
+    subgraph VM["🖥️ Windows VM (VMware) · Docker + WSL2"]
+        subgraph STACK["Docker Compose stack"]
+            WEB["web container<br/>nginx<br/>(TLS · serves SPA · proxies /api)"]
+            API["api container<br/>Node.js / Express<br/>(token validation · RBAC · domain logic)"]
+            DB[("db container<br/>PostgreSQL 16<br/>append-only ledgers")]
+            VOL[["Volumes<br/>pgdata · backups · uploads"]]
+        end
+    end
+
+    BROWSER -- "OIDC / OAuth2 sign-in" --> SPAAPP
+    BROWSER -- "HTTPS + Bearer token" --> WEB
+    WEB -- "/api (same origin)" --> API
+    API -- "validate JWT (JWKS, aud, iss, tid, scope)" --> APIAPP
+    API -- "app-only / Managed Identity" --> GRAPH
+    API -- "Sites.Selected" --> SP
+    API -- "SQL (internal network)" --> DB
+    DB --- VOL
+    API -- "Graph sendMail (reminders + confirmations)" --> GRAPH
+
+    classDef client fill:#eef1fb,stroke:#213a9e,stroke-width:2px,color:#161a26;
+    classDef entra fill:#e8f0fe,stroke:#0078c0,stroke-width:2px,color:#0b3a5b;
+    classDef web fill:#e6f3ec,stroke:#1f8a5b,stroke-width:2px,color:#10402a;
+    classDef api fill:#fbf2df,stroke:#caa53d,stroke-width:2px,color:#5b4708;
+    classDef db fill:#f6f3fd,stroke:#6d4bd1,stroke-width:2px,color:#2e1d5b;
+    classDef vol fill:#f3f4f8,stroke:#9aa1b2,stroke-width:1px,color:#41485a;
+
+    class BROWSER client;
+    class SPAAPP,APIAPP,GRAPH,SP entra;
+    class WEB web;
+    class API api;
+    class DB db;
+    class VOL vol;
