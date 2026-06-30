@@ -28,7 +28,7 @@ jobs:
       TEST_SUPER_DATABASE_URL: postgres://postgres:postgres@localhost:5432/governance
       DATABASE_URL: postgres://governance_app:apppw@localhost:5432/governance
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -49,7 +49,7 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
           node-version: "22"   # Vite 8 requires Node >=20.19 / >=22.12

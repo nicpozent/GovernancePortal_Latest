@@ -1,0 +1,81 @@
+name: smoke
+
+# End-to-end smoke test: build and start the full docker-compose stack
+# (db + api + web) the way it ships, then assert it is actually healthy using
+# the diagnostics toolkit. The stack needs secrets/certs that are gitignored,
+# so we synthesize throwaway ones here (never use these values anywhere real).
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  e2e:
+    name: e2e (docker compose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Synthesize throwaway secrets, certs and volumes
+        working-directory: deploy
+        run: |
+          set -euo pipefail
+          # Compose-level .env (variable substitution): DB passwords + public Entra IDs.
+          cat > .env <<'EOF'
+          POSTGRES_PASSWORD=postgres
+          APP_DB_PASSWORD=apppw
+          AZURE_TENANT_ID=00000000-0000-0000-0000-000000000000
+          SPA_CLIENT_ID=00000000-0000-0000-0000-000000000001
+          API_CLIENT_ID=00000000-0000-0000-0000-000000000002
+          EOF
+          # api env_file must exist (compose overrides DATABASE_URL itself).
+          cp ../apps/api/.env.example ../apps/api/.env
+          # Self-signed cert so nginx (web tier) can start.
+          mkdir -p certs backups uploads
+          openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
+            -keyout certs/privkey.pem -out certs/fullchain.pem \
+            -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost"
+
+      - name: Build and start the stack
+        working-directory: deploy
+        run: docker compose up -d --build
+
+      - name: Wait for the API to become healthy
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then echo "api healthy after ${i}x3s"; exit 0; fi
+            sleep 3
+          done
+          echo "API did not become healthy in time"; exit 1
+
+      - name: Smoke — liveness through nginx (web tier, TLS)
+        run: curl -fsSk https://localhost/healthz | grep -q '"ok":true'
+
+      - name: Smoke — diagnostics (fail only on hard failures)
+        working-directory: deploy
+        run: |
+          set +e
+          docker compose exec -T api node tools/diagnostics/diagnose.js db api
+          rc=$?
+          # exit 0 = all pass, 1 = warnings only (e.g. 0 employees on a fresh stack),
+          # 2 = at least one FAIL. Smoke fails only on hard failures.
+          if [ "$rc" -ge 2 ]; then echo "diagnostics found failures (rc=$rc)"; exit 1; fi
+          echo "diagnostics OK (rc=$rc — warnings tolerated)"
+
+      - name: Diagnostics (config + backups, informational)
+        if: always()
+        working-directory: deploy
+        # These warn on optional-but-unset config (Graph/mail) — don't fail the build.
+        run: docker compose exec -T api node tools/diagnostics/diagnose.js config backups || true
+
+      - name: Dump container logs on failure
+        if: failure()
+        working-directory: deploy
+        run: docker compose logs --no-color --tail=120
+
+      - name: Tear down
+        if: always()
+        working-directory: deploy
+        run: docker compose down -v
