@@ -20,3 +20,7 @@ COPY --from=build /app/dist/ /usr/share/nginx/html/
 COPY 40-envconfig.sh /docker-entrypoint.d/40-envconfig.sh
 RUN chmod +x /docker-entrypoint.d/40-envconfig.sh
 EXPOSE 80 443
+
+# Container liveness — nginx answers /nginx-health on :80 (no TLS/API dependency).
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:80/nginx-health || exit 1

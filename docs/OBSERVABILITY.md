@@ -29,6 +29,44 @@ There are two ways to centralize, and you can use both:
 
 ---
 
+## 0b. Metrics & health endpoints (built in)
+
+Beyond logs, the API now exposes the three operational signals directly:
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `GET /healthz` | none | **Liveness** — process is up. Static `{ok:true}`; does NOT touch the DB (a DB blip must not trigger a restart loop). The Docker `HEALTHCHECK` uses this. |
+| `GET /readyz` | none | **Readiness** — checks the DB (`select 1`). `200` ready / `503` not ready, so a load balancer can drain an instance that lost its DB. |
+| `GET /metrics` | none* | **Prometheus** exposition — RED metrics (`http_requests_total`, `http_request_duration_seconds` by method/route/status) + Node runtime metrics (CPU, heap, event-loop, GC). |
+
+*`/metrics` and the probes are intentionally unauthenticated (a scrape agent has no
+Entra token). They carry **no PII** — only counts/latencies with a *normalised* route
+label (`/api/policies/:id/file`, never the raw id, so cardinality stays bounded).
+**Restrict `/metrics` to your monitoring network at the edge** (nginx/Front Door);
+it is not proxied publicly by the SPA's nginx config.
+
+**Scrape it** (Prometheus / Azure Monitor managed Prometheus):
+```yaml
+scrape_configs:
+  - job_name: governance-api
+    metrics_path: /metrics
+    static_configs: [{ targets: ['api:8080'] }]
+```
+
+**Alert examples (PromQL)** — complement the log-based KQL alerts below:
+```promql
+# p95 latency > 1s over 5m
+histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1
+# 5xx rate > 1% over 5m
+sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.01
+# instance not ready (scrape /readyz as a blackbox target, or alert on `up == 0`)
+```
+
+The container health of all three services is enforced by Docker `HEALTHCHECK`s
+(db: `pg_isready`; api: `/healthz`; web/nginx: a local `/nginx-health` on :80).
+
+---
+
 ## A. Ship all container logs with Fluent Bit (recommended)
 
 This repo includes a ready overlay: `deploy/logging/fluent-bit.conf`,

@@ -12,11 +12,15 @@ const pinoHttp = require('pino-http');
 const { logger } = require('./logger');
 const cfg = require('./config');
 const routes = require('./routes');
+const { register, metricsMiddleware } = require('./metrics');
 
 const app = express();
 
 // Behind Azure Front Door / App Gateway: trust the proxy so req.ip is the real client.
 app.set('trust proxy', 1);
+
+// RED metrics for every request (records on response finish).
+app.use(metricsMiddleware);
 
 // Structured request logging with a correlation id (echoed to the client on errors).
 app.use(pinoHttp({
@@ -29,7 +33,7 @@ app.use(pinoHttp({
   customLogLevel: (_req, res, err) => (err || res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info'),
   // Identify the caller without logging the token itself.
   customProps: (req) => ({ user: req.user && req.user.oid }),
-  autoLogging: { ignore: (req) => req.url === '/healthz' },
+  autoLogging: { ignore: (req) => req.url === '/healthz' || req.url === '/readyz' || req.url === '/metrics' },
 }));
 
 // Security headers (HSTS, no-sniff, frame-deny, etc.)
@@ -50,8 +54,35 @@ app.use('/api/sync', rateLimit({ windowMs: 5 * 60_000, max: 5, standardHeaders: 
 // give it its own limiter so it can't be hammered / brute-forced.
 app.use('/feed', rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false, store: makeStore('feed') }));
 
-// Liveness probe for the platform.
+// Liveness probe — is the process up? Deliberately does NOT touch the DB: a DB
+// blip must not cause the orchestrator to kill/restart a healthy process.
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
+
+// Readiness probe — should this instance receive traffic? Checks the dependency
+// it cannot serve without (the database). 503 when not ready so a load balancer
+// drains it instead of sending failing requests.
+app.get('/readyz', async (_req, res) => {
+  try {
+    const { pool } = require('./db');
+    await pool.query('select 1');
+    res.json({ ok: true, db: 'up' });
+  } catch (e) {
+    logger.warn({ err: e.message }, 'readiness check failed');
+    res.status(503).json({ ok: false, db: 'down' });
+  }
+});
+
+// Prometheus scrape endpoint (RED + Node runtime metrics). No auth by design —
+// restrict to the monitoring network at the edge. No PII is exposed.
+app.get('/metrics', async (_req, res) => {
+  try {
+    res.setHeader('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } catch (e) {
+    logger.error({ err: e.message }, 'metrics render failed');
+    res.status(500).end();
+  }
+});
 
 // ── Consumer feed (PULL) — external systems read the audit log with an API key.
 // Separate from Entra auth: a bearer API key the admin generates in Integrations.
