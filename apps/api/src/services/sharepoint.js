@@ -45,22 +45,8 @@ async function resolveSharingUrl(webUrl) {
   return { driveId: item.parentReference.driveId, itemId: item.id };
 }
 
-// ── Browse the policy library so admins can PICK a file instead of
-//    pasting a link. Uses the app-only Sites.Selected read grant.
-let _driveCache = null;
-async function getLibraryDrive() {
-  if (_driveCache) return _driveCache;
-  const drives = await graph
-    .api(`/sites/${cfg.graph.sharepointSiteId}/drives`)
-    .select('id,name,webUrl')
-    .get();
-  const want = (cfg.graph.sharepointLibrary || '').toLowerCase();
-  const list = drives.value || [];
-  const d = list.find((x) => (x.name || '').toLowerCase() === want) || list[0];
-  if (!d) throw new Error('No document library found on the configured site');
-  _driveCache = d;
-  return d;
-}
+// ── Browse the policy library so admins can PICK a file instead of pasting a
+//    link. Uses the app-only Sites.Selected read grant.
 
 // List all document libraries (drives) on the site — the picker's top level.
 async function listLibraries() {

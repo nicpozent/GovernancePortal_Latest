@@ -1,0 +1,56 @@
+name: security
+
+# Free, private-repo-friendly security scanning (no GitHub Advanced Security /
+# CodeQL required). Results are printed in the job logs.
+#   - gitleaks: fails on committed secrets.
+#   - trivy: fails on HIGH/CRITICAL dependency vulns.
+#   - semgrep: reports SAST findings (informational; add --error to enforce once
+#     the current findings are triaged).
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"   # weekly baseline scan
+
+jobs:
+  secrets:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run gitleaks (working tree)
+        run: |
+          set -euo pipefail
+          V=8.21.2
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz" | tar -xz gitleaks
+          # Scan the current tree (what actually ships). On any finding, print the
+          # (redacted) report so the rule/file is visible in the log, then fail.
+          ./gitleaks detect --no-git --redact --config .gitleaks.toml \
+            --report-format json --report-path gitleaks-report.json \
+          || { echo '=== gitleaks findings ==='; cat gitleaks-report.json; exit 1; }
+
+  deps:
+    name: trivy (dependency scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run trivy
+        run: |
+          set -euo pipefail
+          # Official installer picks the correct latest asset; install to a
+          # writable dir (RUNNER_TEMP) to avoid the /usr/local/bin permission issue.
+          curl -sSL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$RUNNER_TEMP/bin"
+          "$RUNNER_TEMP/bin/trivy" fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 .
+
+  sast:
+    name: semgrep (SAST, informational)
+    runs-on: ubuntu-latest
+    container: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v5
+      - name: Semgrep scan
+        # No --error: findings are reported in the log for triage but don't fail
+        # the build yet. Add --error here to enforce once findings are addressed.
+        run: semgrep scan --config p/owasp-top-ten --config p/javascript --config p/secrets --skip-unknown-extensions
