@@ -96,6 +96,75 @@ off the VM.** Confirm all four:
 
 ---
 
+## 2b. One-time setup: automated off-host backups (plain-language how-to)
+
+This turns the "backup baseline" above from a manual chore into something that runs
+by itself, every day, to a safe location. Two steps.
+
+### Step 1 — Choose the off-host destination (the `-Dest`)
+
+`backup-all.ps1` needs to know **where to put the backups**. That location is the
+`-Dest` ("destination") value you pass it. **"Off-host" simply means *not on this
+same VM.*** Today backups go to `C:\governance-backups`, a folder on the very
+machine that runs the app — so if the VM is lost (disk failure, ransomware, VM
+deleted), the backups are lost with it. The fix is to send them somewhere else.
+
+Pick one, easiest → most robust:
+
+| Option | Example `-Dest` value | Notes |
+|---|---|---|
+| A network file share on another server | `\\backup-server\governance` | Simplest if you already have a file server. |
+| A second disk / NAS appliance | `\\nas01\backups\governance` or `E:\...` (only if E: is a *separate* physical device) | A second disk survives an OS-drive failure, not a whole-VM loss. |
+| **Azure Files** (cloud file share), mounted as a drive | `\\<account>.file.core.windows.net\governance` | Good stepping stone — it's off-site and aligns with the future Azure move. |
+
+Whatever you choose, test that you can write to it from the VM first:
+
+```powershell
+"test" | Out-File \\backup-server\governance\_writetest.txt   # then delete it
+```
+
+> This is the one decision only you/IT can make — it depends on what storage your
+> environment actually has. Record the chosen path here: `_______________________`
+
+### Step 2 — Make it run automatically every day (Windows Task Scheduler)
+
+Right now the backup only runs when someone runs it by hand — and people forget.
+**Task Scheduler** is the built-in Windows "run this on a schedule" tool (like `cron`
+on Linux). Run the block below **once**, in an **Administrator** PowerShell, with
+your real `-Dest` and install path filled in. After that Windows runs the backup
+itself — nobody has to remember.
+
+```powershell
+# EDIT these two values to match your environment:
+$script = "C:\governance-deploy\deploy\scripts\backup-all.ps1"   # where the script lives
+$dest   = "\\backup-server\governance"                            # your off-host destination (Step 1)
+
+$action  = New-ScheduledTaskAction -Execute "powershell.exe" `
+             -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$script`" -Dest `"$dest`""
+$trigger = New-ScheduledTaskTrigger -Daily -At 2am               # every day at 02:00
+Register-ScheduledTask -TaskName "Governance Full Backup" `
+             -Action $action -Trigger $trigger -RunLevel Highest
+```
+
+In English: *"Every day at 2 AM, run the backup script and send the output to the
+off-host destination."* Because `backup-all.ps1 -IncludeUploads` is on by default,
+this one scheduled job backs up **both the database and the uploaded training
+files** off-host in a single run.
+
+**Verify the schedule works:**
+```powershell
+Start-ScheduledTask -TaskName "Governance Full Backup"   # run it now, don't wait for 2am
+Get-ScheduledTaskInfo -TaskName "Governance Full Backup" # check LastTaskResult = 0 (success)
+```
+Then confirm a fresh `governance-full-*.zip` **and** an `uploads-mirror\` folder
+appeared at your `-Dest`.
+
+> If you want the uploaded files captured *more often* than the daily full backup,
+> also schedule `backup-uploads.ps1 -Dest <off-host>` (same pattern; its snippet is
+> at the bottom of that script). Otherwise the daily full backup already covers them.
+
+---
+
 ## 3. Which scenario am I in? (decision tree)
 
 ```
