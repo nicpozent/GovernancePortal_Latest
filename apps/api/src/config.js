@@ -40,9 +40,11 @@ module.exports = {
   backupRetention: parseInt(process.env.BACKUP_RETENTION, 10) || 14,
 
   // In-process daily jobs (backup, directory sync + reminders) run on timers.
-  // They are NOT safe to run in more than one instance (duplicate dumps/emails),
-  // so when scaling the API horizontally set SCHEDULERS_ENABLED=false on every
-  // replica except one. Defaults to enabled (single-instance deployment).
+  // A Postgres advisory lock (src/leader.js) ensures only ONE instance runs
+  // each tick, so when scaling the API horizontally leave SCHEDULERS_ENABLED=true
+  // on EVERY replica — the lock arbitrates automatically. This flag is now just a
+  // kill-switch (set to false to disable the schedulers on an instance entirely).
+  // Defaults to enabled.
   schedulersEnabled: process.env.SCHEDULERS_ENABLED !== 'false',
 
   // Only echo token-validation error detail to clients outside production

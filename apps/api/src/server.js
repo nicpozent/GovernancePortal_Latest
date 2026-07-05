@@ -19,35 +19,43 @@ process.on('uncaughtException', (err) => {
 
 app.listen(cfg.port, () => logger.info({ port: cfg.port }, 'Governance API listening'));
 
+const { withLeaderLock } = require('./leader');
+
 // ── Scheduled daily backup → /backups (mounted volume), keep last 14 ──
-// Gated by SCHEDULERS_ENABLED so only one instance runs it when scaled out.
+// Gated by SCHEDULERS_ENABLED (kill-switch) AND a Postgres advisory lock so
+// exactly one instance runs it when the API is scaled out — leave
+// SCHEDULERS_ENABLED=true on every replica; the lock arbitrates.
 (function scheduleBackups() {
   if (!cfg.schedulersEnabled) { logger.info('schedulers disabled; skipping auto-backup'); return; }
   const { spawn } = require('child_process');
   const fs = require('fs');
   const dir = '/backups';
-  const run = () => {
-    try {
-      if (!fs.existsSync(dir)) return;
-      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const file = `${dir}/governance-${stamp}.sql`;
-      const out = fs.createWriteStream(file);
-      // Pass DB credentials via env (PG* vars), never as argv — argv is visible
-      // in the host process list.
-      const dump = spawn('pg_dump', ['--no-owner', '--clean', '--if-exists'], { env: pgEnvFrom(cfg.databaseUrl, process.env) });
-      dump.stdout.pipe(out);
-      dump.stderr.on('data', (d) => console.error('[auto-backup]', d.toString()));
-      dump.on('close', (code) => {
-        if (code !== 0) { console.error('[auto-backup] failed, exit', code); return; }
-        console.log('[auto-backup] wrote', file);
-        // retention: keep the most recent N
-        try {
-          const files = fs.readdirSync(dir).filter((f) => f.startsWith('governance-') && f.endsWith('.sql')).sort();
-          while (files.length > cfg.backupRetention) { fs.unlinkSync(`${dir}/${files.shift()}`); }
-        } catch (e) { console.error('[auto-backup] retention', e.message); }
-      });
-    } catch (e) { console.error('[auto-backup] error', e.message); }
-  };
+  // The actual dump, as a promise that resolves only when pg_dump finishes —
+  // so the leader lock is held for the whole backup, never released mid-dump.
+  const doBackup = () => new Promise((resolve) => {
+    if (!fs.existsSync(dir)) return resolve();
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const file = `${dir}/governance-${stamp}.sql`;
+    const out = fs.createWriteStream(file);
+    // Pass DB credentials via env (PG* vars), never as argv — argv is visible
+    // in the host process list.
+    const dump = spawn('pg_dump', ['--no-owner', '--clean', '--if-exists'], { env: pgEnvFrom(cfg.databaseUrl, process.env) });
+    dump.stdout.pipe(out);
+    dump.stderr.on('data', (d) => console.error('[auto-backup]', d.toString()));
+    dump.on('error', (e) => { console.error('[auto-backup] spawn error', e.message); resolve(); });
+    dump.on('close', (code) => {
+      if (code !== 0) { console.error('[auto-backup] failed, exit', code); return resolve(); }
+      console.log('[auto-backup] wrote', file);
+      // retention: keep the most recent N
+      try {
+        const files = fs.readdirSync(dir).filter((f) => f.startsWith('governance-') && f.endsWith('.sql')).sort();
+        while (files.length > cfg.backupRetention) { fs.unlinkSync(`${dir}/${files.shift()}`); }
+      } catch (e) { console.error('[auto-backup] retention', e.message); }
+      resolve();
+    });
+  });
+  const run = () => withLeaderLock('backup', doBackup)
+    .catch((e) => logger.error({ err: e.message }, 'auto-backup leader lock'));
   setInterval(run, 24 * 60 * 60 * 1000);   // every 24h
   setTimeout(run, 60 * 1000);              // once, a minute after startup
 })();
@@ -57,10 +65,10 @@ app.listen(cfg.port, () => logger.info({ port: cfg.port }, 'Governance API liste
   if (!cfg.schedulersEnabled) { logger.info('schedulers disabled; skipping auto-sync/reminders'); return; }
   const { runSync } = require('./services/sync');
   const { runReminders } = require('./services/reminders');
-  const tick = async () => {
+  const tick = () => withLeaderLock('daily', async () => {
     try { await runSync(); } catch (e) { console.error('[auto-sync]', e.message); }
     if (cfg.remindersEnabled) { try { await runReminders(); } catch (e) { console.error('[auto-reminders]', e.message); } }
-  };
+  }).catch((e) => logger.error({ err: e.message }, 'auto-sync/reminders leader lock'));
   setInterval(tick, 24 * 60 * 60 * 1000);  // daily
   setTimeout(tick, 3 * 60 * 1000);         // once, 3 min after startup
 })();
