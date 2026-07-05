@@ -264,9 +264,17 @@ Two jobs run **in-process** on `setInterval` timers, kicked off shortly after
 boot (`apps/api/src/server.js`): a daily `pg_dump` backup with retention, and a
 daily directory sync + reminder pass. This is a deliberate simplicity choice for a
 single-instance deployment (ADR-114) — no external scheduler, no queue. The
-trade-off is explicit: timers reset on restart, and the jobs are **not safe to run
-in more than one replica** (they would double-send email / double-dump). Scaling
-the API horizontally requires extracting these into a singleton/cron first.
+trade-off is explicit: timers reset on restart.
+
+**Multi-instance safety (HA step 2).** Each tick now runs under a Postgres
+**advisory lock** (`apps/api/src/leader.js`, `withLeaderLock`): every replica's
+timer fires, but only the one that wins `pg_try_advisory_lock` actually runs the
+job — the rest skip. The lock is held for the whole job (so a slow backup can't be
+double-started) and is tied to the DB session, so if the leader dies mid-job the
+lock frees and the next tick on any replica takes over. `SCHEDULERS_ENABLED` is now
+just a per-instance kill-switch — leave it `true` on every replica when scaling out.
+This removes the "extract into a singleton/cron first" blocker; a queue-backed
+scheduler is still the eventual target for very large fleets.
 
 Idempotency for reminders is achieved in data, not in the scheduler: each
 (policy, user, version, milestone) is recorded in `notifications_sent`, so a
@@ -560,11 +568,16 @@ titles, so all interpolation is HTML-escaped (finding M-2) to prevent injection.
 but another moving part and another image. (b) *A job queue (BullMQ/Redis)* —
 overkill for two daily jobs. (c) *Platform scheduler (cron job / Azure
 Functions/Timer)* — the right answer **when** moving to Azure or scaling out.
-**Trade-offs (explicit and important).** Timers reset on restart, and the jobs are
-**not multi-replica safe** (duplicate emails/dumps). This is acceptable *only*
-while the API runs as a single instance. Horizontal scaling is gated on extracting
-these jobs — this is the single biggest constraint the architecture places on
-scaling, and it is called out deliberately rather than discovered later.
+**Trade-offs (explicit and important).** Timers reset on restart.
+
+**Update (HA step 2).** The original "not multi-replica safe" trade-off is
+resolved: each tick runs under `withLeaderLock` (`src/leader.js`), which grabs a
+Postgres **advisory lock** so only one replica runs the job while the others skip
+(see §9). The lock is held for the whole job and releases with the DB session, so a
+crashed leader is automatically taken over on the next tick. `SCHEDULERS_ENABLED`
+stays `true` on every replica; it is now purely a kill-switch. A platform
+scheduler / queue remains the right answer for very large fleets, but the app tier
+is no longer *blocked* from horizontal scaling by these jobs.
 
 ## ADR-115 — Structured logging with `pino`; optional push/pull integration
 **Context.** Need SIEM-friendly logs and a way to feed audit events to external
@@ -620,11 +633,14 @@ move.
 
 # Part III — Cross-cutting trade-off themes
 
-- **Single-instance simplicity vs. horizontal scale.** Disk-volume uploads
-  (ADR-111) and in-process schedulers (ADR-114) deliberately assume one API
-  instance. The system is simple and correct *today* at the cost of a known,
-  documented refactor before scaling out. This is the most important architectural
-  boundary to remember.
+- **Single-instance simplicity vs. horizontal scale.** The system was originally
+  simple and correct *today* at the cost of a documented refactor before scaling
+  out. Two of those boundaries are now removed: uploads have a pluggable backend
+  (ADR-111, `STORAGE_DRIVER=blob`) so any replica can serve any file, and the
+  in-process schedulers (ADR-114) elect a single leader per tick via a Postgres
+  advisory lock (`src/leader.js`) so they are safe to run on every replica. The
+  remaining single-instance assumption is a shared rate-limit store (in-memory
+  today) — the next scale-out item.
 - **Least privilege vs. setup cost.** Entra app-only with `Sites.Selected`, SCIM,
   AU-scoping and a non-owner DB role (ADR-101/109/112) each trade one-time
   configuration effort for a permanently smaller blast radius. The project
