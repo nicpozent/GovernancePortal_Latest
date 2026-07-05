@@ -48,4 +48,17 @@ module.exports = {
   // Only echo token-validation error detail to clients outside production
   // (it's useful in dev, but leaks "jwt expired" / "audience invalid" otherwise).
   exposeAuthErrors: process.env.NODE_ENV !== 'production',
+
+  // ── Uploaded-file storage (trainings) ──────────────────────
+  // Local disk is the default and preserves today's behavior exactly. Set
+  // STORAGE_DRIVER=blob (+ Azure Storage settings) to store files in Azure Blob
+  // so any API replica can serve them — the enabler for multi-instance/HA.
+  uploadDir: process.env.UPLOAD_DIR || '/uploads',
+  storage: {
+    driver: process.env.STORAGE_DRIVER || 'local',   // 'local' | 'blob'
+    // Blob: prefer Managed Identity (accountUrl) in prod; connectionString for dev.
+    blobAccountUrl: process.env.AZURE_STORAGE_ACCOUNT_URL || null,
+    blobConnectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || null,
+    blobContainer: process.env.AZURE_STORAGE_CONTAINER || 'uploads',
+  },
 };

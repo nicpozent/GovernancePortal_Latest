@@ -6,10 +6,20 @@
 // ============================================================
 
 // Config reads env at import — set test defaults before requiring anything.
+const os = require('os');
+const fsSync = require('fs');
+const pathMod = require('path');
 process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgres://governance_app:apppw@127.0.0.1:55432/governance';
 process.env.AZURE_TENANT_ID = process.env.AZURE_TENANT_ID || 'test-tenant';
 process.env.API_CLIENT_ID = process.env.API_CLIENT_ID || 'test-api';
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+// The default upload dir is /uploads (not writable in tests) — point the local
+// storage driver at a temp dir so the upload/serve path can be exercised.
+if (!process.env.UPLOAD_DIR) {
+  const dir = pathMod.join(os.tmpdir(), 'gov-test-uploads');
+  fsSync.mkdirSync(dir, { recursive: true });
+  process.env.UPLOAD_DIR = dir;
+}
 
 const authPath = require.resolve('../../src/auth');
 const realAuth = require('../../src/auth');

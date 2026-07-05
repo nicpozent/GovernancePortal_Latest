@@ -504,6 +504,19 @@ hole.
 single-instance constraint as the schedulers). multer 1.x→2.x was a deliberate bump
 off a deprecated/vulnerable line; the `.single()` API was unchanged.
 
+**Update (HA step 1).** The "abstraction is small to swap later" promise above is
+now realized: `apps/api/src/storage.js` is a pluggable backend behind a tiny
+interface — `finalize(file) → key`, `exists(key)`, `openReadStream(key)`,
+`remove(key)`. multer still stages the upload to `UPLOAD_DIR` first (never memory);
+`finalize()` then persists it to the configured driver. `STORAGE_DRIVER=local`
+(default) is byte-for-byte the previous behaviour, so the single-host deployment is
+unchanged. `STORAGE_DRIVER=blob` uploads to **Azure Blob** (Managed Identity via
+`DefaultAzureCredential`, or a connection string for dev) so **any API replica can
+serve any file** — removing the disk-volume blocker to running more than one API
+instance. `@azure/storage-blob` is lazy-`require`d, so it is only a dependency when
+the blob driver is actually selected. The upload → serve → replace path is covered
+by `test/integration/uploads.test.js` (regression net added before the refactor).
+
 ## ADR-112 — Microsoft Graph for directory; **SCIM-first**, AU-scoped Graph fallback; `Sites.Selected`
 **Context.** The app needs to know which users/groups exist and to read policy
 documents — without over-reading the tenant.

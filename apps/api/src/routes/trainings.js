@@ -2,8 +2,8 @@
 const { pool } = require('../db');
 const { requireManager } = require('../auth');
 const { isAdmin, audit, canManage, canRead } = require('../authz');
-const { UPLOAD_DIR, UPLOAD_TYPES, withUpload, MGR_DOC_TYPES } = require('../uploads');
-const fs = require('fs');
+const { UPLOAD_TYPES, withUpload, MGR_DOC_TYPES } = require('../uploads');
+const storage = require('../storage');
 const path = require('path');
 
 module.exports = (r) => {
@@ -54,10 +54,11 @@ r.post('/trainings', requireManager, withUpload, async (req, res) => {
   if (!name || !name.trim()) return res.status(400).json({ error: 'name_required' });
   if (!req.file) return res.status(400).json({ error: 'file_required', detail: 'Upload a file.' });
   const gids = groupIds ? (Array.isArray(groupIds) ? groupIds : String(groupIds).split(',').filter(Boolean)) : [];
+  const key = await storage.finalize(req.file);   // persist to the configured backend
   const p = (await pool.query(
     `insert into policies (name, doc_type, version, sharepoint_url, owner, owner_oid, source, upload_path, upload_name, upload_mime, due_date, due_days, review_date)
      values ($1,$2,$3,'',$4,$5,'Upload',$6,$7,$8,$9,$10,$11) returning *`,
-    [name.trim(), docType, version || 'v1.0', req.user.name, req.user.oid, req.file.filename, req.file.originalname, req.file.mimetype,
+    [name.trim(), docType, version || 'v1.0', req.user.name, req.user.oid, key, req.file.originalname, req.file.mimetype,
      dueDate || null, (dueDays!==undefined && dueDays!=='') ? parseInt(dueDays,10) : null, reviewDate || null]
   )).rows[0];
   for (const gid of gids) await pool.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
@@ -75,13 +76,14 @@ r.put('/trainings/:id', requireManager, withUpload, async (req, res) => {
   if (!prev) return res.status(404).json({ error: 'not_found' });
   docType = MGR_DOC_TYPES.includes(docType) ? docType : prev.doc_type;
   const newFile = req.file || null;
+  const newKey = newFile ? await storage.finalize(newFile) : null;
   const p = (await pool.query(
     `update policies set name=$2, doc_type=$3, version=$4, due_date=$5, due_days=$6, review_date=$7,
         upload_path=coalesce($8, upload_path), upload_name=coalesce($9, upload_name), upload_mime=coalesce($10, upload_mime),
         updated_at=now()
       where id=$1 returning *`,
     [req.params.id, name, docType, version, dueDate || null, (dueDays!==undefined && dueDays!=='') ? parseInt(dueDays,10) : null, reviewDate || null,
-     newFile ? newFile.filename : null, newFile ? newFile.originalname : null, newFile ? newFile.mimetype : null]
+     newKey, newFile ? newFile.originalname : null, newFile ? newFile.mimetype : null]
   )).rows[0];
   if (Array.isArray(groupIds) || typeof groupIds === 'string') {
     const gids = Array.isArray(groupIds) ? groupIds : String(groupIds).split(',').filter(Boolean);
@@ -89,8 +91,8 @@ r.put('/trainings/:id', requireManager, withUpload, async (req, res) => {
     for (const gid of gids) await pool.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
   }
   if (prev.version !== p.version) await pool.query('insert into policy_versions (policy_id, version, note, changed_by) values ($1,$2,$3,$4)', [p.id, p.version, versionNote || ('Updated from ' + prev.version), req.user.name]);
-  // delete the superseded file
-  if (newFile && prev.upload_path && prev.upload_path !== p.upload_path) { try { fs.unlinkSync(path.join(UPLOAD_DIR, prev.upload_path)); } catch (_) {} }
+  // delete the superseded file from the storage backend
+  if (newFile && prev.upload_path && prev.upload_path !== p.upload_path) { await storage.remove(prev.upload_path); }
   await audit(req, 'training.update', p.name, { id: p.id });
   res.json(p);
 });
@@ -108,14 +110,15 @@ r.get('/policies/:id/file', async (req, res) => {
   if (!(await canRead(req, req.params.id))) return res.status(403).json({ error: 'forbidden', detail: 'not assigned to you' });
   const p = (await pool.query('select upload_path, upload_name, upload_mime from policies where id=$1', [req.params.id])).rows[0];
   if (!p || !p.upload_path) return res.status(404).json({ error: 'no_file' });
-  const full = path.join(UPLOAD_DIR, path.basename(p.upload_path));
-  if (!fs.existsSync(full)) return res.status(404).json({ error: 'missing_file' });
+  if (!(await storage.exists(p.upload_path))) return res.status(404).json({ error: 'missing_file' });
   // Content-Type is derived server-side from the stored extension (never the
   // client-supplied MIME), so an attacker can't have a file served as text/html.
   const ext = path.extname(p.upload_path).toLowerCase();
   res.setHeader('Content-Type', UPLOAD_TYPES[ext] || 'application/octet-stream');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Content-Disposition', `inline; filename="${(p.upload_name || 'document').replace(/["\r\n]/g, '')}"`);
-  fs.createReadStream(full).pipe(res);
+  const stream = storage.openReadStream(p.upload_path);
+  stream.on('error', (e) => { if (req.log) req.log.error({ err: e.message }, 'file stream failed'); if (!res.headersSent) res.status(500).json({ error: 'read_failed' }); else res.destroy(e); });
+  stream.pipe(res);
 });
 };

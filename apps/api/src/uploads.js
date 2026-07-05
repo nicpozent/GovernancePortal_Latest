@@ -7,8 +7,11 @@
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
+const cfg = require('./config');
 
-const UPLOAD_DIR = '/uploads';
+// Multer streams the upload here first (local staging even for the blob driver);
+// storage.finalize() then persists it to the configured backend.
+const UPLOAD_DIR = cfg.uploadDir;
 
 const UPLOAD_TYPES = {
   '.pdf': 'application/pdf',
