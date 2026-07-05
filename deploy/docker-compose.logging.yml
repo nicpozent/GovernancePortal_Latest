@@ -1,0 +1,70 @@
+# ── Opt-in log shipping overlay ─────────────────────────────────────────────
+# Adds a Fluent Bit collector and routes each service's stdout to it via the
+# Docker fluentd driver (non-blocking, so the app never stalls if the collector
+# is down). Enable by including this file alongside the base compose:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.logging.yml up -d
+#
+# Requires LA_WORKSPACE_ID + LA_SHARED_KEY (or the alternative sink's vars) in
+# deploy/.env. See docs/OBSERVABILITY.md.
+
+x-fluentd: &fluentd-logging
+  driver: fluentd
+  options:
+    fluentd-address: "127.0.0.1:24224"
+    fluentd-async: "true"        # don't block container start if collector is down
+    mode: "non-blocking"
+    max-buffer-size: "4m"
+
+services:
+  fluent-bit:
+    image: fluent/fluent-bit:3.1
+    restart: unless-stopped
+    command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf"]
+    working_dir: /fluent-bit/etc
+    ports:
+      - "127.0.0.1:24224:24224"   # forward input, loopback only
+    volumes:
+      - ./logging/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./logging/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+    environment:
+      LA_WORKSPACE_ID: ${LA_WORKSPACE_ID}
+      LA_SHARED_KEY: ${LA_SHARED_KEY}
+    mem_limit: 128m
+    cpus: 0.5
+
+  api:
+    logging:
+      <<: *fluentd-logging
+      options:
+        fluentd-address: "127.0.0.1:24224"
+        fluentd-async: "true"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+        tag: "gov.api"
+    depends_on:
+      - fluent-bit
+
+  web:
+    logging:
+      <<: *fluentd-logging
+      options:
+        fluentd-address: "127.0.0.1:24224"
+        fluentd-async: "true"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+        tag: "gov.web"
+    depends_on:
+      - fluent-bit
+
+  db:
+    logging:
+      <<: *fluentd-logging
+      options:
+        fluentd-address: "127.0.0.1:24224"
+        fluentd-async: "true"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+        tag: "gov.db"
+    depends_on:
+      - fluent-bit

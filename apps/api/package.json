@@ -12,7 +12,7 @@
     "test:integration": "node --test --test-concurrency=1 'test/integration/**/*.test.js'",
     "test:all": "node --test --test-concurrency=1 'test/**/*.test.js'",
     "diagnose": "node tools/diagnostics/diagnose.js",
-    "migrate": "psql \"$DATABASE_URL\" -f db/schema.sql"
+    "migrate": "node db/migrate.js"
   },
   "dependencies": {
     "@azure/identity": "^4.4.1",

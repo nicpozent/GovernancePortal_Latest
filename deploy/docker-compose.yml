@@ -14,6 +14,12 @@ services:
     image: postgres:16
     restart: unless-stopped
     logging: *default-logging
+    # Resource guardrails (honored by `docker compose up`) to bound blast radius
+    # of a runaway query / resource-exhaustion DoS. Tune to your host.
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 1.0
+    pids_limit: 256
     environment:
       POSTGRES_DB: governance
       POSTGRES_USER: postgres
@@ -54,6 +60,10 @@ services:
     build: ../apps/api
     restart: unless-stopped
     logging: *default-logging
+    mem_limit: 512m
+    mem_reservation: 128m
+    cpus: 0.75
+    pids_limit: 256
     env_file:
       - ../apps/api/.env
     environment:
@@ -73,6 +83,10 @@ services:
     build: ../apps/web
     restart: unless-stopped
     logging: *default-logging
+    mem_limit: 192m
+    mem_reservation: 64m
+    cpus: 0.5
+    pids_limit: 128
     environment:
       AZURE_TENANT_ID: ${AZURE_TENANT_ID}
       SPA_CLIENT_ID: ${SPA_CLIENT_ID}
