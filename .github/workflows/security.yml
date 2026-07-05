@@ -39,9 +39,10 @@ jobs:
       - name: Run trivy
         run: |
           set -euo pipefail
-          V=0.58.1
-          curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v${V}/trivy_${V}_Linux-64bit.tar.gz" | tar -xz trivy
-          ./trivy fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 .
+          # Official installer picks the correct latest asset; install to a
+          # writable dir (RUNNER_TEMP) to avoid the /usr/local/bin permission issue.
+          curl -sSL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$RUNNER_TEMP/bin"
+          "$RUNNER_TEMP/bin/trivy" fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 .
 
   sast:
     name: semgrep (SAST, informational)

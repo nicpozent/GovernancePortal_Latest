@@ -9,9 +9,14 @@ paths = [
   '''.*\.env\.example$''',
   '''architecture-repository/.*''',
   '''docs/.*''',
+  '''apps/web/public/config\.js$''',   # PUBLIC Entra client/tenant IDs (not secrets)
 ]
 regexes = [
   '''change_me''',
   '''apppw''',
   '''postgres:postgres''',      # CI test-only Postgres creds
+  # Public Entra tenant/SPA/API client IDs (GUIDs — safe in the browser, not secrets)
+  '''66cdb438-f45a-45bb-9709-cfede80e5fc3''',
+  '''b9f3bd3f-f945-4060-80eb-f5269c3499c4''',
+  '''655463e2-ab20-45b2-8bd2-be9925be19dd''',
 ]
