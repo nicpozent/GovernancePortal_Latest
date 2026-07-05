@@ -10,8 +10,15 @@
 # ============================================================
 
 # --- where to store backups (change this, or pass -Dest) ---
+# TIP: point -Dest at an OFF-HOST location (a file share, mounted Azure Files,
+# or another disk) so a loss of THIS VM doesn't take the backups with it, e.g.
+#   .\backup-all.ps1 -Dest \\backup-server\governance
 param(
-  [string]$Dest = "C:\governance-backups"
+  [string]$Dest = "C:\governance-backups",
+  # Also mirror the uploaded training files (they are NOT in the DB dump).
+  # On by default so a full backup really is complete. Uploads are mirrored
+  # (not re-zipped each run) so large videos don't bloat every snapshot.
+  [bool]$IncludeUploads = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,7 +61,29 @@ Get-ChildItem $Dest -Filter "governance-full-*.zip" |
   Sort-Object LastWriteTime -Descending | Select-Object -Skip 8 |
   Remove-Item -Force -ErrorAction SilentlyContinue
 
+# --- uploads: mirror the training files alongside the zip -------------------
+# The DB dump inside the zip does NOT contain the uploaded files (they live on
+# the ./uploads volume). Without this, a restore yields a DB whose upload_path
+# rows point at files that no longer exist. Mirror (not zip) so 250 MB videos
+# don't multiply across every snapshot; the mirror always reflects "now".
+if ($IncludeUploads) {
+  $uploads = Join-Path $deploy "uploads"
+  if (Test-Path $uploads) {
+    $upDest = Join-Path $Dest "uploads-mirror"
+    New-Item -ItemType Directory -Force -Path $upDest | Out-Null
+    Write-Host "     mirroring uploads -> $upDest ..."
+    robocopy $uploads $upDest /MIR /Z /R:2 /W:5 /NFL /NDL /NP | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw "uploads mirror (robocopy) failed with exit code $LASTEXITCODE" }
+  } else {
+    Write-Host "     (no uploads folder at $uploads — skipping)"
+  }
+}
+
 Write-Host "Done -> $zip"
+if ($IncludeUploads) { Write-Host "     + uploads mirror in $(Join-Path $Dest 'uploads-mirror')" }
+if ($Dest -notmatch '^\\\\' -and $Dest -match '^[A-Za-z]:') {
+  Write-Warning "Backups are on a LOCAL path ($Dest). For real DR, pass an OFF-HOST -Dest (e.g. \\server\share) so a loss of this VM doesn't lose the backups too."
+}
 
 # ============================================================
 #  Schedule WEEKLY (run once, in an elevated PowerShell):

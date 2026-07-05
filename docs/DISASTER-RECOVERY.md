@@ -53,7 +53,7 @@ irreplaceable state:
 | # | Asset | Lives in | Backed up by | Notes |
 |---|---|---|---|---|
 | 1 | **Database** (the compliance ledger) | `pgdata` Docker volume | Daily `pg_dump` → `deploy/backups/governance-*.sql`; full zip's `database.sql` | The core asset. Append-only ledgers. |
-| 2 | **Uploaded training files** | `deploy/uploads/` bind mount | **`backup-uploads.ps1`** (see §2) | ⚠️ *Not* in the DB dump and *excluded* from the full zip. Must be backed up separately or the DB's `upload_path`s become dead links. |
+| 2 | **Uploaded training files** | `deploy/uploads/` bind mount | `backup-all.ps1 -IncludeUploads` (mirrors them next to the zip) and/or the lighter daily `backup-uploads.ps1` | ⚠️ *Not* in the DB dump. Must be captured or the DB's `upload_path`s become dead links. |
 | 3 | **TLS cert + keys** | `deploy/certs/` | *Not* auto-backed-up (secret) | Re-issue or restore from your secret store; app runs without it only on HTTP. |
 | 4 | **Runtime config / secrets** | `deploy/.env`, `apps/api/.env` | *Not* in the full zip (secret) | Reproduce from your password manager / Azure Key Vault. `*.env.example` templates ARE in the zip. |
 
@@ -65,26 +65,34 @@ restore produces a portal whose training documents 404.
 
 ## 2. Before any disaster: the backup baseline (verify this is true today)
 
-A recovery is only as good as the backups feeding it. Confirm all four:
+**Where backups live today (so you know what to move off-host):**
+- The **daily DB dump** is written by the API to `/backups` in the api container,
+  which is bind-mounted to **`deploy/backups/`** on the VM host (compose:
+  `./backups:/backups`). `BACKUP_RETENTION` keeps the last 14. → on the host, but
+  **on the same VM as the data.**
+- **`backup-all.ps1`** writes `governance-full-*.zip` to **`C:\governance-backups`**
+  by default → also on the same VM unless you pass an off-host `-Dest`.
+- **Uploads** sit in `deploy/uploads/` → on the same VM.
+
+So the single change that turns "we have backups" into real DR is **getting a copy
+off the VM.** Confirm all four:
 
 1. **DB dumps are being written.** `deploy/backups/` should contain recent
-   `governance-*.sql` (the API writes one daily; `BACKUP_RETENTION` keeps the last
-   14). Also runnable on demand from the **Backups** screen or `backup-all.ps1`.
-2. **Uploads are being backed up.** Run the new
-   `deploy/scripts/backup-uploads.ps1 -Dest <off-host path>` and schedule it daily
-   (Task Scheduler snippet is at the bottom of the script). Point `-Dest` at a
-   **different machine / share / Azure Files** — never a folder on the same VM.
-3. **A full application zip exists off-host.** `backup-all.ps1` produces
-   `governance-full-*.zip` (code + `database.sql` + `*.env.example`). Copy it
-   **off the VM** — it contains the DB dump, so store it encrypted and
-   access-controlled.
-4. **Secrets are recorded somewhere safe** (asset 3 & 4): the two `.env` files and
-   the TLS cert/key, in a password manager or Key Vault. These are the only things
-   the zip deliberately omits.
+   `governance-*.sql`. Also on demand from the **Backups** screen or `backup-all.ps1`.
+2. **A full application backup is going OFF-HOST.** Schedule
+   `backup-all.ps1 -Dest \\backup-server\governance` (or a mounted Azure Files path).
+   It now writes the zip (code + `database.sql`) **and** mirrors `uploads/` to
+   `<Dest>\uploads-mirror` in one run — so a single off-host `-Dest` covers assets
+   1 **and** 2. It warns if `-Dest` is a local path.
+3. **(Optional, more frequent) uploads-only mirror.** If you want uploads captured
+   more often than the full backup, schedule `backup-uploads.ps1 -Dest <off-host>`
+   daily (its own Task Scheduler snippet is at the bottom of the script).
+4. **Secrets are recorded somewhere safe** (assets 3 & 4): the two `.env` files and
+   the TLS cert/key, in a password manager or Key Vault — the zip deliberately omits
+   them.
 
-> **Off-host is the whole point.** Backups sitting on the same VM as the data die
-> *with* the VM. At minimum: a daily copy of `deploy/backups/*.sql` + the uploads
-> mirror + the latest full zip to another location.
+> **Off-host is the whole point.** Backups on the same VM as the data die *with* the
+> VM. Point `backup-all.ps1 -Dest` at another machine / share / Azure Files.
 
 ---
 
@@ -221,7 +229,7 @@ copy and **record RTO**:
 
 | Date rehearsed | By | Scenario(s) | Measured RTO | Notes |
 |---|---|---|---|---|
-|  |  |  |  |  |
+| 2026-07-05 | Mechanism verification | A + C (DB) + uploads | <1s on 2-row set | Real schema + all 18 migrations + grants applied to a scratch DB; seeded ledger; `pg_dump --clean --if-exists`; dropped the whole schema (total loss); restored from the dump + restored the uploads mirror. Post-restore counts matched exactly, uploaded files byte-identical, and the append-only grants survived (`governance_app` still cannot DELETE `signatures`). **Re-run on a production-sized dataset to get a real RTO number.** |
 
 ---
 
