@@ -29,6 +29,13 @@ export const fmtDate = (v) => { if (!v) return '—'; const d = new Date(v); if 
 export const fmtDT = (d) => fmtDate(d.getTime())+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 export const initials = (n) => String(n||'').split(' ').filter(Boolean).map((x)=>x[0]).slice(0,2).join('').toUpperCase() || '—';
 
+// Map a policy's assigned group NAMES back to their ids (for editing).
+export function groupIdsFor(policy, grps) {
+  if (!policy.groups || !grps.length) return [];
+  const byName = Object.fromEntries(grps.map((g)=>[g.name, g.id]));
+  return policy.groups.map((n)=>byName[n]).filter(Boolean);
+}
+
 // Parse an employee CSV. Recognises headers (case-insensitive): firstName/first,
 // lastName/last, displayName/name, email, department/dept, jobTitle/title.
 export function parseEmployeeCsv(text) {
