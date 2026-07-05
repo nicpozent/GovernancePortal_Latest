@@ -1,5 +1,10 @@
 # Birgma Governance Portal — Backup Restore Procedure
 
+> **For a real incident, use [`DISASTER-RECOVERY.md`](./DISASTER-RECOVERY.md)** — the
+> full runbook (state inventory, off-host backups, the uploads step this page omits,
+> scenario decision tree, verification + sign-off). This page is the raw
+> DB-restore command reference it builds on.
+
 A backup you have never restored is a guess, not a safety net. This document is the
 **tested** recovery path. Rehearse it once on a throwaway copy so the steps are proven.
 
