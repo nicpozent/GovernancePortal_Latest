@@ -35,7 +35,7 @@ test('rejects a token without the access_as_user scope (403)', () => {
 });
 
 test('tolerates a missing tid (guard only fires when tid present and mismatched)', () => {
-  const { tid, ...noTid } = base;
+  const { tid: _tid, ...noTid } = base;
   const out = principalFromClaims(noTid);
   assert.equal(out.ok, true);
 });

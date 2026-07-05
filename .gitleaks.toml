@@ -1,0 +1,17 @@
+title = "Governance Portal gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known non-secret placeholders and example/config files"
+paths = [
+  '''.*\.env\.example$''',
+  '''architecture-repository/.*''',
+  '''docs/.*''',
+]
+regexes = [
+  '''change_me''',
+  '''apppw''',
+  '''postgres:postgres''',      # CI test-only Postgres creds
+]

@@ -79,7 +79,7 @@ async function main() {
           await c.query('insert into schema_migrations(version) values ($1)', [m]);
           await c.query('commit');
           console.log(`applied ${m}`);
-        } catch (e) { await c.query('rollback'); throw new Error(`migration ${m} failed: ${e.message}`); }
+        } catch (e) { await c.query('rollback'); throw new Error(`migration ${m} failed: ${e.message}`, { cause: e }); }
       }
     }
 

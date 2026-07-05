@@ -1,14 +1,13 @@
 // Generated from the former monolithic routes.js — handler bodies are verbatim.
 const { pool } = require('../db');
 const cfg = require('../config');
-const { logger, forwardEvent } = require('../logger');
-const { requireAdmin, requireManager } = require('../auth');
+const { forwardEvent } = require('../logger');
+const { requireAdmin } = require('../auth');
 const { runSync } = require('../services/sync');
-const { runReminders, sendMail } = require('../services/reminders');
-const { getPolicyDocument, resolveSharingUrl, listLibraries, listFolder } = require('../services/sharepoint');
-const { escapeHtml, isSafeHttpUrl, pgEnvFrom } = require('../util');
-const { isAdmin, isManager, audit, teamOids, canManage, canRead } = require('../authz');
-const { UPLOAD_DIR, UPLOAD_TYPES, uploadMw, withUpload, MGR_DOC_TYPES } = require('../uploads');
+const { runReminders } = require('../services/reminders');
+const { listLibraries, listFolder } = require('../services/sharepoint');
+const { isSafeHttpUrl, pgEnvFrom } = require('../util');
+const { audit } = require('../authz');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -86,7 +85,7 @@ r.post('/admin/backups', requireAdmin, async (req, res) => {
 // ── download a specific stored backup (admin) ──
 r.get('/admin/backups/:name', requireAdmin, async (req, res) => {
   const name = path.basename(req.params.name);   // prevent path traversal
-  if (!/^[\w.\-]+\.sql$/.test(name)) return res.status(400).json({ error: 'bad_name' });
+  if (!/^[\w.-]+\.sql$/.test(name)) return res.status(400).json({ error: 'bad_name' });
   const file = path.join(BACKUP_DIR, name);
   if (!fs.existsSync(file)) return res.status(404).json({ error: 'not_found' });
   res.setHeader('Content-Type', 'application/sql');

@@ -6,6 +6,7 @@
    ============================================================ */
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
+import { csvField, escapeHtml } from './format.js';
 
 const { useState, useEffect, useRef, useCallback } = React;
 
@@ -585,7 +586,7 @@ function App() {
       const rows = await api.complianceReport(scope);
       const cols = ['display_name','email','upn','department','policy','doc_type','current_version','status','signed_version','signed_at','signed_as'];
       const head = ['Employee','Email','UPN','Department','Policy','Type','Current version','Status','Signed version','Signed at','Signed as'];
-      const esc = (v) => { let s = (v === null || v === undefined) ? '' : String(v); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+      const esc = csvField;
       const lines = [head.join(',')].concat(rows.map((r) => cols.map((c) => esc(c === 'signed_at' ? (r[c] ? new Date(r[c]).toISOString() : '') : r[c])).join(',')));
       const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -2203,7 +2204,7 @@ function ReceiptModal({ receipt, onClose }) {
     const w = window.open('', '_blank', 'noopener,noreferrer,width=720,height=900');
     if (!w) return;
     try { w.opener = null; } catch (_) {}
-    const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    const esc = escapeHtml;
     w.document.write(`<!doctype html><html><head><title>Acknowledgement — ${esc(receipt.policy)}</title>
       <style>
         *{box-sizing:border-box} body{font-family:Segoe UI,Arial,sans-serif;color:#23283a;margin:0;padding:48px}
