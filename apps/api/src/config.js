@@ -38,6 +38,10 @@ module.exports = {
   // Operational tunables (centralized so policy isn't buried in handlers).
   quizMaxAttempts: parseInt(process.env.QUIZ_MAX_ATTEMPTS, 10) || 3,
   backupRetention: parseInt(process.env.BACKUP_RETENTION, 10) || 14,
+  // How long compliance records (signatures, quiz attempts, audit) are kept
+  // before the privileged retention purge (db/gdpr.js) may remove them. This is
+  // the number shown in the privacy notice — keep the two in sync.
+  retentionYears: parseInt(process.env.RETENTION_YEARS, 10) || 10,
 
   // In-process daily jobs (backup, directory sync + reminders) run on timers.
   // A Postgres advisory lock (src/leader.js) ensures only ONE instance runs

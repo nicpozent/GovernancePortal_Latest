@@ -14,7 +14,8 @@
     "test:coverage": "node --test --experimental-test-coverage 'test/unit/**/*.test.js'",
     "lint": "eslint .",
     "diagnose": "node tools/diagnostics/diagnose.js",
-    "migrate": "node db/migrate.js"
+    "migrate": "node db/migrate.js",
+    "gdpr": "node db/gdpr.js"
   },
   "dependencies": {
     "@azure/identity": "^4.4.1",

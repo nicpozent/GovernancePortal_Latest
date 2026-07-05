@@ -8,6 +8,7 @@ const { runReminders } = require('../services/reminders');
 const { listLibraries, listFolder } = require('../services/sharepoint');
 const { isSafeHttpUrl, pgEnvFrom } = require('../util');
 const { audit } = require('../authz');
+const { collectSubject } = require('../gdpr');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -150,6 +151,19 @@ r.post('/integrations/test', requireAdmin, async (req, res) => {
   await pool.query('update integration_config set last_forward_at=now(), last_forward_status=$1 where id=1',
     [out.ok ? 'ok' : (out.error || ('http ' + out.status))]);
   res.json(out);
+});
+
+// ── GDPR DSAR: export everything held about one data subject (admin) ──
+// Art. 15/20 — a machine-readable package of the subject's own data. Read-only
+// (safe under the app role); the actual export is itself audited. Erasure is
+// intentionally NOT exposed here — it runs via the privileged CLI (db/gdpr.js)
+// so the running app can never delete the append-only ledgers.
+r.get('/admin/data-subject/:oid/export', requireAdmin, async (req, res) => {
+  const pkg = await collectSubject(pool, req.params.oid);
+  if (!pkg.found) return res.status(404).json({ error: 'not_found', detail: 'No data subject with that oid.' });
+  await audit(req, 'gdpr.dsar.export', req.params.oid, { counts: pkg.counts });
+  res.setHeader('Content-Disposition', `attachment; filename="dsar-${req.params.oid}.json"`);
+  res.json(pkg);
 });
 
 // ── admin audit log (read) ───────────────────────────────────

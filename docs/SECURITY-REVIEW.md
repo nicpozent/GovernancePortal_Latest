@@ -78,8 +78,8 @@ compliance). Controller = Birgma; the app is the processing system.
 |---------------------|--------|------|
 | Art.5 Integrity & confidentiality | ◑ | Strong access control + audit; complete with at-rest encryption |
 | Art.6 Lawful basis | org | Document basis (legal obligation/legitimate interest) in your RoPA |
-| Art.15 Right of access | ✅ (data) | Per-employee record exists (My signatures + admin export); add a documented DSAR process |
-| Art.17 Erasure | ◑ | Leavers are retained for audit (compliance exemption likely applies) — **document a retention policy** & deletion path for when retention lapses |
+| Art.15/20 Right of access & portability | ✅ | Subjects self-view on *My signatures*; admins get a full machine-readable per-subject export via `GET /api/admin/data-subject/:oid/export` (or `npm run gdpr -- export`), audited. Follow the DSAR process in `GDPR-DATA-RIGHTS.md`. |
+| Art.17 Erasure | ✅ (tooling) / org (decision) | Leavers are retained for audit (Art.17(3)(b) exemption). When lawful erasure IS required it is performed by the privileged CLI `npm run gdpr -- erase --oid <oid> --apply` (personal records deleted, audit pseudonymised) — the app role still cannot delete the ledger. Retention purge: `npm run gdpr -- retention`. Runbook: `GDPR-DATA-RIGHTS.md`. |
 | Art.25 Data protection by design/default | ✅ | Private-by-default docs, least privilege, minimal Graph scope |
 | Art.30 Records of processing | org | Add this system to your RoPA |
 | Art.32 Security of processing | ◑ | This document is your technical-measures evidence; close §6 gaps |
@@ -99,7 +99,31 @@ org = organisational/process action, not a code change.
 6. **Monitoring/alerting** — ship api/db logs + audit log to a SIEM; alert on auth failures, sync/backup failures (closes A.8.16 and supports GDPR Art.33).
 7. **Finer roles + access reviews** — add a Compliance role; quarterly review of `Governance.Admin` holders.
 8. **CSP already tightened** (Vite build dropped `unsafe-eval`/CDN); keep libraries patched.
-9. **Document the org artefacts** — RoPA entry, retention policy, privacy-notice wording for IP storage, DSAR + breach runbooks.
+9. **Document the org artefacts** — RoPA entry, retention policy, privacy-notice wording for IP storage, DSAR + breach runbooks. → drafts now in `docs/gdpr/` (`ROPA.md`, `DPIA.md`, `PRIVACY-NOTICE.md`) — **review and formally adopt them.**
+
+---
+
+## 6b. Enabling encryption (operator actions — the app supports both today)
+
+These two are *off by default* and can only be turned on outside the app. The
+application already supports both; enabling them is a host/DB action.
+
+**A. Encryption at rest (Art. 32 / A.8.24).** The `pgdata` volume, `deploy/backups/`,
+and `deploy/uploads/` are plaintext on disk, and `pg_dump` output is plaintext.
+- **On the current Windows VM:** enable **BitLocker** on the drive that holds the
+  Docker volumes + backups + uploads (`manage-bde -on C: -UsedSpaceOnly`, then
+  escrow the recovery key). This covers all three assets and the `.env`/`certs` at once.
+- **On Azure (target):** use platform encryption / **customer-managed keys (CMK)**
+  on the managed Postgres + Storage account; no host step needed.
+- Either way, keep off-host backup copies encrypted (the DR runbook already flags this).
+
+**B. TLS on the API→Postgres hop (Art. 32).** Today it's loopback-only and runs
+without TLS (`PGSSL` unset → `ssl:false`). To require it (needed once the DB is on a
+separate host / Azure):
+1. Give Postgres a server certificate (Azure DB for PostgreSQL has one already; for
+   self-hosted, configure `ssl=on` + `ssl_cert_file`/`ssl_key_file`).
+2. Set **`PGSSL=require`** in `apps/api/.env`. `config.js`/`db.js` then connect with
+   `ssl:{ rejectUnauthorized:true }` — verified TLS, no code change needed.
 
 ---
 
