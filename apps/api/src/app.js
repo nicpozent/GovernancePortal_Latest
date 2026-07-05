@@ -40,13 +40,15 @@ app.use(cors({ origin: cfg.frontendOrigin, methods: ['GET', 'POST', 'PUT', 'DELE
 
 app.use(express.json({ limit: '256kb' }));
 
-// Basic abuse protection (all API traffic).
-app.use('/api', rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false }));
+// Basic abuse protection (all API traffic). The store is shared across replicas
+// when RATE_LIMIT_REDIS_URL is set (makeStore), else in-memory (single-host).
+const { makeStore } = require('./ratelimit');
+app.use('/api', rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false, store: makeStore('api') }));
 // Directory sync is expensive — cap it hard.
-app.use('/api/sync', rateLimit({ windowMs: 5 * 60_000, max: 5, standardHeaders: true, legacyHeaders: false }));
+app.use('/api/sync', rateLimit({ windowMs: 5 * 60_000, max: 5, standardHeaders: true, legacyHeaders: false, store: makeStore('sync') }));
 // The consumer feed lives outside /api and authenticates with an API key —
 // give it its own limiter so it can't be hammered / brute-forced.
-app.use('/feed', rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false }));
+app.use('/feed', rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false, store: makeStore('feed') }));
 
 // Liveness probe for the platform.
 app.get('/healthz', (_req, res) => res.json({ ok: true }));

@@ -51,6 +51,15 @@ module.exports = {
   // (it's useful in dev, but leaks "jwt expired" / "audience invalid" otherwise).
   exposeAuthErrors: process.env.NODE_ENV !== 'production',
 
+  // ── Shared rate-limit store ─────────────────────────────────
+  // In-memory by default (per-process counters — correct for one instance).
+  // Set RATE_LIMIT_REDIS_URL to share the window across API replicas so the
+  // limit isn't effectively multiplied by the replica count. Opt-in for HA.
+  rateLimit: {
+    redisUrl: process.env.RATE_LIMIT_REDIS_URL || null,
+    prefix: process.env.RATE_LIMIT_PREFIX || 'gov:rl:',
+  },
+
   // ── Uploaded-file storage (trainings) ──────────────────────
   // Local disk is the default and preserves today's behavior exactly. Set
   // STORAGE_DRIVER=blob (+ Azure Storage settings) to store files in Azure Blob

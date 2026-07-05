@@ -629,18 +629,45 @@ support horizon.
 modules load and unit tests pass on 22). Pre-prod status made this a safe time to
 move.
 
+## ADR-119 — Rate limiting with a pluggable store (in-memory default, shared Redis for HA)
+**Context.** `express-rate-limit` guards `/api`, `/api/sync` and `/feed`. Its
+default store counts requests in each process's memory — correct for one instance,
+but with N replicas a client effectively gets N× the limit and counters reset per
+instance, weakening the brute-force / abuse protection exactly when the system is
+scaled out.
+**Decision.** Keep the in-memory store as the default (zero behaviour change for the
+single-host deployment) and make the store pluggable via `src/ratelimit.js`
+(`makeStore(name)`). When `RATE_LIMIT_REDIS_URL` is set, each limiter gets a
+Redis-backed store (a distinct key prefix per limiter, one shared connection), so
+the window is shared across every replica. `rate-limit-redis` and `redis` are
+**lazy-required** — they are only a dependency when the Redis URL is set, mirroring
+the Blob storage driver (ADR-111).
+**Alternatives considered.** (a) *Postgres-backed limiter* — reuses the DB we have,
+but adds write load on the hot path and there's no first-class store; rejected.
+(b) *Edge/gateway rate limiting only* (nginx / Front Door) — good defense-in-depth
+and complementary, but doesn't protect app-specific limits like the `/api/sync`
+cap; kept as a future addition, not a replacement. (c) *Sticky sessions* — masks
+the problem, doesn't share state; rejected.
+**Trade-offs.** Redis becomes a soft dependency when enabled; connection errors are
+logged and the client reconnects, but a hard Redis outage degrades limiting. The
+default path has no such dependency. Only the count store is shared — limits and
+windows stay defined in code.
+
 ---
 
 # Part III — Cross-cutting trade-off themes
 
 - **Single-instance simplicity vs. horizontal scale.** The system was originally
   simple and correct *today* at the cost of a documented refactor before scaling
-  out. Two of those boundaries are now removed: uploads have a pluggable backend
-  (ADR-111, `STORAGE_DRIVER=blob`) so any replica can serve any file, and the
-  in-process schedulers (ADR-114) elect a single leader per tick via a Postgres
-  advisory lock (`src/leader.js`) so they are safe to run on every replica. The
-  remaining single-instance assumption is a shared rate-limit store (in-memory
-  today) — the next scale-out item.
+  out. Those boundaries are now removed and the app tier is stateless-ready:
+  uploads have a pluggable backend (ADR-111, `STORAGE_DRIVER=blob`) so any replica
+  can serve any file; the in-process schedulers (ADR-114) elect a single leader per
+  tick via a Postgres advisory lock (`src/leader.js`) so they are safe to run on
+  every replica; and the rate limiters use a shared Redis store when
+  `RATE_LIMIT_REDIS_URL` is set (ADR-119, `src/ratelimit.js`) so the window isn't
+  multiplied by the replica count. Each is opt-in and defaults to the previous
+  single-host behaviour. What remains for full HA is infrastructure, not app code:
+  an HA Postgres, an HA edge/proxy, and running ≥2 API replicas behind it.
 - **Least privilege vs. setup cost.** Entra app-only with `Sites.Selected`, SCIM,
   AU-scoping and a non-owner DB role (ADR-101/109/112) each trade one-time
   configuration effort for a permanently smaller blast radius. The project
