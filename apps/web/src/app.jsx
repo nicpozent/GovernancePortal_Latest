@@ -2226,7 +2226,7 @@ function ReceiptModal({ receipt, onClose }) {
       <div class="row"><span>Date &amp; time</span><span>${esc(dateStr)}, ${esc(timeStr)}</span></div>
       <div class="row"><span>Reference</span><span>${esc(ref)}</span></div>
       <p class="foot">This certificate confirms the named employee read and acknowledged the document version shown above on the date and time recorded. Generated automatically by the Birgma Governance Portal; the authoritative record is held in the portal's append-only signature ledger.</p>
-      </div><script>window.onload=function(){window.print()}<\/script></body></html>`);
+      </div><script>window.onload=function(){window.print()}</scr`+`ipt></body></html>`);
     w.document.close();
   };
   return (
