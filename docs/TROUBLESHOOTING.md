@@ -21,6 +21,9 @@ docker compose exec api node tools/diagnostics/diagnose.js --json        # for a
 See `apps/api/tools/diagnostics/README.md`. The sections below explain individual
 errors in more depth.
 
+**Saw a specific `error` code** (in the app, an API response, or the logs)? Jump to
+[**Application error codes**](#application-error-codes-the-error-field) and Ctrl+F it.
+
 ---
 
 ## Startup / containers
@@ -137,13 +140,82 @@ The "Send reminders" button reports "not configured" until then. Signing still
 works regardless (email is fire-and-forget).
 
 ### SharePoint file won't open / 403 / "Empty Payload"
-Check the `Sites.Selected` per-site grant (§5d of INSTALLATION) actually returned
+Check the `Sites.Selected` per-site grant (§5d of INSTALL-GUIDE) actually returned
 `201`/has `read`. Confirm `SHAREPOINT_SITE_ID` is the site where the documents
 live.
 
 ### "Browse SharePoint" shows "This folder is empty"
 The app reads the configured library/folder via Graph; confirm the documents are
 in that site's document library and the app has read on the site.
+
+---
+
+## Application error codes (the `error` field)
+
+Every API error returns a **stable machine code** in the response body
+(`{"error":"<code>", "detail":"..."}`) — the same code the SPA surfaces and the
+logs record. Look yours up here (**Ctrl+F the code**). `detail`, when present, is a
+human hint; `server_error` also returns a `requestId` for log correlation.
+
+**Authentication (401/403)**
+
+| `error` | Meaning → what to do |
+|---|---|
+| `missing_token` | No/expired bearer token. Sign in again. |
+| `invalid_token` | Token failed validation (signature/issuer/audience/tenant). See **Login / authentication** above — ensure v2 tokens (`requestedAccessTokenVersion:2`) and the right tenant/audience. |
+| `insufficient_scope` | An **app-only** token (or missing `access_as_user`). Use the interactive user sign-in; service principals are rejected by design. |
+| `unauthorized` | The consumer audit feed (`/feed/audit`) API key is wrong/missing. Check/rotate it in **Integrations**. |
+
+**Authorization / conflict (403/409)**
+
+| `error` | Meaning → what to do |
+|---|---|
+| `forbidden` | You lack rights for this action (not Admin/Manager, not the owner, or the document isn't assigned to you). |
+| `manage_in_entra` | The group is directory-sourced (Entra/AD); edit its membership **upstream in Entra** and re-sync. Only *Local* groups are editable in-app. |
+| `name_taken` | A group with that name already exists — pick another. |
+| `group_in_use` | Can't delete a group that still has policy assignments/mappings. Remove them, or archive the group instead. |
+| `already_passed` | You've already passed this quiz — no retake needed. |
+
+**Validation / bad input (400)**
+
+| `error` | Meaning → what to do |
+|---|---|
+| `must_acknowledge` | Tick the acknowledgement box before signing. |
+| `name_required` | A required name field was empty. |
+| `no_rows` | A bulk employee import had no valid rows — check the CSV headers/columns. |
+| `no_questions` | A quiz needs at least one question before it can be saved/published. |
+| `file_required` | A training upload requires a file. |
+| `no_url` | Log-forwarding was enabled without a forward URL. |
+| `bad_url` / `unsafe_url` | The forward URL must be http(s) and not a loopback/link-local address (SSRF guard). |
+| `bad_id` | A URL path id isn't a valid UUID — usually a stale link/bookmark. |
+| `bad_name` | A backup filename isn't allowed (path-traversal guard). |
+
+**Not found (404)**
+
+| `error` | Meaning → what to do |
+|---|---|
+| `not_found` / `policy_not_found` | The item doesn't exist (or was archived). |
+| `no_file` | The policy has no uploaded file. |
+| `no_quiz` | No quiz exists for this policy. |
+| `missing_file` | The DB references a file that's **missing from storage**. Restore uploads (see `DISASTER-RECOVERY.md` §5) or re-upload. |
+
+**Quiz flow (403)**
+
+| `error` | Meaning → what to do |
+|---|---|
+| `quiz_required` | You must pass the knowledge check before signing. |
+| `no_attempts_left` | All attempts used (default 3). Contact an administrator to reset. |
+
+**Uploads / files / integrations / server**
+
+| `error` | Meaning → what to do |
+|---|---|
+| `upload_failed` | Upload rejected — unsupported type or over the 250 MB limit. |
+| `read_failed` | Error streaming a stored file back — check api logs; the file may be corrupt/missing. |
+| `feed_disabled` | The consumer audit feed is off — enable it in **Integrations**. |
+| `sharepoint_browse_failed` | Graph/SharePoint call failed — see the SharePoint items above (`Sites.Selected` grant + `SHAREPOINT_SITE_ID`). |
+| `backup_failed` | `pg_dump` failed — check api logs and disk space. |
+| `server_error` | Unexpected error. Note the `requestId` and grep the logs: `docker compose logs api \| findstr <requestId>`, then run `npm run diagnose`. |
 
 ---
 
