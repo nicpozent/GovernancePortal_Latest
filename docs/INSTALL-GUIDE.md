@@ -105,6 +105,12 @@ API permissions → Microsoft Graph → **Application permissions**, then
    - Expect `201 Created`. The site id is `host,siteGuid,webGuid` (from
      `GET /sites/{hostname}:/sites/{path}`).
 
+### 5e. Assign people to the app (required for sign-in + least-privilege sync)
+Enterprise applications → **Governance API** → Properties → set **"Assignment
+required?" = Yes**, then **Users and groups** → assign the employees/groups who
+should use the portal. Directory sync reads **only** app-assigned principals
+(least privilege), so anyone who should appear as an employee must be assigned here.
+
 After Azure is configured, restart the API: `docker compose up -d`.
 
 ---

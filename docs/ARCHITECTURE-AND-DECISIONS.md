@@ -1,11 +1,12 @@
-# Birgma Governance Portal — Architecture & Decision Record (deep dive)
+# Birgma Governance Portal — Architecture & Decision Record
 
-_This is the authoritative, in-depth companion to the two summary docs:
-[`ARCHITECTURE.md`](ARCHITECTURE.md) (one-page solution view) and
-[`ARCHITECTURE-DECISIONS.md`](ARCHITECTURE-DECISIONS.md) (lightweight ADR list).
-Where they give the headline, this document gives the reasoning, the alternatives
-that were weighed and rejected, the trade-offs we accepted, and the code that
-implements each decision._
+_This is the **single source of truth** for the system's architecture. Part I
+describes how the application is architected (topology, request lifecycle, auth,
+data model, integrity, resilience); Part II is the full decision record — for each
+choice: the reasoning, the alternatives weighed and rejected, the trade-offs
+accepted, and the code that implements it. The reusable capability catalogue lives
+in its companion [`ARCHITECTURE-BUILDING-BLOCKS.md`](ARCHITECTURE-BUILDING-BLOCKS.md)
+(TOGAF ABBs)._
 
 Audience: engineers and reviewers who need to understand **why** the system is
 shaped the way it is before changing it. Every decision below follows the same
@@ -342,9 +343,8 @@ reusable building blocks** other Birgma solutions can adopt.
 
 # Part II — Decision records (with trade-offs)
 
-> These expand the lightweight entries in `ARCHITECTURE-DECISIONS.md`. Status of
-> each: **Accepted** unless noted. Where a newer decision changed the stack
-> (Node 22, Vite 8, multer 2), it is recorded here as the current state.
+> Status of each: **Accepted** unless noted. Where a newer decision changed the
+> stack (Node 22, Vite 8, multer 2), it is recorded here as the current state.
 
 ## ADR-101 — Delegate identity to Microsoft Entra ID
 **Context.** Birgma/Biltema is a Microsoft 365 tenant; every user already has a

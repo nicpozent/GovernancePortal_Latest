@@ -14,7 +14,7 @@ Three containers behind Microsoft Entra ID:
 
 Integrates with Entra ID (SSO + app roles: `Governance.Admin`, `Governance.Manager`)
 and Microsoft Graph (directory sync, SharePoint document access).
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+See [docs/ARCHITECTURE-AND-DECISIONS.md](docs/ARCHITECTURE-AND-DECISIONS.md) (architecture + decision records) and [docs/ARCHITECTURE-BUILDING-BLOCKS.md](docs/ARCHITECTURE-BUILDING-BLOCKS.md) (TOGAF ABBs).
 
 ## Layout
 ```
@@ -28,7 +28,7 @@ governance-portal/
 │   ├── backups/    pg_dump output (gitignored)
 │   ├── uploads/    manager-uploaded files (gitignored)
 │   └── scripts/    backup-all.ps1, reset.ps1
-├── docs/           architecture, install, deploy-from-scratch, TLS, reset, restore, next-steps
+├── docs/           architecture (+ADRs, ABBs), install guide, TLS, reset, restore, DR, migrations, observability, GDPR
 ├── .env.example    tracked template; real .env files stay ignored
 └── .gitignore
 ```
@@ -53,7 +53,8 @@ Then browse to https://localhost. Full setup: [docs/INSTALL-GUIDE.md](docs/INSTA
 ## Operations
 - **Reset to clean state:** `deploy/scripts/reset.ps1` (see [docs/RESET.md](docs/RESET.md))
 - **Backups & restore:** `deploy/scripts/backup-all.ps1`, [docs/RESTORE.md](docs/RESTORE.md)
-- **Deploy from scratch:** [docs/DEPLOY-FROM-SCRATCH.md](docs/DEPLOY-FROM-SCRATCH.md)
+- **Disaster recovery:** [docs/DISASTER-RECOVERY.md](docs/DISASTER-RECOVERY.md)
+- **Database migrations:** [docs/DATABASE-MIGRATIONS.md](docs/DATABASE-MIGRATIONS.md)
 
 ## Configuration
 All secrets come from `.env` files (`deploy/.env`, `apps/api/.env`) and
