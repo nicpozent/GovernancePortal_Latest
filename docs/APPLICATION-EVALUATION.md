@@ -10,8 +10,8 @@ controls-as-code catalogue (`compliance/controls.json`).
 | | |
 |---|---|
 | Reviewed | 2026-07-09 |
-| Branch | `main @ 7a02b22` |
-| Automated tests | 67 (49 API · 18 web + docker-compose smoke e2e) |
+| Branch | `main` (through ADR-120 / Phase 2d) |
+| Automated tests | 89 (71 API · 18 web + docker-compose smoke e2e) |
 | ADRs | 20 |
 | Mapped controls | 39 (ISO 27001 · NIST CSF · GDPR · Zero Trust · MITRE ATT&CK; 19 techniques) |
 
@@ -21,7 +21,7 @@ controls-as-code catalogue (`compliance/controls.json`).
 |---|---|---|
 | **Overall** | **4.3 / 5** | Internal-production-ready |
 | Dimensions at ★★★★★ | 6 / 18 | Eleven more at ★★★★☆ |
-| Automated tests | 67 | 49 API · 18 web + compose smoke e2e |
+| Automated tests | 89 | 71 API · 18 web + compose smoke e2e |
 | Compliance | 39 controls | CI-gated coverage · 19 ATT&CK techniques |
 
 Rating scale: ★★★★★ Excellent · ★★★★☆ Strong · ★★★☆☆ Adequate · ★★☆☆☆ Partial.
@@ -30,7 +30,7 @@ Rating scale: ★★★★★ Excellent · ★★★★☆ Strong · ★★★�
 
 | # | Dimension | Rating | Evidence | Gaps / next |
 |---|---|---|---|---|
-| 1 | Functional coverage | ★★★★★ | Policy acknowledgement + version re-sign, quizzes with gated signing, manager trainings & uploads, groups + effective-membership, Entra directory sync, dashboards, pull/push audit feed | Approval workflow designed (ADR-120), not yet built |
+| 1 | Functional coverage | ★★★★★ | Policy acknowledgement + version re-sign, quizzes with gated signing, manager trainings & uploads, groups + effective-membership, Entra directory sync, dashboards, pull/push audit feed; **approval workflow delivered** (ADR-120, Phases 1–2d: ordered steps with all/any/quorum, person + directory-group approvers, reusable templates, append-only decision ledger) | — |
 | 2 | Architecture & modularity | ★★★★★ | Three-tier (React SPA / Node-Express / PostgreSQL); per-domain route modules; auth/authz/storage/leader/rate-limit extracted; 20 ADRs + TOGAF ABB/SBB | — |
 | 3 | Frontend engineering | ★★★★☆ | React 18 + Vite 8; app.jsx decomposed 2,613 → 668 lines into domain modules; ESLint (0 errors); code→friendly-message mapping | JavaScript, not TypeScript; component/render tests thin |
 | 4 | Identity & access | ★★★★★ | Entra SSO (MSAL, PKCE); RS256-pinned token validation (issuer/audience/tenant/scope); app-only rejected; app roles; 15-min idle logout | MFA / Conditional Access is Entra-side, not app-enforced |
@@ -55,7 +55,6 @@ Rating scale: ★★★★★ Excellent · ★★★★☆ Strong · ★★★�
 |---|---|---|
 | Medium | Enable MFA / Conditional Access | The single biggest access control; enforced in Entra, not something the app can guarantee |
 | Medium | Turn on at-rest encryption + `PGSSL` | GDPR Art. 32 depends on host BitLocker/CMK and DB-hop TLS — both supported but off by default |
-| Medium | Build the approval workflow (ADR-120) | The per-version pre-publication sign-off chain is designed but not yet implemented |
 | Low | Adopt the GDPR artefacts | ROPA / DPIA / privacy notice are drafted from real behaviour; they need DPO review and sign-off |
 | Low | Incident-response + breach runbook | IR-01 / GDPR-04 are tracked as planned controls (DR exists; security IR does not yet) |
 | Low | Azure migration (IaC + CD + managed PG) | Deferred by choice; absorbs CD, HA edge, PITR, private networking and at-rest in one move |
@@ -73,7 +72,9 @@ subject-rights tooling, and a CI-gated controls-as-code catalogue (39 controls a
 ISO 27001 · NIST CSF · GDPR · Zero Trust · MITRE ATT&CK; ISO 42001 / EU AI Act scoped
 out — no AI) round it out. Remaining items are operator or organizational actions
 (MFA, at-rest encryption, adopting the GDPR pack) and the deferred Azure migration —
-not code defects. The one designed-but-unbuilt feature is the per-version policy
-approval workflow (ADR-120).
+not code defects. The per-version policy approval workflow (ADR-120) — the one
+designed-but-unbuilt feature at the original review — has since been **delivered**
+(Phases 1–2d), with its own detailed documentation package under
+[`approval-workflow/`](approval-workflow/README.md).
 
 _Ratings mirror `main @ 7a02b22` at review time; evidence drawn from code, tests, CI and ADRs._

@@ -5,11 +5,11 @@ const TIER = { 5: ['#1f7a5c', 'Excellent'], 4: ['#213a9e', 'Strong'], 3: ['#b886
 const TILES = [
   ['Overall', '4.3', '/5', 'Internal-production-ready'],
   ['Dimensions at ★★★★★', '6', '/18', 'Eleven more at ★★★★☆'],
-  ['Automated tests', '67', '', '49 API · 18 web + compose smoke e2e'],
+  ['Automated tests', '89', '', '71 API · 18 web + compose smoke e2e'],
   ['Compliance', '39', '', 'controls mapped, CI-gated · 19 ATT&CK techniques'],
 ];
 const ROWS = [
-  [1, 'Functional coverage', 'policy governance', 5, 'Policy acknowledgement + version re-sign, quizzes with gated signing, manager trainings & uploads, groups + effective-membership, Entra directory sync, admin/manager dashboards, pull/push audit feed', 'Approval workflow designed (ADR-120), not yet built'],
+  [1, 'Functional coverage', 'policy governance', 5, 'Policy acknowledgement + version re-sign, quizzes with gated signing, manager trainings & uploads, groups + effective-membership, Entra directory sync, admin/manager dashboards, pull/push audit feed; approval workflow delivered (ADR-120, Phases 1–2d: ordered steps with all/any/quorum, person + directory-group approvers, reusable templates, append-only decision ledger)', '—'],
   [2, 'Architecture & modularity', '', 5, 'Three-tier (React SPA / Node-Express / PostgreSQL); API split into per-domain route modules; auth/authz/storage/leader/rate-limit extracted; 20 ADRs + TOGAF ABB/SBB catalogue', '—'],
   [3, 'Frontend engineering', '', 4, 'React 18 + Vite 8; app.jsx decomposed 2,613 → 668 lines into domain component modules; ESLint flat config (0 errors); code→friendly-message mapping', 'JavaScript, not TypeScript; component/render tests thin'],
   [4, 'Identity & access', '', 5, 'Entra SSO (MSAL, PKCE); RS256-pinned token validation (issuer/audience/tenant/scope); app-only tokens rejected; app roles; 15-min idle logout', 'MFA / Conditional Access is Entra-side, not app-enforced'],
@@ -19,7 +19,7 @@ const ROWS = [
   [8, 'Data protection / GDPR', '', 4, 'Per-subject DSAR export; append-only-preserving erasure + retention CLI; data minimization (5-attr Graph, Sites.Selected); drafted ROPA/DPIA/notice', 'Adopt artefacts (DPO sign-off); breach runbook planned'],
   [9, 'Compliance frameworks', '', 4, 'Controls-as-code: 39 controls mapped to ISO 27001 / NIST CSF / GDPR / Zero Trust / MITRE ATT&CK (19 techniques); CI-gated coverage; AI-framework N/A documented', 'Zero-Trust pillar write-up + SoA adoption pending'],
   [10, 'Observability', '', 4, 'Structured pino logs + correlation ids + secret redaction; Prometheus /metrics (RED + runtime); DB-checked /readyz; container healthchecks; log-shipping + alert design', 'SIEM wiring is an operator step; no distributed tracing yet'],
-  [11, 'Testing', '', 4, '49 API tests (node:test unit + integration on real Postgres) + 18 web (vitest) + docker-compose smoke e2e; coverage-gated (78% lines / 70% branches)', 'No load/perf; UI click-through e2e minimal'],
+  [11, 'Testing', '', 4, '71 API tests (node:test unit + integration on real Postgres) + 18 web (vitest) + docker-compose smoke e2e; coverage-gated (78% lines / 70% branches)', 'No load/perf; UI click-through e2e minimal'],
   [12, 'CI/CD', '', 4, 'GitHub Actions: CI (lint/tests/PG integration/coverage), security (gitleaks/Trivy/semgrep + compliance gate), smoke e2e; Dependabot', 'No automated deploy pipeline (deferred to Azure)'],
   [13, 'Reliability / HA / DR', '', 4, 'Rehearsed DR runbook; off-host DB + uploads backups; app tier stateless-ready (Azure Blob storage, advisory-lock leader election, shared Redis rate-limit)', 'Single-instance today; no PITR/replication until Azure'],
   [14, 'Delivery & runtime', '', 3, 'Docker Compose on a Windows VM + nginx edge; per-service resource limits; healthchecks; TLS termination', 'Single-node; no IaC / k8s; manual deploy; Azure target un-codified'],
@@ -31,7 +31,6 @@ const ROWS = [
 const RISKS = [
   ['med', 'Medium', 'Enable MFA / Conditional Access', 'The single biggest access control; enforced in Entra, not something the app can guarantee'],
   ['med', 'Medium', 'Turn on at-rest encryption + PGSSL', 'GDPR Art. 32 depends on host BitLocker/CMK and DB-hop TLS — both supported but off by default'],
-  ['med', 'Medium', 'Build the approval workflow (ADR-120)', 'The per-version pre-publication sign-off chain is designed but not yet implemented'],
   ['low', 'Low', 'Adopt the GDPR artefacts', 'ROPA / DPIA / privacy notice are drafted from real behaviour; they need DPO review and sign-off'],
   ['low', 'Low', 'Incident-response + breach runbook', 'IR-01 / GDPR-04 are tracked as planned controls (DR exists; security IR does not yet)'],
   ['low', 'Low', 'Azure migration (IaC + CD + managed PG)', 'Deferred by choice; absorbs CD, HA edge, PITR, private networking and at-rest in one move'],
@@ -115,12 +114,13 @@ export function AppEvaluation() {
         <div style={{ font: '700 16px/1.3 "IBM Plex Sans"', color: '#161a26', marginBottom: '8px' }}>Strong — production-ready for a single-instance internal deployment</div>
         <p style={{ margin: 0, font: '400 14px/1.6 "IBM Plex Sans"', color: '#54607a', maxWidth: '82ch' }}>
           A complete, well-architected policy-governance system: Entra-secured, server-enforced RBAC over append-only compliance
-          ledgers, tested (67 automated tests + a docker-compose smoke e2e), observable (Prometheus metrics + DB-checked readiness),
+          ledgers, tested (89 automated tests + a docker-compose smoke e2e), observable (Prometheus metrics + DB-checked readiness),
           and documented to a professional standard (20 ADRs, TOGAF ABB/SBB, full runbooks). HA groundwork makes the app tier
           stateless-ready; a rehearsed DR runbook with off-host backups, GDPR subject-rights tooling, and a CI-gated controls-as-code
           catalogue (39 controls across ISO 27001 · NIST CSF · GDPR · Zero Trust · MITRE ATT&CK; ISO 42001 / EU AI Act scoped out — no
           AI) round it out. Remaining items are operator or organizational actions and the deferred Azure migration — not code
-          defects. The one designed-but-unbuilt feature is the per-version policy approval workflow (ADR-120).
+          defects. The per-version policy approval workflow (ADR-120) — the one designed-but-unbuilt feature at the original
+          review — has since been delivered (Phases 1–2d).
         </p>
       </div>
 
