@@ -1,0 +1,34 @@
+%% Policy approval workflow — happy-path sequence (submit -> approve -> publish)
+sequenceDiagram
+  actor Owner
+  actor Approver
+  participant API as approvals.js
+  participant PG as PostgreSQL
+  participant Mail as Graph mail (config-gated)
+
+  Owner->>API: PUT /policies/:id/approvers {steps:[{approverOids,groupIds,rule,required}]}
+  API->>PG: rewrite policy_approvers / policy_approval_steps / policy_approver_groups
+  API-->>Owner: {ok, steps, approvers, groups}
+
+  Owner->>API: POST /policies/:id/submit
+  API->>PG: expandGroups() — resolve groups -> policy_approvers (from_group), snapshot
+  API->>PG: guard: every step has >=1 approver (else 400 no_approvers)
+  API->>PG: approval_state=in_review, submitted_at=now(), approved_externally=false
+  API-->>Mail: notify step-1 approvers (idempotent via notifications_sent)
+  API-->>Owner: {ok, approval_state:'in_review'}
+
+  Approver->>API: POST /policies/:id/approve
+  API->>PG: append policy_approvals (version, step_position, approver_oid, 'approved')
+  alt step satisfied AND later steps remain
+    API-->>Mail: notify next-step approvers
+    API-->>Approver: {approval_state:'in_review'}
+  else final step satisfied
+    API->>PG: approval_state=approved, approved_version=version
+    API-->>Mail: notify owner "ready to publish"
+    API-->>Approver: {approval_state:'approved'}
+  end
+
+  Owner->>API: POST /policies/:id/publish
+  API->>PG: approval_state=published
+  API-->>Owner: {ok, approval_state:'published'}
+  Note over PG: employees can now see & acknowledge the policy

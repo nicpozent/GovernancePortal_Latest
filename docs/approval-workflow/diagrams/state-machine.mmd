@@ -1,0 +1,17 @@
+%% Policy approval workflow — state machine (ADR-120)
+%% Render: https://mermaid.live or the repo's architecture-diagram.html pattern
+stateDiagram-v2
+  [*] --> Published: existing & new policies (approved_externally=true)
+  Published --> Draft: configure approvers
+  Draft --> InReview: submit (expand groups, freeze members)
+  ChangesRequested --> InReview: resubmit (fresh run, re-resolve groups)
+  Rejected --> InReview: resubmit
+  Published --> InReview: submit (re-approval of a new version)
+  InReview --> InReview: step satisfied, more steps remain
+  InReview --> Approved: final step satisfied (approved_version set)
+  InReview --> ChangesRequested: request-changes (+comment)
+  InReview --> Rejected: reject (+comment)
+  InReview --> Draft: withdraw
+  Approved --> Published: publish
+  InReview --> Published: approve-externally (admin break-glass)
+  Draft --> Published: approve-externally (admin)

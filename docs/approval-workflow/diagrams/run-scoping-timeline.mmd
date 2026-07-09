@@ -1,0 +1,13 @@
+%% Run scoping by submit time (ADR-120-a): a changes-requested -> resubmit cycle
+%% starts a FRESH run without deleting prior evidence. Only decisions with
+%% decided_at >= submitted_at count toward the current run.
+timeline
+  title A policy version routed twice (changes requested, then approved)
+  Run 1 - submitted_at = t0 : t0 submit (state=in_review)
+                            : t1 Approver A approves (step 1)
+                            : t2 Approver B requests changes (+comment) -> changes_requested
+  Between runs             : owner edits the document / re-resolves groups on resubmit
+  Run 2 - submitted_at = t3 : t3 resubmit (state=in_review, fresh run)
+                            : t4 Approver A approves again (Run-1 approval no longer counts)
+                            : t5 Approver B approves -> approved (approved_version set)
+                            : t6 owner publishes -> published

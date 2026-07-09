@@ -3,6 +3,11 @@
 **Status: Phase 1 (MVP) + Phase 2a/2b/2c/2d implemented.** Owner: engineering.
 Companion ADR: ADR-120 in `ARCHITECTURE-AND-DECISIONS.md`.
 
+> 📦 **Full documentation package:** [`approval-workflow/`](approval-workflow/) —
+> High-Level Design, Low-Level Design, detailed user stories, security assessment,
+> ABBs/SBBs, and source diagrams. This file remains the design rationale + shipped
+> log; the package is the detailed reference.
+
 > **Shipped (Phase 1):** `migration_019_approvals.sql`; `src/routes/approvals.js`
 > (configure approvers, submit, approve/reject/request-changes, withdraw, publish,
 > admin approve-externally, status + pending queue); the publish gate in

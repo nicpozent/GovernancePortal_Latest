@@ -1,0 +1,70 @@
+%% Policy approval workflow — data model (migrations 019-022)
+%% Composite primary keys are noted in LLD.md; this ERD shows entities + links.
+erDiagram
+  policies {
+    uuid id PK
+    text approval_state "draft|in_review|changes_requested|rejected|approved|published"
+    bool approved_externally "default true"
+    text approved_version
+    timestamptz submitted_at
+    uuid submitted_by FK
+  }
+  policy_approvers {
+    uuid policy_id FK
+    int position
+    uuid approver_oid FK
+    uuid from_group FK "NULL=named; set=expanded from group at submit"
+  }
+  policy_approval_steps {
+    uuid policy_id FK
+    int position
+    text rule "all|any|quorum"
+    int required "quorum count"
+  }
+  policy_approver_groups {
+    uuid policy_id FK
+    int position
+    uuid group_id FK
+  }
+  policy_approvals {
+    bigint id PK
+    uuid policy_id FK
+    text policy_version
+    int step_position
+    uuid approver_oid FK
+    text decision "approved|rejected|changes_requested"
+    text comment
+    timestamptz decided_at
+  }
+  approval_workflows {
+    bigint id PK
+    text name
+    text description
+    bool active
+  }
+  approval_workflow_steps {
+    bigint workflow_id FK
+    int position
+    text rule
+    int required
+  }
+  approval_workflow_step_approvers {
+    bigint workflow_id FK
+    int position
+    uuid approver_oid FK
+  }
+  approval_workflow_step_groups {
+    bigint workflow_id FK
+    int position
+    uuid group_id FK
+  }
+
+  policies ||--o{ policy_approvers : ""
+  policies ||--o{ policy_approval_steps : ""
+  policies ||--o{ policy_approver_groups : ""
+  policies ||--o{ policy_approvals : "append-only"
+  groups ||--o{ policy_approver_groups : "expanded via view"
+  employees ||--o{ policy_approvers : ""
+  approval_workflows ||--o{ approval_workflow_steps : ""
+  approval_workflow_steps ||--o{ approval_workflow_step_approvers : ""
+  approval_workflow_steps ||--o{ approval_workflow_step_groups : ""
