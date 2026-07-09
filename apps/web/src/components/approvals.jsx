@@ -23,6 +23,27 @@ const DECISION_LABEL = { approved: ['approved', '#1f7a5c'], rejected: ['rejected
 const btn = (bg, fg, bd) => ({ border: '1px solid ' + (bd || bg), background: bg, color: fg, borderRadius: '9px', padding: '9px 15px', font: '600 13px/1 "IBM Plex Sans"', cursor: 'pointer' });
 const fmtWhen = (v) => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleDateString() + ' ' + d.toTimeString().slice(0, 5); };
 
+export function MyApprovals({ pending, onOpen }) {
+  const card = { background: '#fff', border: '1px solid #e6e8ee', borderRadius: '12px', boxShadow: '0 1px 3px rgba(20,30,80,.06)' };
+  const list = pending || [];
+  return (
+    <div style={{ maxWidth: '820px' }}>
+      {!list.length && <div style={{ ...card, padding: '30px', textAlign: 'center', color: '#8a92a6', font: '400 13.5px/1.5 "IBM Plex Sans"' }}>Nothing is awaiting your approval right now.</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {list.map((p) => (
+          <div key={p.id} style={{ ...card, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ font: '600 15px/1.3 "IBM Plex Sans"', color: '#161a26' }}>{p.name}</div>
+              <div style={{ font: '400 12.5px/1.4 "IBM Plex Mono",monospace', color: '#9aa1b2', marginTop: '3px' }}>{p.version}{p.submitted_at ? ' · submitted ' + new Date(p.submitted_at).toLocaleDateString() : ''}</div>
+            </div>
+            <button style={{ border: 'none', background: '#213a9e', color: '#fff', borderRadius: '9px', padding: '10px 17px', font: '600 13px/1 "IBM Plex Sans"', cursor: 'pointer' }} onClick={() => onOpen(p)}>Review</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
   const [data, setData] = useState(null);
   const [emps, setEmps] = useState([]);

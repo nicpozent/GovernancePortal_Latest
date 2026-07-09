@@ -6,10 +6,36 @@
 //  Decisions are append-only (policy_approvals; REVOKE update/delete).
 // ============================================================
 const { pool } = require('../db');
+const cfg = require('../config');
 const { isAdmin, audit } = require('../authz');
+const { sendMail } = require('../services/reminders');
+const { escapeHtml } = require('../util');
 
 // Owner or admin may drive the workflow (submit/withdraw/publish/config).
 const canGovern = (req, p) => isAdmin(req) || (p.owner_oid && p.owner_oid === req.user.oid);
+
+// ── Email notifications (fire-and-forget, config-gated, idempotent) ──
+// No-op unless GRAPH_MAIL_SENDER is set (same as reminders). Each (policy, user,
+// milestone, version) is sent at most once via notifications_sent.
+async function emailOnce(policyId, userOid, milestone, version, subject, bodyLine) {
+  if (!cfg.graph.mailSender || !userOid) return;
+  const dup = (await pool.query(
+    'select 1 from notifications_sent where policy_id=$1 and user_oid=$2 and milestone=$3 and policy_version=$4',
+    [policyId, userOid, milestone, version])).rows[0];
+  if (dup) return;
+  const e = (await pool.query('select coalesce(email, upn) as email, display_name from employees where oid=$1', [userOid])).rows[0];
+  if (!e || !e.email) return;
+  const link = cfg.frontendUrl || '';
+  const html = `<div style="font-family:Segoe UI,Arial,sans-serif;color:#23283a;line-height:1.6">
+    <p>Hello ${escapeHtml(e.display_name || 'there')},</p><p>${bodyLine}</p>
+    ${link ? `<p><a href="${link}" style="background:#213a9e;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block">Open the Governance Portal</a></p>` : ''}
+    <p style="color:#8a92a6;font-size:12px">Automated approval notification from the Birgma Governance Portal.</p></div>`;
+  await sendMail(e.email, subject, html);
+  await pool.query('insert into notifications_sent (policy_id, user_oid, milestone, policy_version) values ($1,$2,$3,$4) on conflict do nothing',
+    [policyId, userOid, milestone, version]);
+}
+// Run a notification without blocking or failing the request.
+const notify = (fn) => { Promise.resolve().then(fn).catch(() => {}); };
 
 // Load the approval context for a policy: ordered approvers, the decision log for
 // the current version, how many approvals the CURRENT run has, and whose turn it is.
@@ -58,6 +84,8 @@ module.exports = (r) => {
       `update policies set approval_state='in_review', approved_externally=false, approved_version=null,
          submitted_at=now(), submitted_by=$2, updated_at=now() where id=$1`, [c.p.id, req.user.oid]);
     await audit(req, 'policy.approval.submit', c.p.name, { id: c.p.id, version: c.p.version });
+    notify(() => emailOnce(c.p.id, c.approvers[0].approver_oid, 'approval:step:1', c.p.version,
+      'Approval requested: ' + c.p.name, `Your approval is requested for <strong>${escapeHtml(c.p.name)}</strong> (${escapeHtml(c.p.version)}).`));
     res.json({ ok: true, approval_state: 'in_review' });
   });
 
@@ -84,6 +112,19 @@ module.exports = (r) => {
       await pool.query('update policies set approval_state=$2, updated_at=now() where id=$1', [c.p.id, state]);
     }
     await audit(req, 'policy.approval.' + decision, c.p.name, { id: c.p.id, version: c.p.version, step: c.currentStep.position });
+    // Notify: the next approver when the chain advances, else the owner of the outcome.
+    if (decision === 'approved' && state === 'in_review') {
+      const next = c.approvers[c.runApproved + 1];
+      if (next) notify(() => emailOnce(c.p.id, next.approver_oid, 'approval:step:' + next.position, c.p.version,
+        'Approval requested: ' + c.p.name, `Your approval is requested for <strong>${escapeHtml(c.p.name)}</strong> (${escapeHtml(c.p.version)}).`));
+    } else if (c.p.owner_oid) {
+      const msg = state === 'approved'
+        ? `<strong>${escapeHtml(c.p.name)}</strong> (${escapeHtml(c.p.version)}) is fully approved and ready to publish.`
+        : decision === 'rejected'
+          ? `<strong>${escapeHtml(c.p.name)}</strong> was rejected. Comment: “${escapeHtml(comment)}”.`
+          : `<strong>${escapeHtml(c.p.name)}</strong> needs changes. Comment: “${escapeHtml(comment)}”.`;
+      notify(() => emailOnce(c.p.id, c.p.owner_oid, 'approval:' + state, c.p.version, 'Approval update: ' + c.p.name, msg));
+    }
     res.json({ ok: true, approval_state: state });
   }
   r.post('/policies/:id/approve', (req, res) => decide(req, res, 'approved'));
