@@ -23,6 +23,7 @@ import { QuizBuilder } from './components/quiz.jsx';
 import { Trainings, TrainingEditor } from './components/trainings.jsx';
 import { AppEvaluation } from './components/evaluation.jsx';
 import { ApprovalsModal, MyApprovals } from './components/approvals.jsx';
+import { WorkflowTemplates } from './components/workflows.jsx';
 
 function App() {
   const [phase, setPhase] = useState('loading');   // loading | signedout | error | ready
@@ -502,6 +503,7 @@ function App() {
     help:['Help & guides', role==='admin' ? 'Setup, administration and installation — searchable' : 'How to read and acknowledge your policies'],
     evaluation:['Application evaluation','Evidence-based maturity assessment across engineering, security & compliance'],
     myapprovals:['My approvals','Policies awaiting your decision'],
+    workflows:['Approval workflows','Reusable approval templates you can apply to any policy'],
   };
 
   // dashboard
@@ -582,6 +584,7 @@ function App() {
             {navBtn('integrations','Integrations', <Ico><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="8" cy="7" r="1.6" fill="currentColor"/><circle cx="16" cy="12" r="1.6" fill="currentColor"/><circle cx="9" cy="17" r="1.6" fill="currentColor"/></Ico>)}
             {navBtn('backups','Backups', <Ico><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></Ico>)}
             {navBtn('myapprovals','My approvals', <Ico><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></Ico>)}
+            {navBtn('workflows','Approval workflows', <Ico><path d="M4 5h6v4H4zM14 15h6v4h-6zM7 9v4a2 2 0 0 0 2 2h5"/></Ico>)}
             {navBtn('help','Help & guides', <Ico><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 1 1 4 2.8c-.8.3-1.1.9-1.1 1.7v.3"/><path d="M12 17h.01"/></Ico>)}
             {navBtn('evaluation','Application evaluation', <Ico><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></Ico>)}
           </React.Fragment>
@@ -656,6 +659,7 @@ function App() {
           {view==='help' && <Help isAdmin={role==='admin'} />}
           {view==='evaluation' && <AppEvaluation />}
           {view==='myapprovals' && <MyApprovals pending={pendingApprovals} onOpen={(p)=>setApprovals({ policy:p })} />}
+          {view==='workflows' && <WorkflowTemplates toast={showToast} />}
         </main>
       </div>
 

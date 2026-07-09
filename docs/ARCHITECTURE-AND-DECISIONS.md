@@ -655,9 +655,10 @@ windows stay defined in code.
 
 ## ADR-120 — Policy approval workflow
 **Status: Accepted — Phase 1 + Phase 2a (notifications + My approvals) + Phase 2b
-(group approvers: all/any/quorum) implemented** (see the "Shipped" note in
-[`POLICY-APPROVAL-WORKFLOW.md`](POLICY-APPROVAL-WORKFLOW.md); Phase 2c — reusable
-templates + run snapshotting — pending).
+(group approvers: all/any/quorum) + Phase 2c (reusable templates, apply-copies-in
+for run isolation) implemented** (see the "Shipped" note in
+[`POLICY-APPROVAL-WORKFLOW.md`](POLICY-APPROVAL-WORKFLOW.md)). Remaining future
+extension: approver targeting by directory group (dynamic membership).
 **Context.** The portal distributes and collects acknowledgements for policies that
 are assumed already approved elsewhere; there is no pre-publication sign-off (draft →
 review → approved) in the system.

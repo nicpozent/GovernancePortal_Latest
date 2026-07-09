@@ -1,7 +1,7 @@
 # Design: Policy Approval Workflow
 
-**Status: Phase 1 (MVP) + Phase 2a/2b implemented; Phase 2c (templates) pending.**
-Owner: engineering. Companion ADR: ADR-120 in `ARCHITECTURE-AND-DECISIONS.md`.
+**Status: Phase 1 (MVP) + Phase 2a/2b/2c implemented.** Owner: engineering.
+Companion ADR: ADR-120 in `ARCHITECTURE-AND-DECISIONS.md`.
 
 > **Shipped (Phase 1):** `migration_019_approvals.sql`; `src/routes/approvals.js`
 > (configure approvers, submit, approve/reject/request-changes, withdraw, publish,
@@ -21,10 +21,20 @@ Owner: engineering. Companion ADR: ADR-120 in `ARCHITECTURE-AND-DECISIONS.md`.
 > accepts either the flat `{ approverOids }` form (one-per-step, rule `all`) or a
 > `{ steps:[{ approverOids, rule, required }] }` form; the modal builds groups.
 >
-> **Deferred to Phase 2c:** reusable workflow *templates* and run snapshotting
-> (`approval_workflows` / `_steps`, `approval_runs` / `_run_steps`) so template
-> edits don't disrupt in-flight runs. The approver model on `policies` today still
-> targets **people** only — group-of-directory-members targeting is part of 2c.
+> **Shipped (Phase 2c):** reusable approval **templates** — admins author named,
+> ordered chains (`approval_workflows` / `approval_workflow_steps` /
+> `approval_workflow_step_approvers`, `migration_021_approval_templates.sql`),
+> managed under **Admin → Approval workflows** (`components/workflows.jsx`).
+> `POST /policies/:id/apply-workflow` **copies** a template's steps into the
+> policy's `policy_approvers` / `policy_approval_steps`, so the policy holds its
+> own snapshot and later template edits never disturb an already-configured or
+> in-flight policy — run isolation without a parallel run-snapshot subsystem.
+> `test/integration/approval-templates.test.js` covers CRUD, apply, the snapshot
+> guarantee, the in-review guard, and delete-safety.
+>
+> **Not yet:** approver targeting by **directory group** (dynamic membership /
+> quorum over a live group) — the model is person-based today; this remains a
+> future extension.
 
 This design adds a pre-publication **approval workflow** to the portal: a policy is
 drafted, routed through an ordered chain of approvers (e.g. Infra Manager → CISO →

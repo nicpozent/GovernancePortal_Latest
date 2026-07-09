@@ -175,4 +175,11 @@ export const api = {
   publishPolicy:    (id)              => request('POST', `/api/policies/${id}/publish`),
   approveExternally:(id)              => request('POST', `/api/policies/${id}/approve-externally`),
   pendingApprovals: ()               => request('GET',  '/api/approvals/pending'),
+  // reusable approval workflow templates (Phase 2c)
+  workflows:        ()               => request('GET',  '/api/approval-workflows'),
+  workflow:         (id)             => request('GET',  `/api/approval-workflows/${id}`),
+  createWorkflow:   (w)              => request('POST', '/api/approval-workflows', w),
+  updateWorkflow:   (id, w)          => request('PUT',  `/api/approval-workflows/${id}`, w),
+  deleteWorkflow:   (id)             => request('DELETE', `/api/approval-workflows/${id}`),
+  applyWorkflow:    (id, workflowId) => request('POST', `/api/policies/${id}/apply-workflow`, { workflowId }),
 };

@@ -42,5 +42,6 @@ require('./groups')(r);
 require('./admin')(r);
 require('./dashboards')(r);
 require('./approvals')(r);
+require('./approval-templates')(r);
 
 module.exports = r;
