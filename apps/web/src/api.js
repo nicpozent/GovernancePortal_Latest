@@ -166,6 +166,7 @@ export const api = {
   // ── policy approval workflow (ADR-120) ──
   policyApprovals:  (id)              => request('GET',  `/api/policies/${id}/approvals`),
   setApprovers:     (id, oids)        => request('PUT',  `/api/policies/${id}/approvers`, { approverOids: oids }),
+  setApproverSteps: (id, steps)       => request('PUT',  `/api/policies/${id}/approvers`, { steps }),
   submitApproval:   (id)              => request('POST', `/api/policies/${id}/submit`),
   withdrawApproval: (id)              => request('POST', `/api/policies/${id}/withdraw`),
   approvePolicy:    (id, comment)     => request('POST', `/api/policies/${id}/approve`, comment ? { comment } : undefined),

@@ -654,8 +654,10 @@ default path has no such dependency. Only the count store is shared — limits a
 windows stay defined in code.
 
 ## ADR-120 — Policy approval workflow
-**Status: Accepted — Phase 1 (MVP) implemented** (see the "Shipped" note in
-[`POLICY-APPROVAL-WORKFLOW.md`](POLICY-APPROVAL-WORKFLOW.md); Phase 2 pending).
+**Status: Accepted — Phase 1 + Phase 2a (notifications + My approvals) + Phase 2b
+(group approvers: all/any/quorum) implemented** (see the "Shipped" note in
+[`POLICY-APPROVAL-WORKFLOW.md`](POLICY-APPROVAL-WORKFLOW.md); Phase 2c — reusable
+templates + run snapshotting — pending).
 **Context.** The portal distributes and collects acknowledgements for policies that
 are assumed already approved elsewhere; there is no pre-publication sign-off (draft →
 review → approved) in the system.

@@ -125,3 +125,82 @@ test('pending queue lists policies awaiting the caller', async (t) => {
   h.asUser(s.a2, []);
   assert.equal((await request(h.app).get('/api/approvals/pending')).body.length, 0);
 });
+
+// ── Phase 2b: group approvers (all / any / quorum) ──
+
+test("group step 'any': a single approval clears the step", async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const s = await scenario();
+  h.asAdmin(s.admin);
+  const set = await request(h.app).put(`/api/policies/${s.pol}/approvers`)
+    .send({ steps: [{ approverOids: [s.a1, s.a2], rule: 'any' }] });
+  assert.equal(set.body.steps, 1);
+  assert.equal(set.body.approvers, 2);
+  await request(h.app).post(`/api/policies/${s.pol}/submit`);
+  // Both a1 and a2 are pending for this step until one acts.
+  h.asUser(s.a2, []);
+  assert.equal((await request(h.app).get('/api/approvals/pending')).body.length, 1);
+  // One approval is enough → approved.
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).body.approval_state, 'approved');
+  // The other member is no longer pending.
+  h.asUser(s.a1, []);
+  assert.equal((await request(h.app).get('/api/approvals/pending')).body.length, 0);
+});
+
+test("group step 'all': every approver must approve; double-approve is blocked", async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const s = await scenario();
+  h.asAdmin(s.admin);
+  await request(h.app).put(`/api/policies/${s.pol}/approvers`).send({ steps: [{ approverOids: [s.a1, s.a2], rule: 'all' }] });
+  await request(h.app).post(`/api/policies/${s.pol}/submit`);
+  h.asUser(s.a1, []);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).body.approval_state, 'in_review', 'one of two → still in review');
+  // a1 approving again is rejected.
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).status, 409);
+  h.asUser(s.a2, []);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).body.approval_state, 'approved', 'both → approved');
+});
+
+test("group step 'quorum': N of M approvals clear the step", async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const s = await scenario();
+  const a3 = await db.seedEmployee({ name: 'CFO' });
+  h.asAdmin(s.admin);
+  await request(h.app).put(`/api/policies/${s.pol}/approvers`).send({ steps: [{ approverOids: [s.a1, s.a2, a3], rule: 'quorum', required: 2 }] });
+  await request(h.app).post(`/api/policies/${s.pol}/submit`);
+  h.asUser(s.a1, []);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).body.approval_state, 'in_review', '1 of 2 quorum');
+  h.asUser(s.a2, []);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).body.approval_state, 'approved', '2 of 2 quorum → approved');
+});
+
+test('mixed steps: an any-group then an all-group, in order', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const s = await scenario();
+  const a3 = await db.seedEmployee({ name: 'CFO' });
+  h.asAdmin(s.admin);
+  await request(h.app).put(`/api/policies/${s.pol}/approvers`).send({
+    steps: [
+      { approverOids: [s.a1, s.a2], rule: 'any' },
+      { approverOids: [s.a2, a3], rule: 'all' },
+    ],
+  });
+  await request(h.app).post(`/api/policies/${s.pol}/submit`);
+  // Step 2 members cannot act before step 1 clears.
+  h.asUser(a3, []);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).body.error, 'not_pending_approver');
+  // Clear step 1 with a1 (any).
+  h.asUser(s.a1, []);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).body.approval_state, 'in_review');
+  // Step 2 is 'all' (a2 + a3).
+  h.asUser(a3, []);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).body.approval_state, 'in_review');
+  h.asUser(s.a2, []);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).body.approval_state, 'approved');
+  // The chain reports two steps with the right rules.
+  h.asAdmin(s.admin);
+  const st = await request(h.app).get(`/api/policies/${s.pol}/approvals`);
+  assert.equal(st.body.steps.length, 2);
+  assert.equal(st.body.steps[0].rule, 'any');
+  assert.equal(st.body.steps[1].rule, 'all');
+});

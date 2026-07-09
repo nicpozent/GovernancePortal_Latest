@@ -1,7 +1,7 @@
 # Design: Policy Approval Workflow
 
-**Status: Phase 1 (MVP) implemented; Phase 2 pending.** Owner: engineering.
-Companion ADR: ADR-120 in `ARCHITECTURE-AND-DECISIONS.md`.
+**Status: Phase 1 (MVP) + Phase 2a/2b implemented; Phase 2c (templates) pending.**
+Owner: engineering. Companion ADR: ADR-120 in `ARCHITECTURE-AND-DECISIONS.md`.
 
 > **Shipped (Phase 1):** `migration_019_approvals.sql`; `src/routes/approvals.js`
 > (configure approvers, submit, approve/reject/request-changes, withdraw, publish,
@@ -9,9 +9,22 @@ Companion ADR: ADR-120 in `ARCHITECTURE-AND-DECISIONS.md`.
 > `authz.js` + the employee `/policies` query; append-only `policy_approvals`;
 > friendly error codes; `test/integration/approvals.test.js`; and the in-app
 > **Admin → Policy Library → Approvals** panel (`components/approvals.jsx`).
-> **Deferred to Phase 2:** reusable workflow templates, group approvers with
-> all/any/quorum, run snapshotting, notifications, and the "my approvals" screen
-> (the `/approvals/pending` API exists; no dedicated UI yet).
+>
+> **Shipped (Phase 2a):** config-gated, idempotent, fire-and-forget email
+> notifications (current/next approver on submit/advance; the owner on
+> approved/rejected/changes) and a dedicated **My approvals** screen backed by
+> `/approvals/pending`.
+>
+> **Shipped (Phase 2b):** group approvers per step with an **all / any / quorum**
+> rule (`migration_020_approval_steps.sql` — a step may hold multiple approvers;
+> `policy_approval_steps` carries the rule + quorum count). `PUT …/approvers`
+> accepts either the flat `{ approverOids }` form (one-per-step, rule `all`) or a
+> `{ steps:[{ approverOids, rule, required }] }` form; the modal builds groups.
+>
+> **Deferred to Phase 2c:** reusable workflow *templates* and run snapshotting
+> (`approval_workflows` / `_steps`, `approval_runs` / `_run_steps`) so template
+> edits don't disrupt in-flight runs. The approver model on `policies` today still
+> targets **people** only — group-of-directory-members targeting is part of 2c.
 
 This design adds a pre-publication **approval workflow** to the portal: a policy is
 drafted, routed through an ordered chain of approvers (e.g. Infra Manager → CISO →
