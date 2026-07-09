@@ -54,3 +54,16 @@ jobs:
         # No --error: findings are reported in the log for triage but don't fail
         # the build yet. Add --error here to enforce once findings are addressed.
         run: semgrep scan --config p/owasp-top-ten --config p/javascript --config p/secrets --skip-unknown-extensions
+
+  compliance:
+    name: compliance catalogue (controls-as-code)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate controls catalogue + coverage freshness
+        # Fails if controls.json is malformed, references an unknown framework/risk,
+        # cites an evidence path that no longer exists, or COVERAGE.md is stale.
+        run: node compliance/report.mjs --check

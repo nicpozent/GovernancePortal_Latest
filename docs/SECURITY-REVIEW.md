@@ -5,6 +5,13 @@ Microsoft Entra ID). Frameworks applied: **STRIDE** (threat model), **MITRE
 ATT&CK** (techniques & mitigations), **ISO/IEC 27001:2022 Annex A** (controls),
 **GDPR** (data-protection obligations). Honest verdict up front, then the detail.
 
+> **Authoritative control mapping:** the control → framework → MITRE technique →
+> evidence mapping (ISO 27001, NIST CSF, GDPR, Zero Trust, ATT&CK) is now maintained
+> as **controls-as-code** in `compliance/controls.json` and rendered to
+> [`compliance/COVERAGE.md`](../compliance/COVERAGE.md) — see
+> [`SECURITY-FRAMEWORKS.md`](SECURITY-FRAMEWORKS.md). It is CI-validated, so it stays
+> in sync with the code; the tables in *this* document are the narrative companion.
+
 > **Verdict:** The application layer is **solid** for its threat model — delegated
 > Entra auth, server-side RBAC, parameterized SQL, append-only audit/signature
 > ledgers, escaped output, upload allowlisting, TLS in transit. The residual risk

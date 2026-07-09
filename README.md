@@ -28,7 +28,8 @@ governance-portal/
 │   ├── backups/    pg_dump output (gitignored)
 │   ├── uploads/    manager-uploaded files (gitignored)
 │   └── scripts/    backup-all.ps1, reset.ps1
-├── docs/           architecture (+ADRs, ABBs), install guide, TLS, reset, restore, DR, migrations, observability, GDPR
+├── docs/           architecture (+ADRs, ABBs), install guide, TLS, reset, restore, DR, migrations, observability, GDPR, frameworks
+├── compliance/     controls-as-code catalogue + coverage report (ISO 27001 / NIST CSF / GDPR / Zero Trust / MITRE ATT&CK)
 ├── .env.example    tracked template; real .env files stay ignored
 └── .gitignore
 ```
