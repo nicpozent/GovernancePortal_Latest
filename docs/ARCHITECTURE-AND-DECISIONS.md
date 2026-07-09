@@ -653,6 +653,30 @@ logged and the client reconnects, but a hard Redis outage degrades limiting. The
 default path has no such dependency. Only the count store is shared — limits and
 windows stay defined in code.
 
+## ADR-120 — Policy approval workflow (proposed)
+**Status: Proposed** — full design in [`POLICY-APPROVAL-WORKFLOW.md`](POLICY-APPROVAL-WORKFLOW.md).
+**Context.** The portal distributes and collects acknowledgements for policies that
+are assumed already approved elsewhere; there is no pre-publication sign-off (draft →
+review → approved) in the system.
+**Decision.** Add a per-policy, **per-version** approval workflow: reusable, ordered
+approval templates (approver by person or group; sequential; all/any/quorum), the
+states Draft/In Review/Changes Requested/Approved/Published/Rejected, and an
+**append-only** `policy_approvals` decision ledger (same integrity model as
+`signatures`/`audit_log`, ADR-109). A **publish gate** keeps unapproved policies
+private — reusing private-by-default — so a policy can't reach employees until
+Approved+Published. Re-approval is tied to the version, dovetailing with the existing
+"new version ⇒ re-sign" logic. The migration defaults **existing** policies to
+`published` / `approved_externally` so current behaviour is unchanged.
+**Alternatives considered.** (a) *Approve in SharePoint/Purview/a separate GRC tool* —
+viable, but splits the record; building it in-portal makes the portal the single
+system of record and reuses its identity/audit/notification machinery. (b) *No
+templates, per-policy approvers only* — simpler, kept as the Phase-1 MVP shape; full
+templates are Phase 2. (c) *Cryptographically signed approvals* — deferred; the
+append-only ledger + token-bound identity matches the existing evidence model.
+**Trade-offs.** A substantial feature (migration, state machine, endpoints, UI, RBAC,
+notifications) touching the publish path and versioning — hence designed and phased
+before implementation. Entirely Azure-independent.
+
 ---
 
 # Part III — Cross-cutting trade-off themes
