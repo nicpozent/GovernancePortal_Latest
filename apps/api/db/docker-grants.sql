@@ -23,3 +23,4 @@ grant select on platform_group_members, admin_users, group_effective_members, ef
 revoke update, delete on signatures    from governance_app;
 revoke update, delete on audit_log     from governance_app;
 revoke update, delete on quiz_attempts from governance_app;
+revoke update, delete on policy_approvals from governance_app;

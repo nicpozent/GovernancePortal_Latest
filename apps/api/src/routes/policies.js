@@ -31,6 +31,7 @@ r.get('/policies', async (req, res) => {
          left join policy_groups pg on pg.policy_id = p.id
          left join groups g on g.id = pg.group_id
         where p.archived_at is null
+          and (p.approved_externally or p.approval_state = 'published')
           and exists (
               select 1 from policy_groups x
                 join (

@@ -41,5 +41,6 @@ require('./quizzes')(r);
 require('./groups')(r);
 require('./admin')(r);
 require('./dashboards')(r);
+require('./approvals')(r);
 
 module.exports = r;

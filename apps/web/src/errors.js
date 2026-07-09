@@ -35,6 +35,12 @@ export const ERROR_MESSAGES = {
   // Quiz flow
   quiz_required: 'Please pass the knowledge check before signing.',
   no_attempts_left: 'You’ve used all your attempts — contact your administrator to reset them.',
+  // Approval workflow
+  no_approvers: 'Add at least one approver before submitting for approval.',
+  not_pending_approver: 'It’s not your turn to approve this — an earlier approver is up first.',
+  comment_required: 'Please add a comment when rejecting or requesting changes.',
+  not_approved: 'This policy must be approved before it can be published.',
+  bad_state: 'This policy isn’t in the right state for that action — refresh and try again.',
   // Uploads / files / integration / server
   upload_failed: 'Upload failed — check the file type and size (max 250 MB).',
   read_failed: 'The file couldn’t be opened. Please try again.',

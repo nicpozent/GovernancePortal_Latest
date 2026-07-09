@@ -68,9 +68,14 @@ async function canManage(req, policyId) {
 // everyone) or they are an effective member of one of its assigned groups.
 async function canRead(req, policyId) {
   if (isAdmin(req)) return true;
-  const p = (await pool.query('select owner_oid from policies where id=$1', [policyId])).rows[0];
+  const p = (await pool.query('select owner_oid, approval_state, approved_externally from policies where id=$1', [policyId])).rows[0];
   if (!p) return false;
   if (p.owner_oid && p.owner_oid === req.user.oid) return true;
+  // Approvers may read a policy while it is under review (before it's published).
+  const appr = await pool.query('select 1 from policy_approvers where policy_id=$1 and approver_oid=$2 limit 1', [policyId, req.user.oid]);
+  if (appr.rowCount > 0) return true;
+  // Everyone else sees a policy only once it is PUBLISHED (or approved externally).
+  if (!(p.approved_externally || p.approval_state === 'published')) return false;
   const r = await pool.query(`
     select 1
      where exists (

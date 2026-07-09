@@ -206,6 +206,16 @@ human hint; `server_error` also returns a `requestId` for log correlation.
 | `quiz_required` | You must pass the knowledge check before signing. |
 | `no_attempts_left` | All attempts used (default 3). Contact an administrator to reset. |
 
+**Approval workflow (400/403/409)**
+
+| `error` | Meaning → what to do |
+|---|---|
+| `no_approvers` | Add at least one approver before submitting a policy for approval. |
+| `not_pending_approver` | It isn't your turn — an earlier approver in the chain must act first (admins can override). |
+| `comment_required` | Rejecting or requesting changes needs a comment. |
+| `not_approved` | Only an approved policy can be published. |
+| `bad_state` | The action isn't valid for the policy's current approval state (e.g. approving one that isn't in review). Refresh and retry. |
+
 **Uploads / files / integrations / server**
 
 | `error` | Meaning → what to do |
