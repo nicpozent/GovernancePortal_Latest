@@ -7,16 +7,16 @@ import { Empty } from './common.jsx';
 
 export function MySignatures({ rows }) {
   return (
-    <div style={{ background:'#fff', border:'1px solid #e6e8ee', borderRadius:'14px', overflow:'hidden', maxWidth:'880px' }}>
-      <div style={{ display:'grid', gridTemplateColumns:'2.4fr 1fr 1.2fr 1fr', gap:'14px', padding:'13px 22px', background:'#f8f9fc', borderBottom:'1px solid #eceef4', font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.06em', color:'#9aa1b2', textTransform:'uppercase' }}>
+    <div style={{ background:'var(--surface)', border:'1px solid var(--ce6e8ee)', borderRadius:'14px', overflow:'hidden', maxWidth:'880px' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'2.4fr 1fr 1.2fr 1fr', gap:'14px', padding:'13px 22px', background:'var(--cf8f9fc)', borderBottom:'1px solid var(--ceceef4)', font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.06em', color:'var(--c9aa1b2)', textTransform:'uppercase' }}>
         <div>Document</div><div>Version</div><div>Signature</div><div>Date</div>
       </div>
       {rows.map((s,i)=>(
-        <div key={i} style={{ display:'grid', gridTemplateColumns:'2.4fr 1fr 1.2fr 1fr', gap:'14px', padding:'15px 22px', borderBottom:'1px solid #f3f4f8', alignItems:'center' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'10px', minWidth:0 }}><span style={typePill(s.type)}>{s.type}</span><span style={{ font:'600 13.5px/1.3 "IBM Plex Sans"', color:'#23283a' }}>{s.policy}</span></div>
-          <div style={{ font:'500 12.5px/1 "IBM Plex Mono",monospace', color:'#54607a' }}>{s.version}</div>
-          <div style={{ font:'400 13px/1.3 "IBM Plex Sans"', color:'#54607a' }}>{s.name}</div>
-          <div style={{ font:'400 12.5px/1 "IBM Plex Mono",monospace', color:'#8a92a6' }}>{s.date}</div>
+        <div key={i} style={{ display:'grid', gridTemplateColumns:'2.4fr 1fr 1.2fr 1fr', gap:'14px', padding:'15px 22px', borderBottom:'1px solid var(--cf3f4f8)', alignItems:'center' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'10px', minWidth:0 }}><span style={typePill(s.type)}>{s.type}</span><span style={{ font:'600 13.5px/1.3 "IBM Plex Sans"', color:'var(--c23283a)' }}>{s.policy}</span></div>
+          <div style={{ font:'500 12.5px/1 "IBM Plex Mono",monospace', color:'var(--c54607a)' }}>{s.version}</div>
+          <div style={{ font:'400 13px/1.3 "IBM Plex Sans"', color:'var(--c54607a)' }}>{s.name}</div>
+          <div style={{ font:'400 12.5px/1 "IBM Plex Mono",monospace', color:'var(--c8a92a6)' }}>{s.date}</div>
         </div>
       ))}
       {!rows.length && <Empty msg="You haven't signed anything yet." />}
@@ -28,25 +28,25 @@ export function MySignatures({ rows }) {
 
 export function AuditLog({ rows, onBackup, backingUp }) {
   const fmtAt = (v) => { const d = new Date(v); return isNaN(d) ? '—' : fmtDT(d); };
-  const actionColor = (a) => a.includes('archive')||a.includes('remove')||a.includes('delete') ? '#c0143c' : a.includes('create')||a.includes('add') ? '#1f7a5c' : '#213a9e';
+  const actionColor = (a) => a.includes('archive')||a.includes('remove')||a.includes('delete') ? 'var(--cc0143c)' : a.includes('create')||a.includes('add') ? 'var(--c1f7a5c)' : 'var(--c213a9e)';
   return (
     <div>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-        <div style={{ font:'400 13px/1.5 "IBM Plex Sans"', color:'#7b8294' }}>Every administrative action is recorded (append-only).</div>
-        <button onClick={onBackup} disabled={backingUp} style={{ display:'inline-flex', alignItems:'center', gap:'8px', border:'1px solid #e6e8ee', background:'#fff', color:'#213a9e', borderRadius:'10px', padding:'10px 16px', font:'600 12.5px/1 "IBM Plex Sans"', cursor:backingUp?'not-allowed':'pointer' }}>
+        <div style={{ font:'400 13px/1.5 "IBM Plex Sans"', color:'var(--c7b8294)' }}>Every administrative action is recorded (append-only).</div>
+        <button onClick={onBackup} disabled={backingUp} style={{ display:'inline-flex', alignItems:'center', gap:'8px', border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c213a9e)', borderRadius:'10px', padding:'10px 16px', font:'600 12.5px/1 "IBM Plex Sans"', cursor:backingUp?'not-allowed':'pointer' }}>
           <Ico size={15} sw={1.9}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></Ico>{backingUp ? 'Preparing…' : 'Download backup (.sql)'}
         </button>
       </div>
-      <div style={{ background:'#fff', border:'1px solid #e6e8ee', borderRadius:'14px', overflow:'hidden' }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1.4fr 1.4fr 1fr', gap:'14px', padding:'13px 22px', background:'#f8f9fc', borderBottom:'1px solid #eceef4', font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.06em', color:'#9aa1b2', textTransform:'uppercase' }}>
+      <div style={{ background:'var(--surface)', border:'1px solid var(--ce6e8ee)', borderRadius:'14px', overflow:'hidden' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1.4fr 1.4fr 1fr', gap:'14px', padding:'13px 22px', background:'var(--cf8f9fc)', borderBottom:'1px solid var(--ceceef4)', font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.06em', color:'var(--c9aa1b2)', textTransform:'uppercase' }}>
         <div>When</div><div>Actor</div><div>Action</div><div>Target</div>
       </div>
       {rows.map((r)=>(
-        <div key={r.id} style={{ display:'grid', gridTemplateColumns:'1.4fr 1.4fr 1.4fr 1fr', gap:'14px', padding:'13px 22px', borderBottom:'1px solid #f3f4f8', alignItems:'center' }}>
-          <div style={{ font:'400 12px/1.3 "IBM Plex Mono",monospace', color:'#8a92a6' }}>{fmtAt(r.at)}</div>
-          <div style={{ font:'500 13px/1.3 "IBM Plex Sans"', color:'#23283a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.actor_name||'—'}</div>
+        <div key={r.id} style={{ display:'grid', gridTemplateColumns:'1.4fr 1.4fr 1.4fr 1fr', gap:'14px', padding:'13px 22px', borderBottom:'1px solid var(--cf3f4f8)', alignItems:'center' }}>
+          <div style={{ font:'400 12px/1.3 "IBM Plex Mono",monospace', color:'var(--c8a92a6)' }}>{fmtAt(r.at)}</div>
+          <div style={{ font:'500 13px/1.3 "IBM Plex Sans"', color:'var(--c23283a)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.actor_name||'—'}</div>
           <div><span style={{ font:'600 11.5px/1 "IBM Plex Mono",monospace', color:actionColor(r.action), background:actionColor(r.action)+'14', padding:'4px 9px', borderRadius:'6px' }}>{r.action}</span></div>
-          <div style={{ font:'400 12.5px/1.3 "IBM Plex Sans"', color:'#54607a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.target||'—'}</div>
+          <div style={{ font:'400 12.5px/1.3 "IBM Plex Sans"', color:'var(--c54607a)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.target||'—'}</div>
         </div>
       ))}
       {!rows.length && <Empty msg="No audit entries yet." />}
@@ -61,35 +61,35 @@ export function Backups({ backups, backingUp, onCreate, onDownloadLive, onDownlo
   return (
     <div>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px', marginBottom:'22px' }}>
-        <div style={{ background:'#fff', border:'1px solid #e6e8ee', borderRadius:'14px', padding:'20px 22px' }}>
-          <div style={{ font:'600 15px/1 "IBM Plex Sans"', color:'#161a26', marginBottom:'6px' }}>Manual backup</div>
-          <div style={{ font:'400 12.5px/1.5 "IBM Plex Sans"', color:'#7b8294', marginBottom:'16px' }}>Download a full database dump to your computer (choose where to save it), or create a copy stored on the server.</div>
+        <div style={{ background:'var(--surface)', border:'1px solid var(--ce6e8ee)', borderRadius:'14px', padding:'20px 22px' }}>
+          <div style={{ font:'600 15px/1 "IBM Plex Sans"', color:'var(--c161a26)', marginBottom:'6px' }}>Manual backup</div>
+          <div style={{ font:'400 12.5px/1.5 "IBM Plex Sans"', color:'var(--c7b8294)', marginBottom:'16px' }}>Download a full database dump to your computer (choose where to save it), or create a copy stored on the server.</div>
           <div style={{ display:'flex', gap:'10px', flexWrap:'wrap' }}>
-            <button onClick={onDownloadLive} disabled={backingUp} style={{ display:'inline-flex', alignItems:'center', gap:'8px', border:'none', background:'#213a9e', color:'#fff', borderRadius:'10px', padding:'11px 16px', font:'600 13px/1 "IBM Plex Sans"', cursor:backingUp?'not-allowed':'pointer' }}>
+            <button onClick={onDownloadLive} disabled={backingUp} style={{ display:'inline-flex', alignItems:'center', gap:'8px', border:'none', background:'var(--c213a9e)', color:'#fff', borderRadius:'10px', padding:'11px 16px', font:'600 13px/1 "IBM Plex Sans"', cursor:backingUp?'not-allowed':'pointer' }}>
               <Ico size={15} sw={1.9}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></Ico>{backingUp?'Preparing…':'Download backup'}
             </button>
-            <button onClick={onCreate} disabled={backingUp} style={{ display:'inline-flex', alignItems:'center', gap:'8px', border:'1px solid #e6e8ee', background:'#fff', color:'#213a9e', borderRadius:'10px', padding:'11px 16px', font:'600 13px/1 "IBM Plex Sans"', cursor:backingUp?'not-allowed':'pointer' }}>
+            <button onClick={onCreate} disabled={backingUp} style={{ display:'inline-flex', alignItems:'center', gap:'8px', border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c213a9e)', borderRadius:'10px', padding:'11px 16px', font:'600 13px/1 "IBM Plex Sans"', cursor:backingUp?'not-allowed':'pointer' }}>
               <Ico size={15} sw={2.2} d="M12 5v14M5 12h14" />Create server backup
             </button>
           </div>
         </div>
-        <div style={{ background:'#fff', border:'1px solid #e6e8ee', borderRadius:'14px', padding:'20px 22px' }}>
-          <div style={{ font:'600 15px/1 "IBM Plex Sans"', color:'#161a26', marginBottom:'6px' }}>Automated backups</div>
-          <div style={{ font:'400 12.5px/1.6 "IBM Plex Sans"', color:'#7b8294' }}>The server writes a database backup automatically to <code style={{ font:'600 12px/1 "IBM Plex Mono",monospace', color:'#54607a' }}>./backups</code> on the host and keeps the 14 most recent. For a full-application backup (code + certs + config + DB), run <code style={{ font:'600 12px/1 "IBM Plex Mono",monospace', color:'#54607a' }}>backup-all.ps1</code> — schedule it weekly via Windows Task Scheduler.</div>
+        <div style={{ background:'var(--surface)', border:'1px solid var(--ce6e8ee)', borderRadius:'14px', padding:'20px 22px' }}>
+          <div style={{ font:'600 15px/1 "IBM Plex Sans"', color:'var(--c161a26)', marginBottom:'6px' }}>Automated backups</div>
+          <div style={{ font:'400 12.5px/1.6 "IBM Plex Sans"', color:'var(--c7b8294)' }}>The server writes a database backup automatically to <code style={{ font:'600 12px/1 "IBM Plex Mono",monospace', color:'var(--c54607a)' }}>./backups</code> on the host and keeps the 14 most recent. For a full-application backup (code + certs + config + DB), run <code style={{ font:'600 12px/1 "IBM Plex Mono",monospace', color:'var(--c54607a)' }}>backup-all.ps1</code> — schedule it weekly via Windows Task Scheduler.</div>
         </div>
       </div>
-      <div style={{ background:'#fff', border:'1px solid #e6e8ee', borderRadius:'14px', overflow:'hidden' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'2.4fr 1fr 1fr', gap:'14px', padding:'13px 22px', background:'#f8f9fc', borderBottom:'1px solid #eceef4', font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.06em', color:'#9aa1b2', textTransform:'uppercase' }}>
+      <div style={{ background:'var(--surface)', border:'1px solid var(--ce6e8ee)', borderRadius:'14px', overflow:'hidden' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'2.4fr 1fr 1fr', gap:'14px', padding:'13px 22px', background:'var(--cf8f9fc)', borderBottom:'1px solid var(--ceceef4)', font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.06em', color:'var(--c9aa1b2)', textTransform:'uppercase' }}>
           <div>Backup file</div><div>Created</div><div>Size</div>
         </div>
         {backups.map((b)=>(
-          <div key={b.name} style={{ display:'grid', gridTemplateColumns:'2.4fr 1fr 1fr', gap:'14px', padding:'13px 22px', borderBottom:'1px solid #f3f4f8', alignItems:'center' }}>
-            <button onClick={()=>onDownloadStored(b.name)} style={{ textAlign:'left', border:'none', background:'transparent', cursor:'pointer', font:'600 13px/1.3 "IBM Plex Sans"', color:'#213a9e', display:'inline-flex', alignItems:'center', gap:'8px', minWidth:0 }}>
+          <div key={b.name} style={{ display:'grid', gridTemplateColumns:'2.4fr 1fr 1fr', gap:'14px', padding:'13px 22px', borderBottom:'1px solid var(--cf3f4f8)', alignItems:'center' }}>
+            <button onClick={()=>onDownloadStored(b.name)} style={{ textAlign:'left', border:'none', background:'transparent', cursor:'pointer', font:'600 13px/1.3 "IBM Plex Sans"', color:'var(--c213a9e)', display:'inline-flex', alignItems:'center', gap:'8px', minWidth:0 }}>
               <Ico size={15} sw={1.9}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></Ico>
               <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{b.name}</span>
             </button>
-            <div style={{ font:'400 12px/1 "IBM Plex Mono",monospace', color:'#8a92a6' }}>{fmtAt(b.at)}</div>
-            <div style={{ font:'400 12px/1 "IBM Plex Mono",monospace', color:'#8a92a6' }}>{kb(b.size)}</div>
+            <div style={{ font:'400 12px/1 "IBM Plex Mono",monospace', color:'var(--c8a92a6)' }}>{fmtAt(b.at)}</div>
+            <div style={{ font:'400 12px/1 "IBM Plex Mono",monospace', color:'var(--c8a92a6)' }}>{kb(b.size)}</div>
           </div>
         ))}
         {!backups.length && <Empty msg="No server backups yet — click “Create server backup”." />}
@@ -182,27 +182,27 @@ export function Help({ isAdmin }) {
   const hi = (text) => {
     if (!needle) return text;
     const i = text.toLowerCase().indexOf(needle); if (i<0) return text;
-    return [<React.Fragment key="a">{text.slice(0,i)}</React.Fragment>, <mark key="b" style={{ background:'#fef3c7', color:'inherit', borderRadius:'3px' }}>{text.slice(i,i+needle.length)}</mark>, <React.Fragment key="c">{text.slice(i+needle.length)}</React.Fragment>];
+    return [<React.Fragment key="a">{text.slice(0,i)}</React.Fragment>, <mark key="b" style={{ background:'var(--cfef3c7)', color:'inherit', borderRadius:'3px' }}>{text.slice(i,i+needle.length)}</mark>, <React.Fragment key="c">{text.slice(i+needle.length)}</React.Fragment>];
   };
   return (
     <div style={{ maxWidth:'860px' }}>
       <div style={{ position:'relative', marginBottom:'20px' }}>
-        <span style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'#9aa1b2', display:'flex' }}><Ico size={17}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></Ico></span>
-        <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Search help — keywords or a phrase (e.g. quiz, backup, invalid_token, sign in)" style={{ width:'100%', border:'1px solid #d8dce6', borderRadius:'11px', padding:'13px 14px 13px 42px', font:'400 14px/1 "IBM Plex Sans"', outline:'none', boxSizing:'border-box' }} />
+        <span style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'var(--c9aa1b2)', display:'flex' }}><Ico size={17}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></Ico></span>
+        <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Search help — keywords or a phrase (e.g. quiz, backup, invalid_token, sign in)" style={{ width:'100%', border:'1px solid var(--cd8dce6)', borderRadius:'11px', padding:'13px 14px 13px 42px', font:'400 14px/1 "IBM Plex Sans"', outline:'none', boxSizing:'border-box' }} />
       </div>
-      {needle && <div style={{ font:'400 12.5px/1 "IBM Plex Mono",monospace', color:'#8a92a6', marginBottom:'14px' }}>{matches.length} result{matches.length===1?'':'s'} for \u201c{q.trim()}\u201d</div>}
+      {needle && <div style={{ font:'400 12.5px/1 "IBM Plex Mono",monospace', color:'var(--c8a92a6)', marginBottom:'14px' }}>{matches.length} result{matches.length===1?'':'s'} for \u201c{q.trim()}\u201d</div>}
       {cats.map((cat)=>(
         <div key={cat} style={{ marginBottom:'22px' }}>
-          <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.09em', textTransform:'uppercase', color:'#9aa1b2', marginBottom:'11px' }}>{cat}</div>
+          <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.09em', textTransform:'uppercase', color:'var(--c9aa1b2)', marginBottom:'11px' }}>{cat}</div>
           <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
             {matches.filter((t)=>t.cat===cat).map((t)=>{ const id = t.title; const isOpen = open===id || !!needle; return (
-              <div key={id} style={{ background:'#fff', border:'1px solid #e6e8ee', borderRadius:'12px', overflow:'hidden' }}>
+              <div key={id} style={{ background:'var(--surface)', border:'1px solid var(--ce6e8ee)', borderRadius:'12px', overflow:'hidden' }}>
                 <button onClick={()=>setOpen(open===id?null:id)} style={{ width:'100%', textAlign:'left', border:'none', background:'transparent', cursor:'pointer', padding:'15px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
-                  <span style={{ font:'600 14.5px/1.3 "IBM Plex Sans"', color:'#23283a' }}>{hi(t.title)}</span>
-                  <span style={{ color:'#aab0c0', display:'flex', flex:'none', transform:isOpen?'rotate(90deg)':'none', transition:'transform .15s' }}><Ico size={17} d="M9 6l6 6-6 6" /></span>
+                  <span style={{ font:'600 14.5px/1.3 "IBM Plex Sans"', color:'var(--c23283a)' }}>{hi(t.title)}</span>
+                  <span style={{ color:'var(--caab0c0)', display:'flex', flex:'none', transform:isOpen?'rotate(90deg)':'none', transition:'transform .15s' }}><Ico size={17} d="M9 6l6 6-6 6" /></span>
                 </button>
                 {isOpen && <div style={{ padding:'0 18px 16px', display:'flex', flexDirection:'column', gap:'10px' }}>
-                  {t.body.map((para,i)=>(<p key={i} style={{ margin:0, font:'400 13.5px/1.65 "IBM Plex Sans"', color:'#54607a' }}>{hi(para)}</p>))}
+                  {t.body.map((para,i)=>(<p key={i} style={{ margin:0, font:'400 13.5px/1.65 "IBM Plex Sans"', color:'var(--c54607a)' }}>{hi(para)}</p>))}
                 </div>}
               </div>
             ); })}
@@ -210,7 +210,7 @@ export function Help({ isAdmin }) {
         </div>
       ))}
       {!matches.length && <Empty msg={'No help topics match \u201c'+q.trim()+'\u201d. Try a different keyword.'} />}
-      {isAdmin && <div style={{ marginTop:'8px', font:'400 12px/1.6 "IBM Plex Mono",monospace', color:'#9aa1b2', background:'#f6f8fb', borderRadius:'10px', padding:'14px 16px' }}>The complete installation, Azure setup and security guide also ships as <strong style={{ color:'#54607a' }}>INSTALL-GUIDE.md</strong> in the deployment package.</div>}
+      {isAdmin && <div style={{ marginTop:'8px', font:'400 12px/1.6 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)', background:'var(--cf6f8fb)', borderRadius:'10px', padding:'14px 16px' }}>The complete installation, Azure setup and security guide also ships as <strong style={{ color:'var(--c54607a)' }}>INSTALL-GUIDE.md</strong> in the deployment package.</div>}
     </div>
   );
 }
@@ -249,49 +249,49 @@ export function Integrations() {
     try { const r = await api.testForward(); setTestResult(r.ok ? 'Delivered (HTTP ' + r.status + ')' : ('Failed: ' + (r.error || ('HTTP ' + r.status)))); await load(); }
     catch (e) { setTestResult('Failed: ' + e.message); }
   };
-  if (!c) return <div style={{ padding:'60px', textAlign:'center' }}><span style={{ width:'28px', height:'28px', border:'3px solid #d2d7e3', borderTopColor:'#213a9e', borderRadius:'50%', display:'inline-block', animation:'spin .7s linear infinite' }}></span></div>;
-  const lbl = { font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.05em', color:'#9aa1b2', textTransform:'uppercase', marginBottom:'7px' };
-  const inp = { width:'100%', border:'1px solid #d8dce6', borderRadius:'9px', padding:'10px 12px', font:'400 13.5px/1.3 "IBM Plex Sans"', outline:'none', boxSizing:'border-box' };
-  const card = { background:'#fff', border:'1px solid #e6e8ee', borderRadius:'14px', padding:'22px 24px', marginBottom:'18px' };
+  if (!c) return <div style={{ padding:'60px', textAlign:'center' }}><span style={{ width:'28px', height:'28px', border:'3px solid var(--cd2d7e3)', borderTopColor:'var(--c213a9e)', borderRadius:'50%', display:'inline-block', animation:'spin .7s linear infinite' }}></span></div>;
+  const lbl = { font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.05em', color:'var(--c9aa1b2)', textTransform:'uppercase', marginBottom:'7px' };
+  const inp = { width:'100%', border:'1px solid var(--cd8dce6)', borderRadius:'9px', padding:'10px 12px', font:'400 13.5px/1.3 "IBM Plex Sans"', outline:'none', boxSizing:'border-box' };
+  const card = { background:'var(--surface)', border:'1px solid var(--ce6e8ee)', borderRadius:'14px', padding:'22px 24px', marginBottom:'18px' };
   const feedUrl = (window.location.origin + '/feed/audit');
   return (
     <div style={{ maxWidth:'780px' }}>
       {/* PUSH */}
       <div style={card}>
-        <div style={{ font:'600 15px/1 "IBM Plex Sans"', color:'#161a26', marginBottom:'5px' }}>Forward events to another system (push)</div>
-        <div style={{ font:'400 12.5px/1.6 "IBM Plex Sans"', color:'#7b8294', marginBottom:'16px' }}>Every audit/business event is POSTed as JSON to your endpoint (SIEM, Logic App, webhook). Fire-and-forget — it never affects portal operations.</div>
+        <div style={{ font:'600 15px/1 "IBM Plex Sans"', color:'var(--c161a26)', marginBottom:'5px' }}>Forward events to another system (push)</div>
+        <div style={{ font:'400 12.5px/1.6 "IBM Plex Sans"', color:'var(--c7b8294)', marginBottom:'16px' }}>Every audit/business event is POSTed as JSON to your endpoint (SIEM, Logic App, webhook). Fire-and-forget — it never affects portal operations.</div>
         <div style={{ marginBottom:'13px' }}><div style={lbl}>Endpoint URL</div><input value={forwardUrl} onChange={(e)=>setForwardUrl(e.target.value)} placeholder="https://your-system.example.com/ingest" style={inp} /></div>
-        <div style={{ marginBottom:'13px' }}><div style={lbl}>Bearer token <span style={{ textTransform:'none', color:'#aab0c0', fontWeight:400 }}>(sent as Authorization header)</span></div><input type="password" value={tokenDirty ? forwardToken : ''} onChange={(e)=>{ setForwardToken(e.target.value); setTokenDirty(true); }} placeholder={c.forwardTokenSet ? '•••••••• (leave blank to keep)' : 'optional'} style={inp} /></div>
+        <div style={{ marginBottom:'13px' }}><div style={lbl}>Bearer token <span style={{ textTransform:'none', color:'var(--caab0c0)', fontWeight:400 }}>(sent as Authorization header)</span></div><input type="password" value={tokenDirty ? forwardToken : ''} onChange={(e)=>{ setForwardToken(e.target.value); setTokenDirty(true); }} placeholder={c.forwardTokenSet ? '•••••••• (leave blank to keep)' : 'optional'} style={inp} /></div>
         <label style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', cursor:'pointer' }}>
-          <input type="checkbox" checked={forwardEnabled} onChange={(e)=>setForwardEnabled(e.target.checked)} style={{ width:'17px', height:'17px', accentColor:'#213a9e' }} />
-          <span style={{ font:'500 13.5px/1.4 "IBM Plex Sans"', color:'#2a3142' }}>Enable forwarding</span>
+          <input type="checkbox" checked={forwardEnabled} onChange={(e)=>setForwardEnabled(e.target.checked)} style={{ width:'17px', height:'17px', accentColor:'var(--c213a9e)' }} />
+          <span style={{ font:'500 13.5px/1.4 "IBM Plex Sans"', color:'var(--c2a3142)' }}>Enable forwarding</span>
         </label>
         <div style={{ display:'flex', alignItems:'center', gap:'12px', flexWrap:'wrap' }}>
-          <button onClick={save} disabled={busy} style={{ border:'none', background:'#213a9e', color:'#fff', borderRadius:'10px', padding:'11px 20px', font:'600 13px/1 "IBM Plex Sans"', cursor:busy?'not-allowed':'pointer' }}>Save</button>
-          <button onClick={test} style={{ border:'1px solid #e6e8ee', background:'#fff', color:'#213a9e', borderRadius:'10px', padding:'11px 18px', font:'600 13px/1 "IBM Plex Sans"', cursor:'pointer' }}>Send test event</button>
-          {testResult && <span style={{ font:'500 12.5px/1 "IBM Plex Mono",monospace', color: /Deliv/.test(testResult)?'#1f8a5b':'#c0143c' }}>{testResult}</span>}
-          {c.lastForwardAt && <span style={{ font:'400 11.5px/1 "IBM Plex Mono",monospace', color:'#9aa1b2' }}>last: {c.lastForwardStatus} · {fmtDate(c.lastForwardAt)}</span>}
+          <button onClick={save} disabled={busy} style={{ border:'none', background:'var(--c213a9e)', color:'#fff', borderRadius:'10px', padding:'11px 20px', font:'600 13px/1 "IBM Plex Sans"', cursor:busy?'not-allowed':'pointer' }}>Save</button>
+          <button onClick={test} style={{ border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c213a9e)', borderRadius:'10px', padding:'11px 18px', font:'600 13px/1 "IBM Plex Sans"', cursor:'pointer' }}>Send test event</button>
+          {testResult && <span style={{ font:'500 12.5px/1 "IBM Plex Mono",monospace', color: /Deliv/.test(testResult)?'var(--c1f8a5b)':'var(--cc0143c)' }}>{testResult}</span>}
+          {c.lastForwardAt && <span style={{ font:'400 11.5px/1 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)' }}>last: {c.lastForwardStatus} · {fmtDate(c.lastForwardAt)}</span>}
         </div>
       </div>
       {/* PULL */}
       <div style={card}>
-        <div style={{ font:'600 15px/1 "IBM Plex Sans"', color:'#161a26', marginBottom:'5px' }}>Expose an API to consume (pull)</div>
-        <div style={{ font:'400 12.5px/1.6 "IBM Plex Sans"', color:'#7b8294', marginBottom:'16px' }}>External systems read the audit feed with an API key. Supports <code style={{ background:'#f3f4f8', padding:'1px 5px', borderRadius:'4px' }}>?since=ISO8601</code> and <code style={{ background:'#f3f4f8', padding:'1px 5px', borderRadius:'4px' }}>?limit=N</code> for incremental polling.</div>
+        <div style={{ font:'600 15px/1 "IBM Plex Sans"', color:'var(--c161a26)', marginBottom:'5px' }}>Expose an API to consume (pull)</div>
+        <div style={{ font:'400 12.5px/1.6 "IBM Plex Sans"', color:'var(--c7b8294)', marginBottom:'16px' }}>External systems read the audit feed with an API key. Supports <code style={{ background:'var(--cf3f4f8)', padding:'1px 5px', borderRadius:'4px' }}>?since=ISO8601</code> and <code style={{ background:'var(--cf3f4f8)', padding:'1px 5px', borderRadius:'4px' }}>?limit=N</code> for incremental polling.</div>
         <label style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px', cursor:'pointer' }}>
-          <input type="checkbox" checked={feedEnabled} onChange={(e)=>setFeedEnabled(e.target.checked)} style={{ width:'17px', height:'17px', accentColor:'#213a9e' }} />
-          <span style={{ font:'500 13.5px/1.4 "IBM Plex Sans"', color:'#2a3142' }}>Enable consumer feed</span>
+          <input type="checkbox" checked={feedEnabled} onChange={(e)=>setFeedEnabled(e.target.checked)} style={{ width:'17px', height:'17px', accentColor:'var(--c213a9e)' }} />
+          <span style={{ font:'500 13.5px/1.4 "IBM Plex Sans"', color:'var(--c2a3142)' }}>Enable consumer feed</span>
         </label>
-        <div style={{ marginBottom:'13px' }}><div style={lbl}>Feed endpoint</div><div style={{ font:'500 12.5px/1.4 "IBM Plex Mono",monospace', color:'#41485a', background:'#f6f8fb', border:'1px solid #e6e9f1', borderRadius:'8px', padding:'10px 12px', wordBreak:'break-all' }}>GET {feedUrl}</div></div>
+        <div style={{ marginBottom:'13px' }}><div style={lbl}>Feed endpoint</div><div style={{ font:'500 12.5px/1.4 "IBM Plex Mono",monospace', color:'var(--c41485a)', background:'var(--cf6f8fb)', border:'1px solid var(--ce6e9f1)', borderRadius:'8px', padding:'10px 12px', wordBreak:'break-all' }}>GET {feedUrl}</div></div>
         <div style={{ marginBottom:'14px' }}><div style={lbl}>API key</div>
           {newKey
-            ? <div style={{ font:'500 12.5px/1.4 "IBM Plex Mono",monospace', color:'#1f8a5b', background:'#e6f3ec', border:'1px solid #cfe8da', borderRadius:'8px', padding:'10px 12px', wordBreak:'break-all' }}>{newKey}<div style={{ color:'#54607a', marginTop:'5px', fontWeight:400 }}>Copy it now — it won't be shown again.</div></div>
-            : <div style={{ font:'400 12.5px/1.4 "IBM Plex Sans"', color: c.feedKeySet?'#54607a':'#aab0c0' }}>{c.feedKeySet ? 'A key is set (hidden). Rotate to issue a new one.' : 'No key yet — generate one.'}</div>}
+            ? <div style={{ font:'500 12.5px/1.4 "IBM Plex Mono",monospace', color:'var(--c1f8a5b)', background:'var(--ce6f3ec)', border:'1px solid var(--ccfe8da)', borderRadius:'8px', padding:'10px 12px', wordBreak:'break-all' }}>{newKey}<div style={{ color:'var(--c54607a)', marginTop:'5px', fontWeight:400 }}>Copy it now — it won't be shown again.</div></div>
+            : <div style={{ font:'400 12.5px/1.4 "IBM Plex Sans"', color: c.feedKeySet?'var(--c54607a)':'var(--caab0c0)' }}>{c.feedKeySet ? 'A key is set (hidden). Rotate to issue a new one.' : 'No key yet — generate one.'}</div>}
         </div>
         <div style={{ display:'flex', gap:'12px' }}>
-          <button onClick={save} disabled={busy} style={{ border:'none', background:'#213a9e', color:'#fff', borderRadius:'10px', padding:'11px 20px', font:'600 13px/1 "IBM Plex Sans"', cursor:busy?'not-allowed':'pointer' }}>Save</button>
-          <button onClick={rotate} style={{ border:'1px solid #e6e8ee', background:'#fff', color:'#213a9e', borderRadius:'10px', padding:'11px 18px', font:'600 13px/1 "IBM Plex Sans"', cursor:'pointer' }}>{c.feedKeySet ? 'Rotate key' : 'Generate key'}</button>
+          <button onClick={save} disabled={busy} style={{ border:'none', background:'var(--c213a9e)', color:'#fff', borderRadius:'10px', padding:'11px 20px', font:'600 13px/1 "IBM Plex Sans"', cursor:busy?'not-allowed':'pointer' }}>Save</button>
+          <button onClick={rotate} style={{ border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c213a9e)', borderRadius:'10px', padding:'11px 18px', font:'600 13px/1 "IBM Plex Sans"', cursor:'pointer' }}>{c.feedKeySet ? 'Rotate key' : 'Generate key'}</button>
         </div>
-        <div style={{ marginTop:'15px', font:'400 11.5px/1.5 "IBM Plex Mono",monospace', color:'#9aa1b2' }}>Example:<br/>curl -H "Authorization: Bearer &lt;key&gt;" "{feedUrl}?since=2026-01-01T00:00:00Z"</div>
+        <div style={{ marginTop:'15px', font:'400 11.5px/1.5 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)' }}>Example:<br/>curl -H "Authorization: Bearer &lt;key&gt;" "{feedUrl}?since=2026-01-01T00:00:00Z"</div>
       </div>
     </div>
   );

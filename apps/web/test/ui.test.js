@@ -36,9 +36,9 @@ describe('formatting helpers', () => {
   });
 
   it('pctColor maps compliance bands to colours', () => {
-    expect(pctColor(90)).toBe('#1f7a5c'); // green ≥80
-    expect(pctColor(60)).toBe('#b7791f'); // amber ≥50
-    expect(pctColor(20)).toBe('#c0143c'); // red <50
+    expect(pctColor(90)).toBe('var(--c1f7a5c)'); // green ≥80
+    expect(pctColor(60)).toBe('var(--cb7791f)'); // amber ≥50
+    expect(pctColor(20)).toBe('var(--cc0143c)'); // red <50
   });
 
   it('initials takes up to two upper-cased initials', () => {
@@ -48,8 +48,8 @@ describe('formatting helpers', () => {
   });
 
   it('statusPill returns a distinct style object per status', () => {
-    expect(statusPill('signed').color).toBe('#1f7a5c');
-    expect(statusPill('pending').color).toBe('#9a6712');
-    expect(statusPill('outdated').color).toBe('#c0143c');
+    expect(statusPill('signed').color).toBe('var(--c1f7a5c)');
+    expect(statusPill('pending').color).toBe('var(--c9a6712)');
+    expect(statusPill('outdated').color).toBe('var(--cc0143c)');
   });
 });

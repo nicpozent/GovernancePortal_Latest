@@ -9,6 +9,7 @@ import * as ReactDOM from 'react-dom/client';
 import { csvField } from './format.js';
 import { api, initAuth, currentAccount, signIn, signOut, localSignOut, getToken, CONFIG_OK, IDLE_LOGOUT_MS, API_BASE } from './api.js';
 import { seg, fmtDate, initials, parseEmployeeCsv, groupIdsFor, Ico } from './ui.jsx';
+import { useTheme } from './theme.js';
 
 const { useState, useEffect, useRef, useCallback } = React;
 
@@ -77,6 +78,7 @@ function App() {
   const [policyHistory, setPolicyHistory] = useState(null);
   const [approvals, setApprovals] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState([]);
+  const { theme, toggle: toggleTheme } = useTheme();
   const openPolicyHistory = async (p) => {
     setPolicyHistory({ policy: p, rows: null });
     try { const rows = await api.policyVersions(p.id); setPolicyHistory({ policy: p, rows }); }
@@ -511,10 +513,10 @@ function App() {
   const totalReq = polRows.reduce((a,r)=>a+r.assigned,0), totalSigned = polRows.reduce((a,r)=>a+r.signed,0);
   const overall = totalReq ? Math.round(totalSigned/totalReq*100) : 0, pending = totalReq - totalSigned;
   const kpis = [
-    { label:'Overall compliance', value:overall+'%', sub:totalSigned+' of '+totalReq+' acknowledgements', accent:'#213a9e' },
-    { label:'Active policies', value:String(dashRows.length), sub:'across document types', accent:'#0078c0' },
-    { label:'Employees', value:String(emps.length), sub:'synced from AD / Entra ID', accent:'#1f7a5c' },
-    { label:'Pending signatures', value:String(pending<0?0:pending), sub:'awaiting acknowledgement', accent:'#d81848' },
+    { label:'Overall compliance', value:overall+'%', sub:totalSigned+' of '+totalReq+' acknowledgements', accent:'var(--c213a9e)' },
+    { label:'Active policies', value:String(dashRows.length), sub:'across document types', accent:'var(--c0078c0)' },
+    { label:'Employees', value:String(emps.length), sub:'synced from AD / Entra ID', accent:'var(--c1f7a5c)' },
+    { label:'Pending signatures', value:String(pending<0?0:pending), sub:'awaiting acknowledgement', accent:'var(--cd81848)' },
   ];
   const recent = recentSigs.slice(0,6).map((s)=>({ name:s.display_name||s.full_name, policy:s.policy_name, version:s.policy_version, date:fmtDate(s.signed_at), initials:initials(s.display_name||s.full_name) }));
   const attention = polRows.slice().sort((a,b)=>a.pct-b.pct).slice(0,4);
@@ -554,28 +556,28 @@ function App() {
   const navBtn = (v, label, icon) => {
     const on = view===v;
     return (
-      <button onClick={()=>go(v)} style={{ display:'flex', alignItems:'center', gap:'11px', width:'100%', textAlign:'left', border:'none', cursor:'pointer', fontFamily:'"IBM Plex Sans",sans-serif', fontSize:'14px', lineHeight:1, fontWeight:on?600:500, padding:'11px 13px', borderRadius:'10px', marginBottom:'3px', background:on?'#213a9e':'transparent', color:on?'#fff':'#454c5e' }}>
+      <button onClick={()=>go(v)} style={{ display:'flex', alignItems:'center', gap:'11px', width:'100%', textAlign:'left', border:'none', cursor:'pointer', fontFamily:'"IBM Plex Sans",sans-serif', fontSize:'14px', lineHeight:1, fontWeight:on?600:500, padding:'11px 13px', borderRadius:'10px', marginBottom:'3px', background:on?'var(--c213a9e)':'transparent', color:on?'#fff':'var(--c454c5e)' }}>
         {icon}{label}
       </button>
     );
   };
 
   return (
-    <div style={{ display:'flex', height:'100vh', width:'100%', overflow:'hidden', background:'#eef1f5' }}>
+    <div style={{ display:'flex', height:'100vh', width:'100%', overflow:'hidden', background:'var(--ceef1f5)' }}>
       {/* sidebar */}
-      <aside style={{ width:'264px', flex:'none', background:'#fff', borderRight:'1px solid #e6e8ee', display:'flex', flexDirection:'column', padding:'22px 16px 16px' }}>
-        <div style={{ padding:'6px 8px 16px', marginBottom:'14px', borderBottom:'1px solid #eef0f4' }}>
+      <aside style={{ width:'264px', flex:'none', background:'var(--surface)', borderRight:'1px solid var(--ce6e8ee)', display:'flex', flexDirection:'column', padding:'22px 16px 16px' }}>
+        <div style={{ padding:'6px 8px 16px', marginBottom:'14px', borderBottom:'1px solid var(--ceef0f4)' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
             <img src="assets/birgma-logo.png" alt="Birgma" style={{ height:'26px', width:'auto', display:'block' }} />
-            <span style={{ width:'1px', height:'30px', background:'#e1e4ec', display:'block' }}></span>
+            <span style={{ width:'1px', height:'30px', background:'var(--ce1e4ec)', display:'block' }}></span>
             <img src="assets/biltema-logo.png" alt="Biltema" style={{ height:'12px', width:'auto', display:'block' }} />
           </div>
-          <div style={{ font:'500 11px/1.3 "IBM Plex Mono",monospace', color:'#9aa1b2', letterSpacing:'.04em', marginTop:'11px' }}>Governance Portal</div>
+          <div style={{ font:'500 11px/1.3 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)', letterSpacing:'.04em', marginTop:'11px' }}>Governance Portal</div>
         </div>
 
         {role==='admin' && (
           <React.Fragment>
-            <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.1em', color:'#9aa1b2', textTransform:'uppercase', padding:'8px 12px 10px' }}>Administration</div>
+            <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.1em', color:'var(--c9aa1b2)', textTransform:'uppercase', padding:'8px 12px 10px' }}>Administration</div>
             {navBtn('dashboard','Dashboard', <Ico><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></Ico>)}
             {navBtn('policies','Policy library', <Ico><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></Ico>)}
             {navBtn('employees','Employees', <Ico><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 4.2A3 3 0 0 1 16 10M21 20c0-2.6-1.6-4.6-4-5.2"/></Ico>)}
@@ -591,11 +593,11 @@ function App() {
         )}
         {role==='manager' && (
           <React.Fragment>
-            <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.1em', color:'#9aa1b2', textTransform:'uppercase', padding:'8px 12px 10px' }}>Training management</div>
+            <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.1em', color:'var(--c9aa1b2)', textTransform:'uppercase', padding:'8px 12px 10px' }}>Training management</div>
             {navBtn('mdashboard','Team dashboard', <Ico><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></Ico>)}
             {navBtn('trainings','Documents', <Ico><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 2 6 2s6-1 6-2v-5"/></Ico>)}
             {navBtn('myapprovals','My approvals', <Ico><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></Ico>)}
-            <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.1em', color:'#9aa1b2', textTransform:'uppercase', padding:'18px 12px 10px' }}>My governance</div>
+            <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.1em', color:'var(--c9aa1b2)', textTransform:'uppercase', padding:'18px 12px 10px' }}>My governance</div>
             {navBtn('mypolicies','My policies', <Ico><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6M9 14l2 2 4-4"/></Ico>)}
             {navBtn('mysignatures','My signatures', <Ico><path d="M3 17l4 4 6-10M14 7l3-3 3 3-9 9"/><path d="M3 21h6"/></Ico>)}
             {navBtn('help','Help', <Ico><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 1 1 4 2.8c-.8.3-1.1.9-1.1 1.7v.3"/><path d="M12 17h.01"/></Ico>)}
@@ -603,7 +605,7 @@ function App() {
         )}
         {role==='employee' && (
           <React.Fragment>
-            <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.1em', color:'#9aa1b2', textTransform:'uppercase', padding:'8px 12px 10px' }}>My governance</div>
+            <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.1em', color:'var(--c9aa1b2)', textTransform:'uppercase', padding:'8px 12px 10px' }}>My governance</div>
             {navBtn('mypolicies','My policies', <Ico><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6M9 14l2 2 4-4"/></Ico>)}
             {navBtn('mysignatures','My signatures', <Ico><path d="M3 17l4 4 6-10M14 7l3-3 3 3-9 9"/><path d="M3 21h6"/></Ico>)}
             {navBtn('help','Help', <Ico><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 1 1 4 2.8c-.8.3-1.1.9-1.1 1.7v.3"/><path d="M12 17h.01"/></Ico>)}
@@ -611,35 +613,41 @@ function App() {
         )}
 
         <div style={{ marginTop:'auto' }}></div>
-        <button onClick={signOut} style={{ display:'flex', alignItems:'center', gap:'10px', border:'1px solid #e6e8ee', background:'#fff', color:'#54607a', borderRadius:'10px', padding:'10px 13px', font:'600 13px/1 "IBM Plex Sans",sans-serif', cursor:'pointer', marginBottom:'12px' }}>
+        <button onClick={signOut} style={{ display:'flex', alignItems:'center', gap:'10px', border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c54607a)', borderRadius:'10px', padding:'10px 13px', font:'600 13px/1 "IBM Plex Sans",sans-serif', cursor:'pointer', marginBottom:'12px' }}>
           <Ico size={16}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></Ico>Sign out
         </button>
-        <div style={{ borderTop:'1px solid #eef0f4', padding:'14px 12px 4px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <span style={{ font:'500 11px/1.3 "IBM Plex Mono",monospace', color:'#a7adbd' }}>Birgma Group</span>
-          <span style={{ font:'500 11px/1.3 "IBM Plex Mono",monospace', color:'#c2c7d3' }}>v1.0</span>
+        <div style={{ borderTop:'1px solid var(--ceef0f4)', padding:'14px 12px 4px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <span style={{ font:'500 11px/1.3 "IBM Plex Mono",monospace', color:'var(--ca7adbd)' }}>Birgma Group</span>
+          <span style={{ font:'500 11px/1.3 "IBM Plex Mono",monospace', color:'var(--cc2c7d3)' }}>v1.0</span>
         </div>
       </aside>
 
       {/* main column */}
       <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column' }}>
-        <header style={{ flex:'none', height:'74px', background:'#fff', borderBottom:'1px solid #e6e8ee', display:'flex', alignItems:'center', gap:'20px', padding:'0 30px' }}>
+        <header style={{ flex:'none', height:'74px', background:'var(--surface)', borderBottom:'1px solid var(--ce6e8ee)', display:'flex', alignItems:'center', gap:'20px', padding:'0 30px' }}>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ font:'600 19px/1.2 "IBM Plex Sans"', color:'#161a26' }}>{titles[view][0]}</div>
-            <div style={{ font:'400 13px/1.3 "IBM Plex Sans"', color:'#7b8294', marginTop:'2px' }}>{titles[view][1]}</div>
+            <div style={{ font:'600 19px/1.2 "IBM Plex Sans"', color:'var(--c161a26)' }}>{titles[view][0]}</div>
+            <div style={{ font:'400 13px/1.3 "IBM Plex Sans"', color:'var(--c7b8294)', marginTop:'2px' }}>{titles[view][1]}</div>
           </div>
-          {busy && <span style={{ width:'16px', height:'16px', border:'2px solid #d2d7e3', borderTopColor:'#213a9e', borderRadius:'50%', display:'inline-block', animation:'spin .7s linear infinite' }}></span>}
+          {busy && <span style={{ width:'16px', height:'16px', border:'2px solid var(--cd2d7e3)', borderTopColor:'var(--c213a9e)', borderRadius:'50%', display:'inline-block', animation:'spin .7s linear infinite' }}></span>}
           {(isAdmin || isManager) && (
-            <div style={{ display:'flex', background:'#eef0f4', borderRadius:'11px', padding:'4px', width:isAdmin&&isManager?'330px':'230px' }}>
+            <div style={{ display:'flex', background:'var(--ceef0f4)', borderRadius:'11px', padding:'4px', width:isAdmin&&isManager?'330px':'230px' }}>
               <button style={seg(role==='employee')} onClick={()=>switchRole('employee')}>Employee</button>
               {isManager && <button style={seg(role==='manager')} onClick={()=>switchRole('manager')}>Manager</button>}
               {isAdmin && <button style={seg(role==='admin')} onClick={()=>switchRole('admin')}>Admin</button>}
             </div>
           )}
-          <div style={{ display:'flex', alignItems:'center', gap:'11px', paddingLeft:'18px', borderLeft:'1px solid #eceef4' }}>
-            <div style={{ width:'38px', height:'38px', borderRadius:'50%', background:'#213a9e', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', font:'600 13px/1 "IBM Plex Sans"' }}>{persona.initials}</div>
+          <button onClick={toggleTheme} aria-label={theme==='dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme==='dark' ? 'Light mode' : 'Dark mode'}
+            style={{ width:'38px', height:'38px', flex:'none', borderRadius:'10px', border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c54607a)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+            {theme==='dark'
+              ? <Ico size={17}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></Ico>
+              : <Ico size={17}><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></Ico>}
+          </button>
+          <div style={{ display:'flex', alignItems:'center', gap:'11px', paddingLeft:'18px', borderLeft:'1px solid var(--ceceef4)' }}>
+            <div style={{ width:'38px', height:'38px', borderRadius:'50%', background:'var(--c213a9e)', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', font:'600 13px/1 "IBM Plex Sans"' }}>{persona.initials}</div>
             <div>
-              <div style={{ font:'600 13.5px/1.2 "IBM Plex Sans"', color:'#1a1d29' }}>{persona.name}</div>
-              <div style={{ font:'400 11.5px/1.3 "IBM Plex Sans"', color:'#8a92a6' }}>{persona.sub}</div>
+              <div style={{ font:'600 13.5px/1.2 "IBM Plex Sans"', color:'var(--c1a1d29)' }}>{persona.name}</div>
+              <div style={{ font:'400 11.5px/1.3 "IBM Plex Sans"', color:'var(--c8a92a6)' }}>{persona.sub}</div>
             </div>
           </div>
         </header>

@@ -1,7 +1,7 @@
 /* Admin → Application Evaluation. Evidence-based maturity scorecard, mirroring
    docs/APPLICATION-EVALUATION.md (the source of record). Static, read-only. */
 
-const TIER = { 5: ['#1f7a5c', 'Excellent'], 4: ['#213a9e', 'Strong'], 3: ['#b8860b', 'Adequate'], 2: ['#c0143c', 'Partial'] };
+const TIER = { 5: ['var(--c1f7a5c)', 'Excellent'], 4: ['var(--c213a9e)', 'Strong'], 3: ['var(--cb8860b)', 'Adequate'], 2: ['var(--cc0143c)', 'Partial'] };
 const TILES = [
   ['Overall', '4.3', '/5', 'Internal-production-ready'],
   ['Dimensions at ★★★★★', '6', '/18', 'Eleven more at ★★★★☆'],
@@ -35,13 +35,13 @@ const RISKS = [
   ['low', 'Low', 'Incident-response + breach runbook', 'IR-01 / GDPR-04 are tracked as planned controls (DR exists; security IR does not yet)'],
   ['low', 'Low', 'Azure migration (IaC + CD + managed PG)', 'Deferred by choice; absorbs CD, HA edge, PITR, private networking and at-rest in one move'],
 ];
-const PILL = { med: ['#9a6712', '#fbf1d9'], low: ['#1f7a5c', '#e6f3ec'], hi: ['#c0143c', '#fbe7ec'] };
+const PILL = { med: ['var(--c9a6712)', 'var(--cfbf1d9)'], low: ['var(--c1f7a5c)', 'var(--ce6f3ec)'], hi: ['var(--cc0143c)', 'var(--cfbe7ec)'] };
 
-const card = { background: '#fff', border: '1px solid #e6e8ee', borderRadius: '14px', boxShadow: '0 1px 3px rgba(20,30,80,.06)' };
+const card = { background: 'var(--surface)', border: '1px solid var(--ce6e8ee)', borderRadius: '14px', boxShadow: '0 1px 3px rgba(20,30,80,.06)' };
 const mono = '"IBM Plex Mono",monospace';
-const th = { textAlign: 'left', font: '600 11px/1 ' + mono, letterSpacing: '.08em', textTransform: 'uppercase', color: '#9aa1b2', padding: '13px 16px', borderBottom: '1px solid #e6e8ee', background: '#f7f8fb', whiteSpace: 'nowrap' };
-const td = { padding: '14px 16px', borderBottom: '1px solid #eef1f6', verticalAlign: 'top', font: '400 13.5px/1.5 "IBM Plex Sans"', color: '#41485a' };
-const secHead = { font: '600 11px/1 ' + mono, letterSpacing: '.12em', textTransform: 'uppercase', color: '#9aa1b2', margin: '30px 0 12px' };
+const th = { textAlign: 'left', font: '600 11px/1 ' + mono, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--c9aa1b2)', padding: '13px 16px', borderBottom: '1px solid var(--ce6e8ee)', background: 'var(--cf7f8fb)', whiteSpace: 'nowrap' };
+const td = { padding: '14px 16px', borderBottom: '1px solid var(--ceef1f6)', verticalAlign: 'top', font: '400 13.5px/1.5 "IBM Plex Sans"', color: 'var(--c41485a)' };
+const secHead = { font: '600 11px/1 ' + mono, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--c9aa1b2)', margin: '30px 0 12px' };
 
 function Dots({ n }) {
   const c = TIER[n][0];
@@ -49,7 +49,7 @@ function Dots({ n }) {
     <span style={{ display: 'inline-flex', flexDirection: 'column', gap: '5px' }}>
       <span style={{ display: 'inline-flex', gap: '3px' }}>
         {[1, 2, 3, 4, 5].map((i) => (
-          <span key={i} style={{ width: '9px', height: '9px', borderRadius: '50%', background: i <= n ? c : '#e2e6f3' }}></span>
+          <span key={i} style={{ width: '9px', height: '9px', borderRadius: '50%', background: i <= n ? c : 'var(--ce2e6f3)' }}></span>
         ))}
       </span>
       <span style={{ font: '600 11px/1 ' + mono, letterSpacing: '.04em', textTransform: 'uppercase', color: c }}>{TIER[n][1]}</span>
@@ -64,9 +64,9 @@ export function AppEvaluation() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '10px' }}>
         {TILES.map((t, i) => (
           <div key={i} style={{ ...card, padding: '18px' }}>
-            <div style={{ font: '600 11px/1 ' + mono, letterSpacing: '.08em', textTransform: 'uppercase', color: '#9aa1b2', marginBottom: '8px' }}>{t[0]}</div>
-            <div style={{ font: '700 30px/1 "IBM Plex Sans"', color: '#161a26', letterSpacing: '-.02em' }}>{t[1]}<span style={{ font: '600 15px/1 "IBM Plex Sans"', color: '#9aa1b2' }}>{t[2]}</span></div>
-            <div style={{ font: '400 12.5px/1.4 "IBM Plex Sans"', color: '#6b7280', marginTop: '5px' }}>{t[3]}</div>
+            <div style={{ font: '600 11px/1 ' + mono, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--c9aa1b2)', marginBottom: '8px' }}>{t[0]}</div>
+            <div style={{ font: '700 30px/1 "IBM Plex Sans"', color: 'var(--c161a26)', letterSpacing: '-.02em' }}>{t[1]}<span style={{ font: '600 15px/1 "IBM Plex Sans"', color: 'var(--c9aa1b2)' }}>{t[2]}</span></div>
+            <div style={{ font: '400 12.5px/1.4 "IBM Plex Sans"', color: 'var(--c6b7280)', marginTop: '5px' }}>{t[3]}</div>
           </div>
         ))}
       </div>
@@ -79,11 +79,11 @@ export function AppEvaluation() {
             <tbody>
               {ROWS.map((r) => (
                 <tr key={r[0]}>
-                  <td style={{ ...td, font: '400 12.5px/1.5 ' + mono, color: '#9aa1b2' }}>{r[0]}</td>
-                  <td style={{ ...td, font: '600 13.5px/1.4 "IBM Plex Sans"', color: '#1a1d29' }}>{r[1]}{r[2] ? <span style={{ color: '#9aa1b2', fontWeight: 400 }}> {r[2]}</span> : null}</td>
+                  <td style={{ ...td, font: '400 12.5px/1.5 ' + mono, color: 'var(--c9aa1b2)' }}>{r[0]}</td>
+                  <td style={{ ...td, font: '600 13.5px/1.4 "IBM Plex Sans"', color: 'var(--c1a1d29)' }}>{r[1]}{r[2] ? <span style={{ color: 'var(--c9aa1b2)', fontWeight: 400 }}> {r[2]}</span> : null}</td>
                   <td style={{ ...td, whiteSpace: 'nowrap' }}><Dots n={r[3]} /></td>
                   <td style={{ ...td, maxWidth: '46ch' }}>{r[4]}</td>
-                  <td style={{ ...td, maxWidth: '32ch', color: '#6b7280' }}>{r[5]}</td>
+                  <td style={{ ...td, maxWidth: '32ch', color: 'var(--c6b7280)' }}>{r[5]}</td>
                 </tr>
               ))}
             </tbody>
@@ -100,7 +100,7 @@ export function AppEvaluation() {
               {RISKS.map((k, i) => (
                 <tr key={i}>
                   <td style={td}><span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: '20px', font: '600 11px/1.5 ' + mono, color: PILL[k[0]][0], background: PILL[k[0]][1] }}>{k[1]}</span></td>
-                  <td style={{ ...td, font: '600 13.5px/1.4 "IBM Plex Sans"', color: '#1a1d29' }}>{k[2]}</td>
+                  <td style={{ ...td, font: '600 13.5px/1.4 "IBM Plex Sans"', color: 'var(--c1a1d29)' }}>{k[2]}</td>
                   <td style={{ ...td, maxWidth: '52ch' }}>{k[3]}</td>
                 </tr>
               ))}
@@ -110,9 +110,9 @@ export function AppEvaluation() {
       </div>
 
       <div style={secHead}>Verdict</div>
-      <div style={{ ...card, borderLeft: '4px solid #1f7a5c', padding: '20px 22px' }}>
-        <div style={{ font: '700 16px/1.3 "IBM Plex Sans"', color: '#161a26', marginBottom: '8px' }}>Strong — production-ready for a single-instance internal deployment</div>
-        <p style={{ margin: 0, font: '400 14px/1.6 "IBM Plex Sans"', color: '#54607a', maxWidth: '82ch' }}>
+      <div style={{ ...card, borderLeft: '4px solid var(--c1f7a5c)', padding: '20px 22px' }}>
+        <div style={{ font: '700 16px/1.3 "IBM Plex Sans"', color: 'var(--c161a26)', marginBottom: '8px' }}>Strong — production-ready for a single-instance internal deployment</div>
+        <p style={{ margin: 0, font: '400 14px/1.6 "IBM Plex Sans"', color: 'var(--c54607a)', maxWidth: '82ch' }}>
           A complete, well-architected policy-governance system: Entra-secured, server-enforced RBAC over append-only compliance
           ledgers, tested (89 automated tests + a docker-compose smoke e2e), observable (Prometheus metrics + DB-checked readiness),
           and documented to a professional standard (20 ADRs, TOGAF ABB/SBB, full runbooks). HA groundwork makes the app tier
@@ -124,7 +124,7 @@ export function AppEvaluation() {
         </p>
       </div>
 
-      <div style={{ font: '400 12px/1.5 ' + mono, color: '#a7adbd', marginTop: '22px' }}>
+      <div style={{ font: '400 12px/1.5 ' + mono, color: 'var(--ca7adbd)', marginTop: '22px' }}>
         Source of record: docs/APPLICATION-EVALUATION.md · compliance/controls.json · ratings mirror the repository at review time.
       </div>
     </div>

@@ -6,12 +6,12 @@ const { useState, useEffect } = React;
 import { api } from '../api.js';
 
 export const APPROVAL_BADGE = {
-  draft: ['Draft', '#54607a', '#eef1f6'],
-  in_review: ['In review', '#9a6712', '#fbf1d9'],
-  changes_requested: ['Changes requested', '#c2410c', '#fbe9dd'],
-  rejected: ['Rejected', '#c0143c', '#fbe7ec'],
-  approved: ['Approved', '#213a9e', '#e7ebfb'],
-  published: ['Published', '#1f7a5c', '#e6f3ec'],
+  draft: ['Draft', 'var(--c54607a)', 'var(--ceef1f6)'],
+  in_review: ['In review', 'var(--c9a6712)', 'var(--cfbf1d9)'],
+  changes_requested: ['Changes requested', 'var(--cc2410c)', 'var(--cfbe9dd)'],
+  rejected: ['Rejected', 'var(--cc0143c)', 'var(--cfbe7ec)'],
+  approved: ['Approved', 'var(--c213a9e)', 'var(--ce7ebfb)'],
+  published: ['Published', 'var(--c1f7a5c)', 'var(--ce6f3ec)'],
 };
 
 export function ApprovalBadge({ state }) {
@@ -19,7 +19,7 @@ export function ApprovalBadge({ state }) {
   return <span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: '999px', font: '600 10.5px/1.4 "IBM Plex Mono",monospace', letterSpacing: '.03em', textTransform: 'uppercase', color: b[1], background: b[2] }}>{b[0]}</span>;
 }
 
-const DECISION_LABEL = { approved: ['approved', '#1f7a5c'], rejected: ['rejected', '#c0143c'], changes_requested: ['requested changes', '#c2410c'] };
+const DECISION_LABEL = { approved: ['approved', 'var(--c1f7a5c)'], rejected: ['rejected', 'var(--cc0143c)'], changes_requested: ['requested changes', 'var(--cc2410c)'] };
 const btn = (bg, fg, bd) => ({ border: '1px solid ' + (bd || bg), background: bg, color: fg, borderRadius: '9px', padding: '9px 15px', font: '600 13px/1 "IBM Plex Sans"', cursor: 'pointer' });
 const fmtWhen = (v) => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleDateString() + ' ' + d.toTimeString().slice(0, 5); };
 export const ruleLabel = (s) => {
@@ -52,8 +52,8 @@ export function StepBuilder({ steps, setSteps, emps, groups, disabled }) {
   const addGroup = (i, id) => { if (!id) return; patchStep(i, { groupIds: [...new Set([...(steps[i].groupIds || []), id])] }); };
   const removeGroup = (i, id) => patchStep(i, { groupIds: (steps[i].groupIds || []).filter((x) => x !== id) });
   const chip = (bg, bd, fg, xbg, xfg) => ({ span: { display: 'inline-flex', alignItems: 'center', gap: '6px', background: bg, border: '1px solid ' + bd, borderRadius: '999px', padding: '4px 6px 4px 11px', font: '500 12.5px/1.2 "IBM Plex Sans"', color: fg }, x: { border: 'none', background: xbg, color: xfg, width: '17px', height: '17px', borderRadius: '50%', cursor: 'pointer', font: '600 10px/1 "IBM Plex Mono"' } });
-  const peopleChip = chip('#eef1fb', '#d5ddf5', '#23283a', '#d5ddf5', '#3a4bb0');
-  const groupChip = chip('#e9f5ef', '#c8e6d7', '#1f5c45', '#c8e6d7', '#1f7a5c');
+  const peopleChip = chip('var(--ceef1fb)', 'var(--cd5ddf5)', 'var(--c23283a)', 'var(--cd5ddf5)', 'var(--c3a4bb0)');
+  const groupChip = chip('var(--ce9f5ef)', 'var(--cc8e6d7)', 'var(--c1f5c45)', 'var(--cc8e6d7)', 'var(--c1f7a5c)');
   return (
     <div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -62,21 +62,21 @@ export function StepBuilder({ steps, setSteps, emps, groups, disabled }) {
           const avail = activeEmps.filter((e) => !s.approverOids.includes(e.oid));
           const availGroups = allGroups.filter((g) => !gids.includes(g.id));
           return (
-            <div key={i} style={{ border: '1px solid #e6e8ee', borderRadius: '11px', padding: '12px 13px', background: '#fbfbfd' }}>
+            <div key={i} style={{ border: '1px solid var(--ce6e8ee)', borderRadius: '11px', padding: '12px 13px', background: 'var(--cfbfbfd)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '9px', flexWrap: 'wrap' }}>
-                <span style={{ font: '600 12.5px/1 "IBM Plex Sans"', color: '#54607a' }}>Step {i + 1}</span>
-                <select value={s.rule} disabled={disabled} onChange={(e) => patchStep(i, { rule: e.target.value })} style={{ border: '1px solid #d8dce6', borderRadius: '8px', padding: '5px 8px', font: '500 12.5px/1 "IBM Plex Sans"', color: '#23283a', background: '#fff' }}>
+                <span style={{ font: '600 12.5px/1 "IBM Plex Sans"', color: 'var(--c54607a)' }}>Step {i + 1}</span>
+                <select value={s.rule} disabled={disabled} onChange={(e) => patchStep(i, { rule: e.target.value })} style={{ border: '1px solid var(--cd8dce6)', borderRadius: '8px', padding: '5px 8px', font: '500 12.5px/1 "IBM Plex Sans"', color: 'var(--c23283a)', background: 'var(--surface)' }}>
                   <option value="all">All must approve</option>
                   <option value="any">Any one approves</option>
                   <option value="quorum">Quorum…</option>
                 </select>
                 {s.rule === 'quorum' && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px', font: '500 12px/1 "IBM Plex Sans"', color: '#54607a' }}>
-                    <input type="number" min={1} value={s.required} disabled={disabled} onChange={(e) => patchStep(i, { required: e.target.value })} style={{ width: '52px', border: '1px solid #d8dce6', borderRadius: '8px', padding: '5px 7px', font: '500 12.5px/1 "IBM Plex Mono"' }} />
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px', font: '500 12px/1 "IBM Plex Sans"', color: 'var(--c54607a)' }}>
+                    <input type="number" min={1} value={s.required} disabled={disabled} onChange={(e) => patchStep(i, { required: e.target.value })} style={{ width: '52px', border: '1px solid var(--cd8dce6)', borderRadius: '8px', padding: '5px 7px', font: '500 12.5px/1 "IBM Plex Mono"' }} />
                     must approve
                   </span>
                 )}
-                <button disabled={disabled} style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#c0143c', font: '600 12px/1 "IBM Plex Sans"', cursor: 'pointer' }} onClick={() => removeStep(i)}>Remove step</button>
+                <button disabled={disabled} style={{ marginLeft: 'auto', border: 'none', background: 'none', color: 'var(--cc0143c)', font: '600 12px/1 "IBM Plex Sans"', cursor: 'pointer' }} onClick={() => removeStep(i)}>Remove step</button>
               </div>
               {(s.approverOids.length > 0 || gids.length > 0) && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '9px' }}>
@@ -91,12 +91,12 @@ export function StepBuilder({ steps, setSteps, emps, groups, disabled }) {
                 </div>
               )}
               <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
-                <select value="" disabled={disabled} onChange={(e) => { addApprover(i, e.target.value); e.target.value = ''; }} style={{ flex: '1 1 200px', border: '1px solid #d8dce6', borderRadius: '8px', padding: '7px 9px', font: '400 12.5px/1 "IBM Plex Sans"', color: '#54607a', background: '#fff' }}>
+                <select value="" disabled={disabled} onChange={(e) => { addApprover(i, e.target.value); e.target.value = ''; }} style={{ flex: '1 1 200px', border: '1px solid var(--cd8dce6)', borderRadius: '8px', padding: '7px 9px', font: '400 12.5px/1 "IBM Plex Sans"', color: 'var(--c54607a)', background: 'var(--surface)' }}>
                   <option value="">+ Add person…</option>
                   {avail.map((e) => <option key={e.oid} value={e.oid}>{e.display_name}{e.department ? ' · ' + e.department : ''}</option>)}
                 </select>
                 {allGroups.length > 0 && (
-                  <select value="" disabled={disabled} onChange={(e) => { addGroup(i, e.target.value); e.target.value = ''; }} style={{ flex: '1 1 200px', border: '1px solid #d8dce6', borderRadius: '8px', padding: '7px 9px', font: '400 12.5px/1 "IBM Plex Sans"', color: '#1f5c45', background: '#fff' }}>
+                  <select value="" disabled={disabled} onChange={(e) => { addGroup(i, e.target.value); e.target.value = ''; }} style={{ flex: '1 1 200px', border: '1px solid var(--cd8dce6)', borderRadius: '8px', padding: '7px 9px', font: '400 12.5px/1 "IBM Plex Sans"', color: 'var(--c1f5c45)', background: 'var(--surface)' }}>
                     <option value="">+ Add group…</option>
                     {availGroups.map((g) => <option key={g.id} value={g.id}>{g.name}{typeof g.member_count !== 'undefined' ? ` (${g.member_count})` : ''}</option>)}
                   </select>
@@ -106,25 +106,25 @@ export function StepBuilder({ steps, setSteps, emps, groups, disabled }) {
           );
         })}
       </div>
-      <button disabled={disabled} style={{ ...btn('#fff', '#54607a', '#e6e8ee'), marginTop: '11px' }} onClick={addStep}>+ Add step</button>
+      <button disabled={disabled} style={{ ...btn('var(--surface)', 'var(--c54607a)', 'var(--ce6e8ee)'), marginTop: '11px' }} onClick={addStep}>+ Add step</button>
     </div>
   );
 }
 
 export function MyApprovals({ pending, onOpen }) {
-  const card = { background: '#fff', border: '1px solid #e6e8ee', borderRadius: '12px', boxShadow: '0 1px 3px rgba(20,30,80,.06)' };
+  const card = { background: 'var(--surface)', border: '1px solid var(--ce6e8ee)', borderRadius: '12px', boxShadow: '0 1px 3px rgba(20,30,80,.06)' };
   const list = pending || [];
   return (
     <div style={{ maxWidth: '820px' }}>
-      {!list.length && <div style={{ ...card, padding: '30px', textAlign: 'center', color: '#8a92a6', font: '400 13.5px/1.5 "IBM Plex Sans"' }}>Nothing is awaiting your approval right now.</div>}
+      {!list.length && <div style={{ ...card, padding: '30px', textAlign: 'center', color: 'var(--c8a92a6)', font: '400 13.5px/1.5 "IBM Plex Sans"' }}>Nothing is awaiting your approval right now.</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {list.map((p) => (
           <div key={p.id} style={{ ...card, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ font: '600 15px/1.3 "IBM Plex Sans"', color: '#161a26' }}>{p.name}</div>
-              <div style={{ font: '400 12.5px/1.4 "IBM Plex Mono",monospace', color: '#9aa1b2', marginTop: '3px' }}>{p.version}{p.submitted_at ? ' · submitted ' + new Date(p.submitted_at).toLocaleDateString() : ''}</div>
+              <div style={{ font: '600 15px/1.3 "IBM Plex Sans"', color: 'var(--c161a26)' }}>{p.name}</div>
+              <div style={{ font: '400 12.5px/1.4 "IBM Plex Mono",monospace', color: 'var(--c9aa1b2)', marginTop: '3px' }}>{p.version}{p.submitted_at ? ' · submitted ' + new Date(p.submitted_at).toLocaleDateString() : ''}</div>
             </div>
-            <button style={{ border: 'none', background: '#213a9e', color: '#fff', borderRadius: '9px', padding: '10px 17px', font: '600 13px/1 "IBM Plex Sans"', cursor: 'pointer' }} onClick={() => onOpen(p)}>Review</button>
+            <button style={{ border: 'none', background: 'var(--c213a9e)', color: '#fff', borderRadius: '9px', padding: '10px 17px', font: '600 13px/1 "IBM Plex Sans"', cursor: 'pointer' }} onClick={() => onOpen(p)}>Review</button>
           </div>
         ))}
       </div>
@@ -182,42 +182,42 @@ export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(20,26,48,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '36px', zIndex: 56, animation: 'ovIn .18s ease' }} onClick={onClose}>
-      <div style={{ width: '640px', maxWidth: '100%', maxHeight: '88vh', background: '#fff', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 60px rgba(10,16,40,.34)', animation: 'cardUp .22s ease' }} onClick={stop}>
-        <div style={{ flex: 'none', padding: '22px 26px', borderBottom: '1px solid #eceef4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px' }}>
+      <div style={{ width: '640px', maxWidth: '100%', maxHeight: '88vh', background: 'var(--surface)', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 60px rgba(10,16,40,.34)', animation: 'cardUp .22s ease' }} onClick={stop}>
+        <div style={{ flex: 'none', padding: '22px 26px', borderBottom: '1px solid var(--ceceef4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px' }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ font: '600 18px/1.2 "IBM Plex Sans"', color: '#161a26' }}>Approval — {policy.name}</div>
+            <div style={{ font: '600 18px/1.2 "IBM Plex Sans"', color: 'var(--c161a26)' }}>Approval — {policy.name}</div>
             <div style={{ marginTop: '7px', display: 'flex', alignItems: 'center', gap: '9px' }}><ApprovalBadge state={st} />
-              <span style={{ font: '400 12px/1.3 "IBM Plex Mono",monospace', color: '#9aa1b2' }}>{policy.version}</span></div>
+              <span style={{ font: '400 12px/1.3 "IBM Plex Mono",monospace', color: 'var(--c9aa1b2)' }}>{policy.version}</span></div>
           </div>
-          <button style={{ border: 'none', background: '#f3f4f8', width: '34px', height: '34px', borderRadius: '9px', cursor: 'pointer', color: '#54607a', flex: 'none' }} onClick={onClose}>✕</button>
+          <button style={{ border: 'none', background: 'var(--cf3f4f8)', width: '34px', height: '34px', borderRadius: '9px', cursor: 'pointer', color: 'var(--c54607a)', flex: 'none' }} onClick={onClose}>✕</button>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 26px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Approval chain (grouped steps) */}
           <div>
-            <div style={{ font: '600 11px/1 "IBM Plex Mono",monospace', letterSpacing: '.08em', textTransform: 'uppercase', color: '#9aa1b2', marginBottom: '10px' }}>Approval chain</div>
-            {!data.steps.length && <div style={{ font: '400 13px/1.5 "IBM Plex Sans"', color: '#8a92a6' }}>No approvers configured yet.</div>}
+            <div style={{ font: '600 11px/1 "IBM Plex Mono",monospace', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--c9aa1b2)', marginBottom: '10px' }}>Approval chain</div>
+            {!data.steps.length && <div style={{ font: '400 13px/1.5 "IBM Plex Sans"', color: 'var(--c8a92a6)' }}>No approvers configured yet.</div>}
             {data.steps.map((s) => {
               const isCurrent = data.currentStep && data.currentStep.position === s.position;
-              const circle = s.satisfied ? '#1f7a5c' : (isCurrent ? '#213a9e' : '#eef0f4');
+              const circle = s.satisfied ? 'var(--c1f7a5c)' : (isCurrent ? 'var(--c213a9e)' : 'var(--ceef0f4)');
               return (
-                <div key={s.position} style={{ display: 'flex', alignItems: 'flex-start', gap: '11px', padding: '10px 0', borderBottom: '1px solid #f3f4f8' }}>
-                  <span style={{ flex: 'none', width: '22px', height: '22px', borderRadius: '50%', background: circle, color: s.satisfied || isCurrent ? '#fff' : '#9aa1b2', display: 'flex', alignItems: 'center', justifyContent: 'center', font: '600 11px/1 "IBM Plex Mono"' }}>{s.satisfied ? '✓' : s.position}</span>
+                <div key={s.position} style={{ display: 'flex', alignItems: 'flex-start', gap: '11px', padding: '10px 0', borderBottom: '1px solid var(--cf3f4f8)' }}>
+                  <span style={{ flex: 'none', width: '22px', height: '22px', borderRadius: '50%', background: circle, color: s.satisfied || isCurrent ? '#fff' : 'var(--c9aa1b2)', display: 'flex', alignItems: 'center', justifyContent: 'center', font: '600 11px/1 "IBM Plex Mono"' }}>{s.satisfied ? '✓' : s.position}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ font: '600 12.5px/1.3 "IBM Plex Sans"', color: '#54607a' }}>Step {s.position}</span>
-                      {(s.approvers.length > 1 || (s.groups && s.groups.length)) && <span style={{ font: '600 10px/1.4 "IBM Plex Mono",monospace', textTransform: 'uppercase', letterSpacing: '.04em', color: '#6b74e0', background: '#eef0fb', borderRadius: '999px', padding: '2px 8px' }}>{ruleLabel(s)}</span>}
-                      {(s.groups || []).map((g) => <span key={g.id} title="Directory group — expanded to its members at submit" style={{ font: '600 10px/1.4 "IBM Plex Mono",monospace', color: '#1f5c45', background: '#e9f5ef', border: '1px solid #c8e6d7', borderRadius: '999px', padding: '2px 8px' }}>◇ {g.name}</span>)}
-                      {isCurrent && <span style={{ font: '600 11px/1 "IBM Plex Mono"', color: '#213a9e' }}>· awaiting</span>}
+                      <span style={{ font: '600 12.5px/1.3 "IBM Plex Sans"', color: 'var(--c54607a)' }}>Step {s.position}</span>
+                      {(s.approvers.length > 1 || (s.groups && s.groups.length)) && <span style={{ font: '600 10px/1.4 "IBM Plex Mono",monospace', textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--c6b74e0)', background: 'var(--ceef0fb)', borderRadius: '999px', padding: '2px 8px' }}>{ruleLabel(s)}</span>}
+                      {(s.groups || []).map((g) => <span key={g.id} title="Directory group — expanded to its members at submit" style={{ font: '600 10px/1.4 "IBM Plex Mono",monospace', color: 'var(--c1f5c45)', background: 'var(--ce9f5ef)', border: '1px solid var(--cc8e6d7)', borderRadius: '999px', padding: '2px 8px' }}>◇ {g.name}</span>)}
+                      {isCurrent && <span style={{ font: '600 11px/1 "IBM Plex Mono"', color: 'var(--c213a9e)' }}>· awaiting</span>}
                     </div>
-                    {!s.approvers.length && (s.groups && s.groups.length) ? <div style={{ marginTop: '5px', font: '400 12px/1.5 "IBM Plex Sans"', color: '#8a92a6' }}>Members resolved when submitted for approval.</div> : null}
+                    {!s.approvers.length && (s.groups && s.groups.length) ? <div style={{ marginTop: '5px', font: '400 12px/1.5 "IBM Plex Sans"', color: 'var(--c8a92a6)' }}>Members resolved when submitted for approval.</div> : null}
                     {s.approvers.map((a) => {
                       const dec = decFor(s.position, a.oid);
                       const approvedInRun = s.approvedOids.includes(a.oid);
                       return (
                         <div key={a.oid} style={{ marginTop: '5px' }}>
-                          <div style={{ font: '600 13px/1.3 "IBM Plex Sans"', color: '#23283a' }}>{a.name || nameOf(a.oid)}{a.from_group && <span style={{ marginLeft: '7px', color: '#1f7a5c', font: '500 11px/1 "IBM Plex Mono"' }}>· via group</span>}{approvedInRun && <span style={{ marginLeft: '7px', color: '#1f7a5c', font: '600 11px/1 "IBM Plex Mono"' }}>✓</span>}</div>
-                          {dec && <div style={{ font: '400 12px/1.5 "IBM Plex Sans"', color: DECISION_LABEL[dec.decision][1], marginTop: '1px' }}>{DECISION_LABEL[dec.decision][0]}{dec.comment ? ' — “' + dec.comment + '”' : ''} <span style={{ color: '#aab0c0' }}>· {fmtWhen(dec.decided_at)}</span></div>}
+                          <div style={{ font: '600 13px/1.3 "IBM Plex Sans"', color: 'var(--c23283a)' }}>{a.name || nameOf(a.oid)}{a.from_group && <span style={{ marginLeft: '7px', color: 'var(--c1f7a5c)', font: '500 11px/1 "IBM Plex Mono"' }}>· via group</span>}{approvedInRun && <span style={{ marginLeft: '7px', color: 'var(--c1f7a5c)', font: '600 11px/1 "IBM Plex Mono"' }}>✓</span>}</div>
+                          {dec && <div style={{ font: '400 12px/1.5 "IBM Plex Sans"', color: DECISION_LABEL[dec.decision][1], marginTop: '1px' }}>{DECISION_LABEL[dec.decision][0]}{dec.comment ? ' — “' + dec.comment + '”' : ''} <span style={{ color: 'var(--caab0c0)' }}>· {fmtWhen(dec.decided_at)}</span></div>}
                         </div>
                       );
                     })}
@@ -229,14 +229,14 @@ export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
 
           {/* Current approver actions */}
           {data.canAct && (
-            <div style={{ background: '#f7f8fb', border: '1px solid #eceef4', borderRadius: '11px', padding: '15px' }}>
-              <div style={{ font: '600 13px/1.3 "IBM Plex Sans"', color: '#23283a', marginBottom: '9px' }}>Your decision</div>
+            <div style={{ background: 'var(--cf7f8fb)', border: '1px solid var(--ceceef4)', borderRadius: '11px', padding: '15px' }}>
+              <div style={{ font: '600 13px/1.3 "IBM Plex Sans"', color: 'var(--c23283a)', marginBottom: '9px' }}>Your decision</div>
               <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Comment (required to reject or request changes)…" rows={2}
-                style={{ width: '100%', border: '1px solid #d8dce6', borderRadius: '9px', padding: '9px 11px', font: '400 13px/1.4 "IBM Plex Sans"', resize: 'vertical', outline: 'none' }} />
+                style={{ width: '100%', border: '1px solid var(--cd8dce6)', borderRadius: '9px', padding: '9px 11px', font: '400 13px/1.4 "IBM Plex Sans"', resize: 'vertical', outline: 'none' }} />
               <div style={{ display: 'flex', gap: '9px', marginTop: '10px', flexWrap: 'wrap' }}>
-                <button disabled={busy} style={btn('#1f7a5c', '#fff')} onClick={() => run(() => api.approvePolicy(policy.id, comment), 'Approved')}>Approve</button>
-                <button disabled={busy} style={btn('#fff', '#c2410c', '#f0d9c9')} onClick={() => run(() => api.requestChanges(policy.id, comment), 'Changes requested')}>Request changes</button>
-                <button disabled={busy} style={btn('#fff', '#c0143c', '#f0d6dd')} onClick={() => run(() => api.rejectPolicy(policy.id, comment), 'Rejected')}>Reject</button>
+                <button disabled={busy} style={btn('var(--c1f7a5c)', '#fff')} onClick={() => run(() => api.approvePolicy(policy.id, comment), 'Approved')}>Approve</button>
+                <button disabled={busy} style={btn('var(--surface)', 'var(--cc2410c)', 'var(--cf0d9c9)')} onClick={() => run(() => api.requestChanges(policy.id, comment), 'Changes requested')}>Request changes</button>
+                <button disabled={busy} style={btn('var(--surface)', 'var(--cc0143c)', 'var(--cf0d6dd)')} onClick={() => run(() => api.rejectPolicy(policy.id, comment), 'Rejected')}>Reject</button>
               </div>
             </div>
           )}
@@ -245,9 +245,9 @@ export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
           {canConfig && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                <div style={{ font: '600 11px/1 "IBM Plex Mono",monospace', letterSpacing: '.08em', textTransform: 'uppercase', color: '#9aa1b2' }}>Configure steps (approved in order)</div>
+                <div style={{ font: '600 11px/1 "IBM Plex Mono",monospace', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--c9aa1b2)' }}>Configure steps (approved in order)</div>
                 {templates.length > 0 && (
-                  <select value="" style={{ marginLeft: 'auto', border: '1px solid #d8dce6', borderRadius: '8px', padding: '5px 9px', font: '500 12px/1 "IBM Plex Sans"', color: '#54607a', background: '#fff' }}
+                  <select value="" style={{ marginLeft: 'auto', border: '1px solid var(--cd8dce6)', borderRadius: '8px', padding: '5px 9px', font: '500 12px/1 "IBM Plex Sans"', color: 'var(--c54607a)', background: 'var(--surface)' }}
                     onChange={(e) => { const id = e.target.value; e.target.value = ''; if (id) run(() => api.applyWorkflow(policy.id, Number(id)), 'Template applied'); }}>
                     <option value="">Apply a template…</option>
                     {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -255,22 +255,22 @@ export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
                 )}
               </div>
               <StepBuilder steps={steps} setSteps={setSteps} emps={emps} groups={groups} disabled={busy} />
-              <button disabled={busy || !totalApprovers} style={{ ...btn('#fff', '#213a9e', '#c9d3f0'), marginTop: '11px' }} onClick={() => run(saveSteps, 'Steps saved')}>Save steps ({totalApprovers})</button>
+              <button disabled={busy || !totalApprovers} style={{ ...btn('var(--surface)', 'var(--c213a9e)', 'var(--cc9d3f0)'), marginTop: '11px' }} onClick={() => run(saveSteps, 'Steps saved')}>Save steps ({totalApprovers})</button>
             </div>
           )}
         </div>
 
         {/* Footer: governance actions */}
-        <div style={{ flex: 'none', borderTop: '1px solid #eceef4', background: '#fafbfd', padding: '15px 26px', display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ flex: 'none', borderTop: '1px solid var(--ceceef4)', background: 'var(--cfafbfd)', padding: '15px 26px', display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           {data.canGovern && ['draft', 'changes_requested', 'rejected', 'published'].includes(st) &&
-            <button disabled={busy || !data.steps.length} style={btn('#213a9e', '#fff')} onClick={() => run(() => api.submitApproval(policy.id), 'Submitted for approval')}>Submit for approval</button>}
+            <button disabled={busy || !data.steps.length} style={btn('var(--c213a9e)', '#fff')} onClick={() => run(() => api.submitApproval(policy.id), 'Submitted for approval')}>Submit for approval</button>}
           {data.canGovern && st === 'in_review' &&
-            <button disabled={busy} style={btn('#fff', '#54607a', '#e6e8ee')} onClick={() => run(() => api.withdrawApproval(policy.id), 'Withdrawn')}>Withdraw</button>}
+            <button disabled={busy} style={btn('var(--surface)', 'var(--c54607a)', 'var(--ce6e8ee)')} onClick={() => run(() => api.withdrawApproval(policy.id), 'Withdrawn')}>Withdraw</button>}
           {data.canGovern && st === 'approved' &&
-            <button disabled={busy} style={btn('#1f7a5c', '#fff')} onClick={() => run(() => api.publishPolicy(policy.id), 'Published')}>Publish</button>}
+            <button disabled={busy} style={btn('var(--c1f7a5c)', '#fff')} onClick={() => run(() => api.publishPolicy(policy.id), 'Published')}>Publish</button>}
           {data.canGovern && !['published'].includes(st) &&
-            <button disabled={busy} style={btn('#fff', '#54607a', '#e6e8ee')} onClick={() => run(() => api.approveExternally(policy.id), 'Marked approved externally')}>Mark approved externally</button>}
-          <button style={btn('#fff', '#54607a', '#e6e8ee')} onClick={onClose}>Close</button>
+            <button disabled={busy} style={btn('var(--surface)', 'var(--c54607a)', 'var(--ce6e8ee)')} onClick={() => run(() => api.approveExternally(policy.id), 'Marked approved externally')}>Mark approved externally</button>}
+          <button style={btn('var(--surface)', 'var(--c54607a)', 'var(--ce6e8ee)')} onClick={onClose}>Close</button>
         </div>
       </div>
     </div>
