@@ -4,6 +4,14 @@ _A TOGAF-aligned derivation of the reusable, technology-neutral capabilities thi
 solution embodies, and how each is realized here. Companion to
 [`ARCHITECTURE-AND-DECISIONS.md`](ARCHITECTURE-AND-DECISIONS.md)._
 
+> **Currency:** updated through **ADR-120** (approval workflow, Phase 2d). Recent
+> additions reflected below: the sign-off workflow (B9) and its decision ledger
+> (D8), GDPR data-subject rights (B10), controls-as-code assurance (B11), the
+> storage abstraction (A12), the shared rate-limit store (A13), HA-safe scheduling
+> via leader election (A10), and metrics/readiness observability (A11). The
+> approval workflow has its own detailed block catalogue in
+> [`approval-workflow/BUILDING-BLOCKS.md`](approval-workflow/BUILDING-BLOCKS.md).
+
 ---
 
 ## 1. Why this document exists (and what an ABB is)
@@ -54,6 +62,9 @@ Realization references point at where it lives in the code.
 | **B6 Notification & Escalation** — drive people to fulfil obligations on a schedule | reminder engine + milestone ladder | **Highly reusable** |
 | **B7 Compliance Reporting & Assurance** — prove status to auditors/leaders | dashboards, by-unit/by-group, CSV export | Reusable analytics-over-obligations capability |
 | **B8 Accountability / Non-repudiation** — defensible record of who did what | `audit_log` (append-only) + signature binding | **Highly reusable** governance primitive |
+| **B9 Pre-publication Sign-off** — authorise an artefact through an ordered approval chain before it is released | approval workflow (ADR-120): states, steps (all/any/quorum), person + directory-group approvers, templates, publish gate | **Highly reusable** (contracts, change requests, model cards) — see [`approval-workflow/`](approval-workflow/README.md) |
+| **B10 Data-subject Rights** — export/erase/retain personal data on request | `gdpr.js` (collect / erase / purge) + DSAR export endpoint + CLI | **Enterprise-reusable** GDPR primitive |
+| **B11 Controls Assurance** — express controls as data and prove coverage deterministically | controls-as-code (`compliance/controls.json` → `report.mjs`; frameworks + ATT&CK + gaps; CI-gated) | **Enterprise-reusable** assurance capability |
 
 ### 2.2 Data Architecture ABBs
 
@@ -66,6 +77,7 @@ Realization references point at where it lives in the code.
 | **D5 Assessment Results Store** | `quiz_attempts` (append-only) | Reusable |
 | **D6 Notification State Store** — idempotency of outbound comms | `notifications_sent` | Reusable pattern (exactly-once-ish messaging) |
 | **D7 Integration/Config State** | `integration_config`, `sync_runs` | Solution-specific |
+| **D8 Immutable Decision Ledger** — append-only sign-off decisions bound to version + step + identity | `policy_approvals` (UPDATE/DELETE revoked) + approver spec (`policy_approvers`, `policy_approval_steps`, `policy_approver_groups`) + templates | **Enterprise-reusable** (same integrity model as D3/D4) |
 
 ### 2.3 Application Architecture ABBs (services/components)
 
@@ -79,9 +91,11 @@ Realization references point at where it lives in the code.
 | **A6 Content Access Broker** — mediate access to documents held in an external DMS | `services/sharepoint.js` (Graph drive items) | Reusable DMS-brokerage pattern |
 | **A7 Outbound Notification Service** — send transactional messages via a platform | `services/reminders.js` (Graph `sendMail`) | **Enterprise-reusable** |
 | **A8 Integration / Event Distribution** — push (webhook) + pull (authenticated feed) of domain events | `logger.forwardEvent` + `/feed/audit` | Reusable eventing pattern |
-| **A9 Backup & Recovery Service** | scheduled `pg_dump` + retention + restore path | **Enterprise-reusable** |
-| **A10 Scheduling / Task Orchestration** | in-process schedulers (ADR-114) | Reusable capability; *current SBB is single-instance only* |
-| **A11 Observability / Audit Forwarding** — structured logs + correlation id + SIEM feed | `pino`/`pino-http` + forward/feed | **Enterprise-reusable** |
+| **A9 Backup & Recovery Service** | scheduled `pg_dump` + uploads backup + retention + **off-host `-Dest`** + restore path | **Enterprise-reusable** |
+| **A10 Scheduling / Task Orchestration** | in-process schedulers (ADR-114) with **Postgres advisory-lock leader election** (`leader.js`) so only one replica runs them | Reusable capability; now **HA-safe (single-leader)** |
+| **A11 Observability** — structured logs + correlation id + SIEM feed **+ metrics + readiness** | `pino`/`pino-http` + forward/feed; **Prometheus `/metrics` (RED)** + `/readyz` DB check (`metrics.js`) + container healthchecks | **Enterprise-reusable** |
+| **A12 Storage Abstraction** — mediate object/file storage behind one interface | `storage.js` (pluggable **local volume ↔ Azure Blob**) | **Enterprise-reusable** portability seam |
+| **A13 Rate-limit Store** — shared throttling across replicas | `ratelimit.js` (in-memory default → **shared Redis** for HA, ADR-119) | Reusable |
 
 ### 2.4 Technology Architecture ABBs (platform/infrastructure)
 
@@ -91,7 +105,7 @@ Realization references point at where it lives in the code.
 | **T2 HTTP Edge / TLS Termination** | nginx | Reusable |
 | **T3 Application Runtime / Container Platform** | Node 22 + Docker (Compose; Azure Container Apps target) | Reusable |
 | **T4 Relational DBMS with privilege-based access control** | PostgreSQL 16 | Reusable |
-| **T5 Object / File Storage** | mounted volume (Azure Blob target) | Reusable |
+| **T5 Object / File Storage** | mounted volume **or Azure Blob** (pluggable via A12 `storage.js`) | Reusable |
 | **T6 Directory & Collaboration Platform** | Microsoft Graph (Entra/SharePoint/Exchange) | Enterprise-shared service |
 | **T7 Secrets Management** | `.env` on disk now → **Key Vault target** | **Enterprise-shared; weakly realized today (gap)** |
 | **T8 Log Aggregation / SIEM** | stdout JSON → external SIEM (via feed/forward) | Enterprise-shared service |
@@ -202,14 +216,15 @@ Deriving ABBs also exposes where a needed capability is **present but immature**
 | ABB | Maturity | Note / target |
 |-----|----------|---------------|
 | A2 Policy Decision Point | **Consolidated** (was embedded) | Still helper-based rather than a standalone PDP service, but the duplicated effective-membership query — the root cause of M-1 — has been extracted into a single DB view (`effective_group_membership`, migration 018) that all ~11 queries now use. Externalizing the PDP entirely remains a future option. |
-| A10 Scheduling | **Single-instance, flag-gated** | In-process timers still can't all run in >1 replica (ADR-114), but `SCHEDULERS_ENABLED=false` now lets you run them in exactly one instance when scaling out. Target: platform scheduler / singleton job. |
+| A10 Scheduling | **HA-safe (single-leader)** | In-process timers, but now guarded by a **Postgres advisory-lock leader election** (`leader.js`), so exactly one replica runs them even when scaled out (supersedes the earlier flag-only mitigation, ADR-114/119). Target: platform scheduler / singleton job remains an option. |
 | T7 Secrets Management | **Weak** | Secrets on disk (`.env`). Target: Key Vault + Managed Identity — the code already supports `DefaultAzureCredential`. |
-| T5 Object Storage | **Local** | Volume on one host; no replication. Target: Azure Blob. |
+| T5 Object Storage / A12 | **Pluggable (shipped)** | `storage.js` abstracts local volume vs **Azure Blob** (opt-in, backward compatible). On the VM it is still a single-host volume; flipping to Blob is a config change, no re-architecture. |
+| A11 Observability (metrics) | **Shipped** | Prometheus `/metrics` (RED) + `/readyz` DB readiness + container healthchecks added; SIEM aggregation/alerting is still an org deployment (below). |
 | A8 Integration / Eventing | **Basic** | Fire-and-forget webhook + pull feed; no delivery guarantees/retry/DLQ. Adequate for audit forwarding; would need hardening if used for critical integration. |
 | T8 SIEM | **Optional** | Structured logs + feed exist; aggregation/alerting is an org deployment (monitoring gap noted in `SECURITY-REVIEW.md`). |
 
-The remaining ABBs (A1, A3, A5, A6, A7, A9, D1–D6, B1–B8) are **production-grade**
-in their current realization.
+The remaining ABBs (A1, A3, A5, A6, A7, A9, A12, A13, D1–D8, B1–B11) are
+**production-grade** in their current realization.
 
 ---
 

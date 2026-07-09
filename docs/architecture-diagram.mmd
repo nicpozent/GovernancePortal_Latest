@@ -1,4 +1,4 @@
-%% Birgma Governance Portal — Architecture
+%% Birgma Governance Portal — Architecture (current as of Phase 2d / ADR-120)
 %% HOW TO OPEN IN LUCIDCHART:
 %%   Lucidchart → File → Import Diagram → Mermaid  (paste this whole file)
 %%   (or use the "Mermaid" shape-library / "Import Data > Mermaid" option).
@@ -7,34 +7,47 @@
 
 flowchart TB
     subgraph CLIENT["👤 Client"]
-        BROWSER["Browser<br/>React SPA + MSAL.js"]
+        BROWSER["Browser<br/>React SPA + MSAL.js (PKCE)<br/>Admin · Manager · Employee views"]
     end
 
     subgraph ENTRA["☁️ Microsoft Entra ID / Microsoft 365"]
         SPAAPP["App registration:<br/>Governance Portal (SPA, PKCE)"]
         APIAPP["App registration:<br/>Governance API<br/>roles: Admin / Manager"]
-        GRAPH["Microsoft Graph<br/>users · groups · managers"]
-        SP["SharePoint<br/>policy documents"]
+        GRAPH["Microsoft Graph<br/>users · groups · managers · SharePoint · mail"]
     end
 
-    subgraph VM["🖥️ Windows VM (VMware) · Docker + WSL2"]
+    subgraph VM["🖥️ Windows VM (VMware) · Docker + WSL2  — Azure-native as target"]
         subgraph STACK["Docker Compose stack"]
-            WEB["web container<br/>nginx<br/>(TLS · serves SPA · proxies /api)"]
-            API["api container<br/>Node.js / Express<br/>(token validation · RBAC · domain logic)"]
-            DB[("db container<br/>PostgreSQL 16<br/>append-only ledgers")]
-            VOL[["Volumes<br/>pgdata · backups · uploads"]]
+            WEB["web container · nginx<br/>TLS · serves SPA · proxies /api · healthcheck"]
+            subgraph API["api container · Node.js 22 / Express"]
+                CORE["Token validation · RBAC (PDP)<br/>policy · training · quiz · groups · dashboards"]
+                APPR["Approval workflow (ADR-120)<br/>state machine · steps (all/any/quorum)<br/>group expansion · templates"]
+                OPS["Observability<br/>/metrics (Prometheus) · /readyz · pino logs"]
+                GDPR["GDPR data rights<br/>DSAR export · erasure · retention"]
+                SCH["Schedulers (leader-locked)<br/>reminders · sync"]
+            end
+            DB[("db container · PostgreSQL 16<br/>append-only ledgers:<br/>signatures · audit_log · quiz_attempts · policy_approvals")]
+            VOL[["Storage abstraction<br/>local volume ↔ Azure Blob<br/>pgdata · backups · uploads"]]
         end
+        REDIS["(optional) Redis<br/>shared rate-limit store (HA)"]
     end
 
-    BROWSER -- "OIDC / OAuth2 sign-in" --> SPAAPP
+    subgraph ASSURE["🛡️ Assurance (repo + CI)"]
+        CAC["controls-as-code<br/>compliance/controls.json → report.mjs<br/>frameworks · ATT&CK · gaps (CI-gated)"]
+    end
+
+    BROWSER -- "OIDC / OAuth2 sign-in (PKCE)" --> SPAAPP
     BROWSER -- "HTTPS + Bearer token" --> WEB
     WEB -- "/api (same origin)" --> API
-    API -- "validate JWT (JWKS, aud, iss, tid, scope)" --> APIAPP
-    API -- "app-only / Managed Identity" --> GRAPH
-    API -- "Sites.Selected" --> SP
+    CORE -- "validate JWT (JWKS · aud · iss · tid · scope · delegated-only)" --> APIAPP
+    CORE -- "app-only / Managed Identity (DefaultAzureCredential)" --> GRAPH
+    APPR -- "resolve group members (effective_group_membership)" --> DB
+    SCH -- "sendMail (reminders · approval notifications)" --> GRAPH
+    CORE -- "Sites.Selected (documents)" --> GRAPH
     API -- "SQL (internal network)" --> DB
+    API -- "pluggable" --> VOL
+    API -. "RATE_LIMIT_STORE=redis" .-> REDIS
     DB --- VOL
-    API -- "Graph sendMail (reminders + confirmations)" --> GRAPH
 
     classDef client fill:#eef1fb,stroke:#213a9e,stroke-width:2px,color:#161a26;
     classDef entra fill:#e8f0fe,stroke:#0078c0,stroke-width:2px,color:#0b3a5b;
@@ -42,10 +55,14 @@ flowchart TB
     classDef api fill:#fbf2df,stroke:#caa53d,stroke-width:2px,color:#5b4708;
     classDef db fill:#f6f3fd,stroke:#6d4bd1,stroke-width:2px,color:#2e1d5b;
     classDef vol fill:#f3f4f8,stroke:#9aa1b2,stroke-width:1px,color:#41485a;
+    classDef opt fill:#fff,stroke:#c0143c,stroke-dasharray:4 3,color:#7a1024;
+    classDef assure fill:#eef7f1,stroke:#1f7a5c,stroke-width:1px,color:#12402c;
 
     class BROWSER client;
-    class SPAAPP,APIAPP,GRAPH,SP entra;
+    class SPAAPP,APIAPP,GRAPH entra;
     class WEB web;
-    class API api;
+    class CORE,APPR,OPS,GDPR,SCH api;
     class DB db;
     class VOL vol;
+    class REDIS opt;
+    class CAC assure;
