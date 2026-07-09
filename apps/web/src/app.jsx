@@ -22,6 +22,7 @@ import { IdleWarning, Toast, Splash, SignIn } from './components/common.jsx';
 import { QuizBuilder } from './components/quiz.jsx';
 import { Trainings, TrainingEditor } from './components/trainings.jsx';
 import { AppEvaluation } from './components/evaluation.jsx';
+import { ApprovalsModal } from './components/approvals.jsx';
 
 function App() {
   const [phase, setPhase] = useState('loading');   // loading | signedout | error | ready
@@ -73,6 +74,7 @@ function App() {
     setMgrReminding(false);
   };
   const [policyHistory, setPolicyHistory] = useState(null);
+  const [approvals, setApprovals] = useState(null);
   const openPolicyHistory = async (p) => {
     setPolicyHistory({ policy: p, rows: null });
     try { const rows = await api.policyVersions(p.id); setPolicyHistory({ policy: p, rows }); }
@@ -517,7 +519,7 @@ function App() {
   const typeTabs = TYPES.map((t)=>({ t, count: t==='All'?pols.length:pols.filter((p)=>p.doc_type===t).length, on:activeType===t }));
   const fpol = activeType==='All' ? pols : pols.filter((p)=>p.doc_type===activeType);
   const dueMeta = (v) => { if (!v) return null; const d = new Date(v); if (isNaN(d)) return null; const days = Math.ceil((d - new Date(new Date().toDateString())) / 86400000); return { text: fmtDate(v), days, overdue: days < 0, soon: days >= 0 && days <= 7 }; };
-  const polCards = fpol.map((p)=>{ const c = countsById[p.id]||{assigned:0,signed:0}; const assigned = Number(c.assigned)||0, signed = Number(c.signed)||0; const pct = assigned?Math.round(signed/assigned*100):0; const due = dueMeta(p.due_date); const dueText = p.due_date ? ('Due '+ (due?due.text:fmtDate(p.due_date)) + (due&&due.overdue?' · overdue':'')) : (p.due_days!=null ? ('Due '+p.due_days+'d after assignment') : null); return { raw:p, id:p.id, name:p.name, type:p.doc_type, version:p.version, url:p.sharepoint_url, owner:p.owner||'—', updated:fmtDate(p.updated_at), due, dueText, dueRolling:(!p.due_date && p.due_days!=null), assigned, signed, pct, groupsText:(p.groups&&p.groups.length)?p.groups.join(', '):'—' }; });
+  const polCards = fpol.map((p)=>{ const c = countsById[p.id]||{assigned:0,signed:0}; const assigned = Number(c.assigned)||0, signed = Number(c.signed)||0; const pct = assigned?Math.round(signed/assigned*100):0; const due = dueMeta(p.due_date); const dueText = p.due_date ? ('Due '+ (due?due.text:fmtDate(p.due_date)) + (due&&due.overdue?' · overdue':'')) : (p.due_days!=null ? ('Due '+p.due_days+'d after assignment') : null); return { raw:p, id:p.id, name:p.name, type:p.doc_type, version:p.version, url:p.sharepoint_url, owner:p.owner||'—', updated:fmtDate(p.updated_at), due, dueText, dueRolling:(!p.due_date && p.due_days!=null), assigned, signed, pct, groupsText:(p.groups&&p.groups.length)?p.groups.join(', '):'—', approval_state:p.approval_state }; });
   const archivedCards = archived.map((p)=>({ raw:p, id:p.id, name:p.name, type:p.doc_type, version:p.version, url:p.sharepoint_url, owner:p.owner||'—', archivedOn:fmtDate(p.archived_at) }));
 
   // employees
@@ -635,7 +637,7 @@ function App() {
 
         <main style={{ flex:1, overflowY:'auto', padding:'28px 30px 40px' }}>
           {view==='dashboard' && <Dashboard {...{ kpis, polRows, recent, attention, deptRows, groupRows, dashLayout, setDashLayout, onGroup:openGroupDetail, onExport:exportReport, exporting, exportScope, setExportScope, onReminders:sendReminders, sendingReminders }} />}
-          {view==='policies' && <PolicyLibrary {...{ typeTabs, setActiveType, polCards, polTab, switchPolTab, archivedCards, openAddPolicy:()=>openDrawer('policy','add'), openEdit:(p)=>openDrawer('policy','edit',{...p.raw,_groupIds:groupIdsFor(p.raw,grps)}), openReader, onArchive:(p)=>setConfirmArchive(p.raw), onRestore:doRestore, onQuiz:(p)=>openQuizBuilder(p.raw), onHistory:(p)=>openPolicyHistory(p.raw) }} />}
+          {view==='policies' && <PolicyLibrary {...{ typeTabs, setActiveType, polCards, polTab, switchPolTab, archivedCards, openAddPolicy:()=>openDrawer('policy','add'), openEdit:(p)=>openDrawer('policy','edit',{...p.raw,_groupIds:groupIdsFor(p.raw,grps)}), openReader, onArchive:(p)=>setConfirmArchive(p.raw), onRestore:doRestore, onQuiz:(p)=>openQuizBuilder(p.raw), onHistory:(p)=>openPolicyHistory(p.raw), onApprovals:(p)=>setApprovals({ policy:p.raw }) }} />}
           {view==='employees' && <Employees {...{ empFilters, empFilter, setEmpFilter, empList, adCount, entraCount, syncing, syncNow, openAdd:()=>openDrawer('employee','add'), onImport:importEmployeesCsv, onEditManager:(e)=>setManagerEdit(e), syncInfo, formerEmps, empTab, setEmpTab }} />}
           {view==='groups' && <Groups {...{ platformCards, groupTab, switchGroupTab, archivedGroups, openAddGroup:()=>openDrawer('group','add'), openImport, removeMapping, onMembers:openMembers, onArchive:doArchiveGroup, onRestore:doRestoreGroup, onDelete:(g)=>setConfirmDeleteGroup(g) }} />}
           {view==='audit' && <AuditLog rows={auditRows} onBackup={downloadBackup} backingUp={backingUp} />}
@@ -653,6 +655,7 @@ function App() {
       {reader && <Reader {...{ reader, onClose:()=>setReader(null), signFirst, signLast, signAgreed, setSignFirst, setSignLast, setSignAgreed, submitSign, quizState, setQuizAnswer, submitQuizAttempt, retryQuiz }} />}
       {receipt && <ReceiptModal receipt={receipt} onClose={()=>setReceipt(null)} />}
       {policyHistory && <PolicyHistoryModal detail={policyHistory} onClose={()=>setPolicyHistory(null)} />}
+      {approvals && <ApprovalsModal policy={approvals.policy} onClose={()=>setApprovals(null)} onChanged={()=>loadView('policies')} toast={showToast} />}
       {trainEdit && <TrainingEditor state={trainEdit} groups={trainGroups} onClose={()=>setTrainEdit(null)} onSave={saveTraining} />}
       {importOpen && <ImportModal {...{ onClose:()=>setImportOpen(false), platformGroups, impTarget, setImpTarget, impSearch, setImpSearch, importList, impSel, setImpSel, impTargetName, doImport }} />}
       {drawer && <Drawer {...{ drawer, form, setF, grps, emps, toggleGroupId, roleOpts:ROLE_OPTS, onClose:()=>setDrawer(null), onSave:saveDrawer, onBrowse:openPicker }} />}

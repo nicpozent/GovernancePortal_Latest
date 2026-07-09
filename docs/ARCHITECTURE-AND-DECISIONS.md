@@ -653,8 +653,9 @@ logged and the client reconnects, but a hard Redis outage degrades limiting. The
 default path has no such dependency. Only the count store is shared — limits and
 windows stay defined in code.
 
-## ADR-120 — Policy approval workflow (proposed)
-**Status: Proposed** — full design in [`POLICY-APPROVAL-WORKFLOW.md`](POLICY-APPROVAL-WORKFLOW.md).
+## ADR-120 — Policy approval workflow
+**Status: Accepted — Phase 1 (MVP) implemented** (see the "Shipped" note in
+[`POLICY-APPROVAL-WORKFLOW.md`](POLICY-APPROVAL-WORKFLOW.md); Phase 2 pending).
 **Context.** The portal distributes and collects acknowledgements for policies that
 are assumed already approved elsewhere; there is no pre-publication sign-off (draft →
 review → approved) in the system.

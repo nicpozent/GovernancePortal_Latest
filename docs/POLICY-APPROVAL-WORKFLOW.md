@@ -1,7 +1,17 @@
 # Design: Policy Approval Workflow
 
-**Status: proposed (design for review — no code yet).** Owner: engineering.
+**Status: Phase 1 (MVP) implemented; Phase 2 pending.** Owner: engineering.
 Companion ADR: ADR-120 in `ARCHITECTURE-AND-DECISIONS.md`.
+
+> **Shipped (Phase 1):** `migration_019_approvals.sql`; `src/routes/approvals.js`
+> (configure approvers, submit, approve/reject/request-changes, withdraw, publish,
+> admin approve-externally, status + pending queue); the publish gate in
+> `authz.js` + the employee `/policies` query; append-only `policy_approvals`;
+> friendly error codes; `test/integration/approvals.test.js`; and the in-app
+> **Admin → Policy Library → Approvals** panel (`components/approvals.jsx`).
+> **Deferred to Phase 2:** reusable workflow templates, group approvers with
+> all/any/quorum, run snapshotting, notifications, and the "my approvals" screen
+> (the `/approvals/pending` API exists; no dedicated UI yet).
 
 This design adds a pre-publication **approval workflow** to the portal: a policy is
 drafted, routed through an ordered chain of approvers (e.g. Infra Manager → CISO →

@@ -163,4 +163,15 @@ export const api = {
   restoreGroup:   (id)                => request('POST', `/api/groups/${id}/restore`),
   deleteGroup:    (id)                => request('DELETE', `/api/groups/${id}`),
   archivedGroups: ()                  => request('GET',  '/api/groups-archived'),
+  // ── policy approval workflow (ADR-120) ──
+  policyApprovals:  (id)              => request('GET',  `/api/policies/${id}/approvals`),
+  setApprovers:     (id, oids)        => request('PUT',  `/api/policies/${id}/approvers`, { approverOids: oids }),
+  submitApproval:   (id)              => request('POST', `/api/policies/${id}/submit`),
+  withdrawApproval: (id)              => request('POST', `/api/policies/${id}/withdraw`),
+  approvePolicy:    (id, comment)     => request('POST', `/api/policies/${id}/approve`, comment ? { comment } : undefined),
+  rejectPolicy:     (id, comment)     => request('POST', `/api/policies/${id}/reject`, { comment }),
+  requestChanges:   (id, comment)     => request('POST', `/api/policies/${id}/request-changes`, { comment }),
+  publishPolicy:    (id)              => request('POST', `/api/policies/${id}/publish`),
+  approveExternally:(id)              => request('POST', `/api/policies/${id}/approve-externally`),
+  pendingApprovals: ()               => request('GET',  '/api/approvals/pending'),
 };
