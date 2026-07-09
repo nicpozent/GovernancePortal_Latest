@@ -13,17 +13,19 @@ const btn = (bg, fg, bd) => ({ border: '1px solid ' + (bd || bg), background: bg
 export function WorkflowTemplates({ toast }) {
   const [list, setList] = useState(null);
   const [emps, setEmps] = useState([]);
-  const [editing, setEditing] = useState(null);   // { id?, name, description, steps:[{approverOids,rule,required}] }
+  const [groups, setGroups] = useState([]);
+  const [editing, setEditing] = useState(null);   // { id?, name, description, steps:[{approverOids,groupIds,rule,required}] }
   const [busy, setBusy] = useState(false);
 
   const load = async () => setList(await api.workflows());
   useEffect(() => {
     load().catch((e) => { if (toast) toast(e.message, true); });
     api.employees().then(setEmps).catch(() => {});
+    api.groups().then(setGroups).catch(() => {});
   }, []);
 
   const startNew = () => setEditing({ name: '', description: '', steps: [] });
-  const startEdit = (t) => setEditing({ id: t.id, name: t.name, description: t.description || '', steps: t.steps.map((s) => ({ approverOids: s.approvers.map((a) => a.oid), rule: s.rule, required: s.required || 1 })) });
+  const startEdit = (t) => setEditing({ id: t.id, name: t.name, description: t.description || '', steps: t.steps.map((s) => ({ approverOids: s.approvers.map((a) => a.oid), groupIds: (s.groups || []).map((g) => g.id), rule: s.rule, required: s.required || 1 })) });
   const setSteps = (fn) => setEditing((ed) => ({ ...ed, steps: typeof fn === 'function' ? fn(ed.steps) : fn }));
 
   const run = async (fn, okMsg) => {
@@ -39,7 +41,7 @@ export function WorkflowTemplates({ toast }) {
   }, 'Template saved');
   const del = (t) => { if (!window.confirm(`Delete template “${t.name}”? Policies it was applied to keep their approvers.`)) return; run(() => api.deleteWorkflow(t.id), 'Template deleted'); };
 
-  const totalApprovers = editing ? editing.steps.reduce((n, s) => n + s.approverOids.length, 0) : 0;
+  const totalApprovers = editing ? editing.steps.reduce((n, s) => n + s.approverOids.length + (s.groupIds || []).length, 0) : 0;
 
   return (
     <div style={{ maxWidth: '860px' }}>
@@ -66,7 +68,7 @@ export function WorkflowTemplates({ toast }) {
                   {!t.steps.length && <span style={{ font: '400 12px/1.4 "IBM Plex Sans"', color: '#aab0c0' }}>No steps.</span>}
                   {t.steps.map((s) => (
                     <span key={s.position} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f4f6fb', border: '1px solid #e6e8ee', borderRadius: '8px', padding: '5px 10px', font: '500 12px/1.3 "IBM Plex Sans"', color: '#3a4460' }}>
-                      <b style={{ color: '#54607a' }}>{s.position}.</b> {s.approvers.map((a) => a.name || a.oid.slice(0, 8)).join(', ')}
+                      <b style={{ color: '#54607a' }}>{s.position}.</b> {[...s.approvers.map((a) => a.name || a.oid.slice(0, 8)), ...(s.groups || []).map((g) => '◇ ' + g.name)].join(', ')}
                       <span style={{ font: '600 10px/1 "IBM Plex Mono",monospace', textTransform: 'uppercase', color: '#6b74e0' }}>· {ruleLabel(s)}</span>
                     </span>
                   ))}
@@ -87,7 +89,7 @@ export function WorkflowTemplates({ toast }) {
           <input value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="When to use this chain"
             style={{ width: '100%', border: '1px solid #d8dce6', borderRadius: '9px', padding: '9px 11px', font: '400 13px/1.3 "IBM Plex Sans"', outline: 'none', marginBottom: '18px' }} />
           <div style={{ font: '600 11px/1 "IBM Plex Mono",monospace', letterSpacing: '.08em', textTransform: 'uppercase', color: '#9aa1b2', marginBottom: '10px' }}>Steps (approved in order)</div>
-          <StepBuilder steps={editing.steps} setSteps={setSteps} emps={emps} disabled={busy} />
+          <StepBuilder steps={editing.steps} setSteps={setSteps} emps={emps} groups={groups} disabled={busy} />
           <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
             <button disabled={busy || !editing.name.trim() || !totalApprovers} style={btn('#213a9e', '#fff')} onClick={save}>Save template</button>
             <button disabled={busy} style={btn('#fff', '#54607a', '#e6e8ee')} onClick={() => setEditing(null)}>Cancel</button>

@@ -22,29 +22,45 @@ export function ApprovalBadge({ state }) {
 const DECISION_LABEL = { approved: ['approved', '#1f7a5c'], rejected: ['rejected', '#c0143c'], changes_requested: ['requested changes', '#c2410c'] };
 const btn = (bg, fg, bd) => ({ border: '1px solid ' + (bd || bg), background: bg, color: fg, borderRadius: '9px', padding: '9px 15px', font: '600 13px/1 "IBM Plex Sans"', cursor: 'pointer' });
 const fmtWhen = (v) => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleDateString() + ' ' + d.toTimeString().slice(0, 5); };
-export const ruleLabel = (s) => s.rule === 'any' ? 'Any one approves' : s.rule === 'quorum' ? `${s.required} of ${s.approvers.length} required` : (s.approvers.length > 1 ? 'All must approve' : 'Approval');
+export const ruleLabel = (s) => {
+  const hasGroups = s.groups && s.groups.length;
+  if (s.rule === 'any') return 'Any one approves';
+  if (s.rule === 'quorum') return hasGroups ? `${s.required} must approve` : `${s.required} of ${s.approvers.length} required`;
+  return (s.approvers.length > 1 || hasGroups) ? 'All must approve' : 'Approval';
+};
 
-// Normalize builder steps to the API { approverOids, rule, required } shape,
-// dropping empty steps and clamping the quorum count.
+// Normalize builder steps to the API { approverOids, groupIds, rule, required }
+// shape, dropping empty steps. The quorum count is clamped ≥1 here; the server
+// clamps it against the resolved member count (groups expand at submit).
 export const stepsToPayload = (steps) => steps
-  .map((s) => ({ approverOids: s.approverOids, rule: s.rule, required: s.rule === 'quorum' ? Math.min(Math.max(Number(s.required) || 1, 1), s.approverOids.length) : undefined }))
-  .filter((s) => s.approverOids.length);
+  .map((s) => ({ approverOids: s.approverOids || [], groupIds: s.groupIds || [], rule: s.rule, required: s.rule === 'quorum' ? Math.max(Number(s.required) || 1, 1) : undefined }))
+  .filter((s) => (s.approverOids.length || s.groupIds.length));
 
-// Shared ordered-step editor (used by the policy Approvals modal and the
-// reusable-template admin screen). `steps` is [{ approverOids:[], rule, required }].
-export function StepBuilder({ steps, setSteps, emps, disabled }) {
+// Shared ordered-step editor (policy Approvals modal + reusable-template admin
+// screen). `steps` is [{ approverOids:[], groupIds:[], rule, required }].
+// `groups` is the directory/local groups list (empty if the caller can't list them).
+export function StepBuilder({ steps, setSteps, emps, groups, disabled }) {
   const activeEmps = (emps || []).filter((e) => e.status !== 'Inactive');
+  const allGroups = groups || [];
   const nameOf = (oid) => { const e = (emps || []).find((x) => x.oid === oid); return e ? e.display_name : oid.slice(0, 8); };
+  const groupName = (id) => { const g = allGroups.find((x) => x.id === id); return g ? g.name : id.slice(0, 8); };
   const patchStep = (i, patch) => setSteps((ss) => ss.map((s, j) => j === i ? { ...s, ...patch } : s));
-  const addStep = () => setSteps((ss) => [...ss, { approverOids: [], rule: 'all', required: 1 }]);
+  const addStep = () => setSteps((ss) => [...ss, { approverOids: [], groupIds: [], rule: 'all', required: 1 }]);
   const removeStep = (i) => setSteps((ss) => ss.filter((_, j) => j !== i));
   const addApprover = (i, oid) => { if (!oid) return; patchStep(i, { approverOids: [...new Set([...steps[i].approverOids, oid])] }); };
   const removeApprover = (i, oid) => patchStep(i, { approverOids: steps[i].approverOids.filter((x) => x !== oid) });
+  const addGroup = (i, id) => { if (!id) return; patchStep(i, { groupIds: [...new Set([...(steps[i].groupIds || []), id])] }); };
+  const removeGroup = (i, id) => patchStep(i, { groupIds: (steps[i].groupIds || []).filter((x) => x !== id) });
+  const chip = (bg, bd, fg, xbg, xfg) => ({ span: { display: 'inline-flex', alignItems: 'center', gap: '6px', background: bg, border: '1px solid ' + bd, borderRadius: '999px', padding: '4px 6px 4px 11px', font: '500 12.5px/1.2 "IBM Plex Sans"', color: fg }, x: { border: 'none', background: xbg, color: xfg, width: '17px', height: '17px', borderRadius: '50%', cursor: 'pointer', font: '600 10px/1 "IBM Plex Mono"' } });
+  const peopleChip = chip('#eef1fb', '#d5ddf5', '#23283a', '#d5ddf5', '#3a4bb0');
+  const groupChip = chip('#e9f5ef', '#c8e6d7', '#1f5c45', '#c8e6d7', '#1f7a5c');
   return (
     <div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {steps.map((s, i) => {
+          const gids = s.groupIds || [];
           const avail = activeEmps.filter((e) => !s.approverOids.includes(e.oid));
+          const availGroups = allGroups.filter((g) => !gids.includes(g.id));
           return (
             <div key={i} style={{ border: '1px solid #e6e8ee', borderRadius: '11px', padding: '12px 13px', background: '#fbfbfd' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '9px', flexWrap: 'wrap' }}>
@@ -56,24 +72,36 @@ export function StepBuilder({ steps, setSteps, emps, disabled }) {
                 </select>
                 {s.rule === 'quorum' && (
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px', font: '500 12px/1 "IBM Plex Sans"', color: '#54607a' }}>
-                    <input type="number" min={1} max={Math.max(1, s.approverOids.length)} value={s.required} disabled={disabled} onChange={(e) => patchStep(i, { required: e.target.value })} style={{ width: '52px', border: '1px solid #d8dce6', borderRadius: '8px', padding: '5px 7px', font: '500 12.5px/1 "IBM Plex Mono"' }} />
-                    of {s.approverOids.length}
+                    <input type="number" min={1} value={s.required} disabled={disabled} onChange={(e) => patchStep(i, { required: e.target.value })} style={{ width: '52px', border: '1px solid #d8dce6', borderRadius: '8px', padding: '5px 7px', font: '500 12.5px/1 "IBM Plex Mono"' }} />
+                    must approve
                   </span>
                 )}
                 <button disabled={disabled} style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#c0143c', font: '600 12px/1 "IBM Plex Sans"', cursor: 'pointer' }} onClick={() => removeStep(i)}>Remove step</button>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: s.approverOids.length ? '9px' : 0 }}>
-                {s.approverOids.map((oid) => (
-                  <span key={oid} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#eef1fb', border: '1px solid #d5ddf5', borderRadius: '999px', padding: '4px 6px 4px 11px', font: '500 12.5px/1.2 "IBM Plex Sans"', color: '#23283a' }}>
-                    {nameOf(oid)}
-                    <button disabled={disabled} style={{ border: 'none', background: '#d5ddf5', color: '#3a4bb0', width: '17px', height: '17px', borderRadius: '50%', cursor: 'pointer', font: '600 10px/1 "IBM Plex Mono"' }} onClick={() => removeApprover(i, oid)}>✕</button>
-                  </span>
-                ))}
+              {(s.approverOids.length > 0 || gids.length > 0) && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '9px' }}>
+                  {s.approverOids.map((oid) => (
+                    <span key={oid} style={peopleChip.span}>{nameOf(oid)}
+                      <button disabled={disabled} style={peopleChip.x} onClick={() => removeApprover(i, oid)}>✕</button></span>
+                  ))}
+                  {gids.map((id) => (
+                    <span key={id} style={groupChip.span} title="Directory group — resolved to its members at submit">◇ {groupName(id)}
+                      <button disabled={disabled} style={groupChip.x} onClick={() => removeGroup(i, id)}>✕</button></span>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+                <select value="" disabled={disabled} onChange={(e) => { addApprover(i, e.target.value); e.target.value = ''; }} style={{ flex: '1 1 200px', border: '1px solid #d8dce6', borderRadius: '8px', padding: '7px 9px', font: '400 12.5px/1 "IBM Plex Sans"', color: '#54607a', background: '#fff' }}>
+                  <option value="">+ Add person…</option>
+                  {avail.map((e) => <option key={e.oid} value={e.oid}>{e.display_name}{e.department ? ' · ' + e.department : ''}</option>)}
+                </select>
+                {allGroups.length > 0 && (
+                  <select value="" disabled={disabled} onChange={(e) => { addGroup(i, e.target.value); e.target.value = ''; }} style={{ flex: '1 1 200px', border: '1px solid #d8dce6', borderRadius: '8px', padding: '7px 9px', font: '400 12.5px/1 "IBM Plex Sans"', color: '#1f5c45', background: '#fff' }}>
+                    <option value="">+ Add group…</option>
+                    {availGroups.map((g) => <option key={g.id} value={g.id}>{g.name}{typeof g.member_count !== 'undefined' ? ` (${g.member_count})` : ''}</option>)}
+                  </select>
+                )}
               </div>
-              <select value="" disabled={disabled} onChange={(e) => { addApprover(i, e.target.value); e.target.value = ''; }} style={{ width: '100%', border: '1px solid #d8dce6', borderRadius: '8px', padding: '7px 9px', font: '400 12.5px/1 "IBM Plex Sans"', color: '#54607a', background: '#fff' }}>
-                <option value="">+ Add approver…</option>
-                {avail.map((e) => <option key={e.oid} value={e.oid}>{e.display_name}{e.department ? ' · ' + e.department : ''}</option>)}
-              </select>
             </div>
           );
         })}
@@ -107,8 +135,9 @@ export function MyApprovals({ pending, onOpen }) {
 export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
   const [data, setData] = useState(null);
   const [emps, setEmps] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [templates, setTemplates] = useState([]);
-  const [steps, setSteps] = useState([]);    // builder: [{ approverOids:[], rule, required }]
+  const [steps, setSteps] = useState([]);    // builder: [{ approverOids:[], groupIds:[], rule, required }]
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
   const stop = (e) => e.stopPropagation();
@@ -116,11 +145,17 @@ export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
   const load = async () => {
     const d = await api.policyApprovals(policy.id);
     setData(d);
-    setSteps((d.steps || []).map((s) => ({ approverOids: s.approvers.map((a) => a.oid), rule: s.rule, required: s.required })));
+    // The builder edits the SPEC: directly-named people (from_group null) + groups.
+    setSteps((d.steps || []).map((s) => ({
+      approverOids: s.approvers.filter((a) => !a.from_group).map((a) => a.oid),
+      groupIds: (s.groups || []).map((g) => g.id),
+      rule: s.rule, required: s.required,
+    })));
   };
   useEffect(() => {
     load().catch((e) => { if (toast) toast(e.message, true); onClose(); });
     api.employees().then(setEmps).catch(() => {});
+    api.groups().then(setGroups).catch(() => {});         // admin-only; ignored for non-admins
     api.workflows().then(setTemplates).catch(() => {});   // admin-only; ignored for non-admins
   }, []);
 
@@ -143,7 +178,7 @@ export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
   const canConfig = data.canGovern && st !== 'in_review';
   // Most recent decision (current version) per (position, approver).
   const decFor = (pos, oid) => { let hit = null; data.decisions.forEach((d) => { if (d.step_position === pos && d.approver_oid === oid) hit = d; }); return hit; };
-  const totalApprovers = steps.reduce((n, s) => n + s.approverOids.length, 0);
+  const totalApprovers = steps.reduce((n, s) => n + s.approverOids.length + (s.groupIds || []).length, 0);
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(20,26,48,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '36px', zIndex: 56, animation: 'ovIn .18s ease' }} onClick={onClose}>
@@ -171,15 +206,17 @@ export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span style={{ font: '600 12.5px/1.3 "IBM Plex Sans"', color: '#54607a' }}>Step {s.position}</span>
-                      {s.approvers.length > 1 && <span style={{ font: '600 10px/1.4 "IBM Plex Mono",monospace', textTransform: 'uppercase', letterSpacing: '.04em', color: '#6b74e0', background: '#eef0fb', borderRadius: '999px', padding: '2px 8px' }}>{ruleLabel(s)}</span>}
+                      {(s.approvers.length > 1 || (s.groups && s.groups.length)) && <span style={{ font: '600 10px/1.4 "IBM Plex Mono",monospace', textTransform: 'uppercase', letterSpacing: '.04em', color: '#6b74e0', background: '#eef0fb', borderRadius: '999px', padding: '2px 8px' }}>{ruleLabel(s)}</span>}
+                      {(s.groups || []).map((g) => <span key={g.id} title="Directory group — expanded to its members at submit" style={{ font: '600 10px/1.4 "IBM Plex Mono",monospace', color: '#1f5c45', background: '#e9f5ef', border: '1px solid #c8e6d7', borderRadius: '999px', padding: '2px 8px' }}>◇ {g.name}</span>)}
                       {isCurrent && <span style={{ font: '600 11px/1 "IBM Plex Mono"', color: '#213a9e' }}>· awaiting</span>}
                     </div>
+                    {!s.approvers.length && (s.groups && s.groups.length) ? <div style={{ marginTop: '5px', font: '400 12px/1.5 "IBM Plex Sans"', color: '#8a92a6' }}>Members resolved when submitted for approval.</div> : null}
                     {s.approvers.map((a) => {
                       const dec = decFor(s.position, a.oid);
                       const approvedInRun = s.approvedOids.includes(a.oid);
                       return (
                         <div key={a.oid} style={{ marginTop: '5px' }}>
-                          <div style={{ font: '600 13px/1.3 "IBM Plex Sans"', color: '#23283a' }}>{a.name || nameOf(a.oid)}{approvedInRun && <span style={{ marginLeft: '7px', color: '#1f7a5c', font: '600 11px/1 "IBM Plex Mono"' }}>✓</span>}</div>
+                          <div style={{ font: '600 13px/1.3 "IBM Plex Sans"', color: '#23283a' }}>{a.name || nameOf(a.oid)}{a.from_group && <span style={{ marginLeft: '7px', color: '#1f7a5c', font: '500 11px/1 "IBM Plex Mono"' }}>· via group</span>}{approvedInRun && <span style={{ marginLeft: '7px', color: '#1f7a5c', font: '600 11px/1 "IBM Plex Mono"' }}>✓</span>}</div>
                           {dec && <div style={{ font: '400 12px/1.5 "IBM Plex Sans"', color: DECISION_LABEL[dec.decision][1], marginTop: '1px' }}>{DECISION_LABEL[dec.decision][0]}{dec.comment ? ' — “' + dec.comment + '”' : ''} <span style={{ color: '#aab0c0' }}>· {fmtWhen(dec.decided_at)}</span></div>}
                         </div>
                       );
@@ -217,7 +254,7 @@ export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
                   </select>
                 )}
               </div>
-              <StepBuilder steps={steps} setSteps={setSteps} emps={emps} disabled={busy} />
+              <StepBuilder steps={steps} setSteps={setSteps} emps={emps} groups={groups} disabled={busy} />
               <button disabled={busy || !totalApprovers} style={{ ...btn('#fff', '#213a9e', '#c9d3f0'), marginTop: '11px' }} onClick={() => run(saveSteps, 'Steps saved')}>Save steps ({totalApprovers})</button>
             </div>
           )}

@@ -656,9 +656,11 @@ windows stay defined in code.
 ## ADR-120 — Policy approval workflow
 **Status: Accepted — Phase 1 + Phase 2a (notifications + My approvals) + Phase 2b
 (group approvers: all/any/quorum) + Phase 2c (reusable templates, apply-copies-in
-for run isolation) implemented** (see the "Shipped" note in
-[`POLICY-APPROVAL-WORKFLOW.md`](POLICY-APPROVAL-WORKFLOW.md)). Remaining future
-extension: approver targeting by directory group (dynamic membership).
+for run isolation) + Phase 2d (directory-group approvers, snapshot-at-submit)
+implemented** (see the "Shipped" note in
+[`POLICY-APPROVAL-WORKFLOW.md`](POLICY-APPROVAL-WORKFLOW.md)). Group membership is
+read from the already-synced `effective_group_membership` view, so no new Entra
+scope was needed; members are frozen at submit so an in-flight run never shifts.
 **Context.** The portal distributes and collects acknowledgements for policies that
 are assumed already approved elsewhere; there is no pre-publication sign-off (draft →
 review → approved) in the system.

@@ -56,18 +56,43 @@ function notifyStep(p, step) {
   }
 }
 
+// Resolve every group approver of a policy to its CURRENT members and freeze
+// them into policy_approvers for the run (snapshot-at-submit). Previously
+// expanded rows (from_group not null) are cleared first, so re-submitting after
+// changes picks up fresh membership. A directly-named approver (from_group null)
+// wins over a group-expanded duplicate at the same step (ON CONFLICT).
+async function expandGroups(policyId) {
+  await pool.query('delete from policy_approvers where policy_id=$1 and from_group is not null', [policyId]);
+  const groups = (await pool.query('select position, group_id from policy_approver_groups where policy_id=$1', [policyId])).rows;
+  for (const g of groups) {
+    await pool.query(
+      `insert into policy_approvers (policy_id, position, approver_oid, from_group)
+         select $1, $2, m.employee_oid, $3
+           from effective_group_membership m
+           join employees e on e.oid = m.employee_oid
+          where m.group_id = $3 and coalesce(e.status, 'Active') <> 'Inactive'
+       on conflict (policy_id, position, approver_oid) do nothing`, [policyId, g.position, g.group_id]);
+  }
+}
+
 // Load the approval context for a policy: the ordered STEPS (each a group of
-// approvers + rule), the decision log for the current version, per-step run
-// approvals, and which step is currently awaiting a decision.
+// approvers + optional directory groups + rule), the decision log for the
+// current version, per-step run approvals, and which step is currently awaiting
+// a decision. The step list is authoritative from policy_approval_steps, unioned
+// with any positions that carry approvers/groups (defensive / pre-2b data).
 async function ctx(policyId) {
   const p = (await pool.query(
     'select id, name, version, owner_oid, approval_state, approved_version, submitted_at from policies where id=$1',
     [policyId])).rows[0];
   if (!p) return null;
   const approverRows = (await pool.query(
-    `select pa.position, pa.approver_oid, e.display_name from policy_approvers pa
+    `select pa.position, pa.approver_oid, pa.from_group, e.display_name from policy_approvers pa
        left join employees e on e.oid = pa.approver_oid
       where pa.policy_id=$1 order by pa.position, pa.approver_oid`, [policyId])).rows;
+  const groupRows = (await pool.query(
+    `select pg.position, pg.group_id, g.name from policy_approver_groups pg
+       left join groups g on g.id = pg.group_id
+      where pg.policy_id=$1 order by pg.position, pg.group_id`, [policyId])).rows;
   const ruleRows = (await pool.query(
     'select position, rule, required from policy_approval_steps where policy_id=$1', [policyId])).rows;
   const rules = new Map(ruleRows.map((r) => [r.position, r]));
@@ -83,31 +108,43 @@ async function ctx(policyId) {
     if (!approvedByPos.has(d.step_position)) approvedByPos.set(d.step_position, new Set());
     approvedByPos.get(d.step_position).add(d.approver_oid);
   }
-  // Group approvers into steps by position.
-  const byPos = new Map();
+  const peopleByPos = new Map();
   for (const a of approverRows) {
-    if (!byPos.has(a.position)) byPos.set(a.position, []);
-    byPos.get(a.position).push({ oid: a.approver_oid, name: a.display_name });
+    if (!peopleByPos.has(a.position)) peopleByPos.set(a.position, []);
+    peopleByPos.get(a.position).push({ oid: a.approver_oid, name: a.display_name, from_group: a.from_group });
   }
-  const steps = [...byPos.keys()].sort((x, y) => x - y).map((position) => {
-    const approvers = byPos.get(position);
+  const groupsByPos = new Map();
+  for (const g of groupRows) {
+    if (!groupsByPos.has(g.position)) groupsByPos.set(g.position, []);
+    groupsByPos.get(g.position).push({ id: g.group_id, name: g.name });
+  }
+  const positions = [...new Set([...rules.keys(), ...peopleByPos.keys(), ...groupsByPos.keys()])].sort((x, y) => x - y);
+  const steps = positions.map((position) => {
+    const approvers = peopleByPos.get(position) || [];
+    const groups = groupsByPos.get(position) || [];
     const r = rules.get(position) || {};
     const rule = r.rule || 'all';
     const target = stepTarget(rule, r.required, approvers.length);
     const approvedOids = [...(approvedByPos.get(position) || new Set())];
-    return { position, rule, required: target, approvers, approvedOids, satisfied: approvedOids.length >= target };
+    return { position, rule, required: target, approvers, groups, approvedOids, satisfied: approvedOids.length >= target };
   });
   const currentStep = p.approval_state === 'in_review' ? (steps.find((s) => !s.satisfied) || null) : null;
   return { p, steps, decisions, currentStep };
 }
 
 // Shape a step for the API (no internal fields leak).
-const stepDto = (s) => ({ position: s.position, rule: s.rule, required: s.required, approvers: s.approvers, approvedOids: s.approvedOids, satisfied: s.satisfied });
+const stepDto = (s) => ({
+  position: s.position, rule: s.rule, required: s.required,
+  approvers: s.approvers.map((a) => ({ oid: a.oid, name: a.name, from_group: a.from_group })),
+  groups: s.groups, approvedOids: s.approvedOids, satisfied: s.satisfied,
+});
 
 module.exports = (r) => {
   // ── configure the approver steps (owner/admin) ──
   // Accepts either { approverOids:[...] } (one approver per step, rule 'all' —
-  // the Phase 1 form) or { steps:[{ approverOids:[...], rule, required }] }.
+  // the Phase 1 form) or { steps:[{ approverOids:[...], groupIds:[...], rule,
+  // required }] }. A step may name people, reference directory groups, or both;
+  // groups are resolved to their members at submit time.
   r.put('/policies/:id/approvers', async (req, res) => {
     const c = await ctx(req.params.id);
     if (!c) return res.status(404).json({ error: 'not_found' });
@@ -118,37 +155,48 @@ module.exports = (r) => {
     if (Array.isArray(req.body && req.body.steps)) {
       steps = req.body.steps.map((s) => ({
         approverOids: [...new Set((Array.isArray(s.approverOids) ? s.approverOids : []).filter(Boolean))],
+        groupIds: [...new Set((Array.isArray(s.groupIds) ? s.groupIds : []).filter(Boolean))],
         rule: ['all', 'any', 'quorum'].includes(s.rule) ? s.rule : 'all',
         required: Number.isInteger(s.required) ? s.required : null,
-      })).filter((s) => s.approverOids.length);
+      })).filter((s) => s.approverOids.length || s.groupIds.length);
     } else {
       const oids = Array.isArray(req.body && req.body.approverOids) ? req.body.approverOids : [];
-      steps = oids.filter(Boolean).map((oid) => ({ approverOids: [oid], rule: 'all', required: null }));
+      steps = oids.filter(Boolean).map((oid) => ({ approverOids: [oid], groupIds: [], rule: 'all', required: null }));
     }
 
     await pool.query('delete from policy_approvers where policy_id=$1', [c.p.id]);
     await pool.query('delete from policy_approval_steps where policy_id=$1', [c.p.id]);
-    let pos = 1, approverCount = 0;
+    await pool.query('delete from policy_approver_groups where policy_id=$1', [c.p.id]);
+    let pos = 1, approverCount = 0, groupCount = 0;
     for (const s of steps) {
       for (const oid of s.approverOids) {
         await pool.query('insert into policy_approvers (policy_id, position, approver_oid) values ($1,$2,$3)', [c.p.id, pos, oid]);
         approverCount++;
       }
-      const required = s.rule === 'quorum' ? Math.min(Math.max(s.required || 1, 1), s.approverOids.length) : null;
+      const required = s.rule === 'quorum' ? Math.max(s.required || 1, 1) : null;
       await pool.query('insert into policy_approval_steps (policy_id, position, rule, required) values ($1,$2,$3,$4)', [c.p.id, pos, s.rule, required]);
+      for (const gid of s.groupIds) {
+        await pool.query('insert into policy_approver_groups (policy_id, position, group_id) values ($1,$2,$3)', [c.p.id, pos, gid]);
+        groupCount++;
+      }
       pos++;
     }
-    await audit(req, 'policy.approvers.set', c.p.name, { id: c.p.id, steps: steps.length, approvers: approverCount });
-    res.json({ ok: true, steps: steps.length, approvers: approverCount });
+    await audit(req, 'policy.approvers.set', c.p.name, { id: c.p.id, steps: steps.length, approvers: approverCount, groups: groupCount });
+    res.json({ ok: true, steps: steps.length, approvers: approverCount, groups: groupCount });
   });
 
   // ── submit for approval (owner/admin): -> in_review ──
   r.post('/policies/:id/submit', async (req, res) => {
+    const pre = await ctx(req.params.id);
+    if (!pre) return res.status(404).json({ error: 'not_found' });
+    if (!canGovern(req, pre.p)) return res.status(403).json({ error: 'forbidden' });
+    if (!pre.steps.length) return res.status(400).json({ error: 'no_approvers', detail: 'Add at least one approver first.' });
+    if (pre.p.approval_state === 'in_review') return res.status(409).json({ error: 'bad_state', detail: 'Already in review.' });
+    // Freeze current group membership into the run, then re-read.
+    await expandGroups(pre.p.id);
     const c = await ctx(req.params.id);
-    if (!c) return res.status(404).json({ error: 'not_found' });
-    if (!canGovern(req, c.p)) return res.status(403).json({ error: 'forbidden' });
-    if (!c.steps.length) return res.status(400).json({ error: 'no_approvers', detail: 'Add at least one approver first.' });
-    if (c.p.approval_state === 'in_review') return res.status(409).json({ error: 'bad_state', detail: 'Already in review.' });
+    const empty = c.steps.find((s) => !s.approvers.length);
+    if (empty) return res.status(400).json({ error: 'no_approvers', detail: `Step ${empty.position} has no members to approve — its group is empty or all members are inactive.` });
     await pool.query(
       `update policies set approval_state='in_review', approved_externally=false, approved_version=null,
          submitted_at=now(), submitted_by=$2, updated_at=now() where id=$1`, [c.p.id, req.user.oid]);

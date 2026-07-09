@@ -1,6 +1,6 @@
 # Design: Policy Approval Workflow
 
-**Status: Phase 1 (MVP) + Phase 2a/2b/2c implemented.** Owner: engineering.
+**Status: Phase 1 (MVP) + Phase 2a/2b/2c/2d implemented.** Owner: engineering.
 Companion ADR: ADR-120 in `ARCHITECTURE-AND-DECISIONS.md`.
 
 > **Shipped (Phase 1):** `migration_019_approvals.sql`; `src/routes/approvals.js`
@@ -32,9 +32,28 @@ Companion ADR: ADR-120 in `ARCHITECTURE-AND-DECISIONS.md`.
 > `test/integration/approval-templates.test.js` covers CRUD, apply, the snapshot
 > guarantee, the in-review guard, and delete-safety.
 >
-> **Not yet:** approver targeting by **directory group** (dynamic membership /
-> quorum over a live group) — the model is person-based today; this remains a
-> future extension.
+> **Shipped (Phase 2d):** approver targeting by **directory group**
+> (`migration_022_group_approvers.sql`). A step may name people, reference groups
+> (`policy_approver_groups` / template `approval_workflow_step_groups`), or both.
+> Groups are resolved to their **current members at submit time** and frozen into
+> `policy_approvers` for the run (`expandGroups` in `approvals.js`, marking rows
+> with `from_group`), so a membership change mid-review never shifts an in-flight
+> run and the append-only ledger stays meaningful — **snapshot-at-submit**, the
+> same isolation philosophy as apply-copies-in (2c). Re-submitting after changes
+> re-resolves the group (fresh snapshot). Empty/all-inactive groups are blocked at
+> submit. Membership is read from the already-synced `effective_group_membership`
+> view, so **no new Entra app-registration scope** is required. Group config is
+> admin-scoped (the group list is admin-only, like templates). The step builder
+> (`StepBuilder`) offers both a person and a group picker; the chain shows the
+> group chip plus each resolved member (tagged “via group”).
+> `test/integration/approval-groups.test.js` covers all/any/quorum over a group,
+> the snapshot guarantee, re-resolution on resubmit, the empty-group block, and
+> person∩group dedup.
+>
+> **Deliberately not done:** a member who is also the owner/submitter is *not*
+> auto-excluded from an approver group — configuring a group is treated the same
+> as naming that person. Fully dynamic (never-frozen) membership was rejected in
+> favour of the snapshot model above.
 
 This design adds a pre-publication **approval workflow** to the portal: a policy is
 drafted, routed through an ordered chain of approvers (e.g. Infra Manager → CISO →
