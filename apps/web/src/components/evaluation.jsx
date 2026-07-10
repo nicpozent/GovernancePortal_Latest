@@ -1,3 +1,4 @@
+import * as React from 'react';
 /* Admin → Application Evaluation. Evidence-based maturity scorecard, mirroring
    docs/APPLICATION-EVALUATION.md (the source of record). Static, read-only. */
 

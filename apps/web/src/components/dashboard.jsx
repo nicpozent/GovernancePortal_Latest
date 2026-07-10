@@ -1,3 +1,4 @@
+import * as React from 'react';
 /* Extracted from app.jsx — presentational components (dashboard). */
 import { Ico, seg, typePill, pctColor, initials } from '../ui.jsx';
 import { Empty } from './common.jsx';

@@ -1,3 +1,4 @@
+import * as React from 'react';
 /* ============================================================
    Presentation helpers extracted from app.jsx: CSS-string→style-object,
    pills/segments/tabs/chips, date/initials formatting, employee-CSV parsing,
