@@ -12,6 +12,7 @@
 //  This is the per-site equivalent of least privilege — the app
 //  cannot touch any other SharePoint site in the tenant.
 // ============================================================
+const { Readable } = require('stream');
 const graph = require('../graph');
 const cfg = require('../config');
 
@@ -40,9 +41,19 @@ async function getPolicyDocument(driveId, itemId) {
 // external SharePoint URL directly is blocked by SharePoint's X-Frame-Options.
 // `asPdf` asks Graph to convert an Office document (Word/PowerPoint/Excel) to
 // PDF on download, so it can preview in an <iframe> like a native PDF.
+// Native files are streamed via their pre-authenticated `@microsoft.graph.downloadUrl`
+// (the reliable, redirect-free path); Office→PDF uses /content?format=pdf.
 async function getPolicyContentStream(driveId, itemId, asPdf) {
-  const path = `/drives/${driveId}/items/${itemId}/content` + (asPdf ? '?format=pdf' : '');
-  return graph.api(path).getStream();
+  if (asPdf) {
+    return graph.api(`/drives/${driveId}/items/${itemId}/content?format=pdf`).getStream();
+  }
+  const item = await graph.api(`/drives/${driveId}/items/${itemId}`)
+    .select('id,name,@microsoft.graph.downloadUrl').get();
+  const url = item['@microsoft.graph.downloadUrl'];
+  if (!url) throw new Error('item has no downloadUrl');
+  const resp = await fetch(url);                       // pre-authenticated; no auth header needed
+  if (!resp.ok || !resp.body) throw new Error('download failed: HTTP ' + resp.status);
+  return Readable.fromWeb(resp.body);
 }
 
 // Resolve a sharing/web URL to a drive item (handy when an admin
