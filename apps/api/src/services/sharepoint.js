@@ -38,8 +38,11 @@ async function getPolicyDocument(driveId, itemId) {
 // Stream a document's bytes through our own origin (app-only Graph). The SPA
 // renders an inline preview from a SAME-ORIGIN blob (CSP-safe); embedding the
 // external SharePoint URL directly is blocked by SharePoint's X-Frame-Options.
-async function getPolicyContentStream(driveId, itemId) {
-  return graph.api(`/drives/${driveId}/items/${itemId}/content`).getStream();
+// `asPdf` asks Graph to convert an Office document (Word/PowerPoint/Excel) to
+// PDF on download, so it can preview in an <iframe> like a native PDF.
+async function getPolicyContentStream(driveId, itemId, asPdf) {
+  const path = `/drives/${driveId}/items/${itemId}/content` + (asPdf ? '?format=pdf' : '');
+  return graph.api(path).getStream();
 }
 
 // Resolve a sharing/web URL to a drive item (handy when an admin

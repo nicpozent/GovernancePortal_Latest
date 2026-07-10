@@ -82,13 +82,17 @@ r.get('/policies/:id/content', async (req, res) => {
   let name = 'document';
   try { const meta = await getPolicyDocument(p.sharepoint_drive_id, p.sharepoint_item_id); if (meta && meta.name) name = meta.name; }
   catch (e) { return res.status(502).json({ error: 'sharepoint_unavailable', detail: e.message }); }
-  // Content-Type is derived server-side from the file extension (never guessed
-  // from bytes), consistent with the uploaded-file endpoint.
-  res.setHeader('Content-Type', UPLOAD_TYPES[path.extname(name).toLowerCase()] || 'application/octet-stream');
+  // Office documents (Word/PowerPoint/Excel) can't render in an <iframe>, so ask
+  // Graph to convert them to PDF; native PDFs/images stream as-is. Content-Type is
+  // set server-side from the extension (never guessed from bytes).
+  const ext = path.extname(name).toLowerCase();
+  const asPdf = ['.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx'].includes(ext);
+  res.setHeader('Content-Type', asPdf ? 'application/pdf' : (UPLOAD_TYPES[ext] || 'application/octet-stream'));
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Content-Disposition', `inline; filename="${name.replace(/["\r\n]/g, '')}"`);
+  const outName = asPdf ? name.replace(/\.[^.]+$/, '.pdf') : name;
+  res.setHeader('Content-Disposition', `inline; filename="${outName.replace(/["\r\n]/g, '')}"`);
   let stream;
-  try { stream = await getPolicyContentStream(p.sharepoint_drive_id, p.sharepoint_item_id); }
+  try { stream = await getPolicyContentStream(p.sharepoint_drive_id, p.sharepoint_item_id, asPdf); }
   catch (e) { if (req.log) req.log.error({ err: e.message }, 'sharepoint content fetch failed'); return res.status(502).json({ error: 'sharepoint_unavailable' }); }
   stream.on('error', (e) => { if (req.log) req.log.error({ err: e.message }, 'sharepoint content stream failed'); if (!res.headersSent) res.status(502).json({ error: 'read_failed' }); else res.destroy(e); });
   stream.pipe(res);

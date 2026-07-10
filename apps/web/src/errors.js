@@ -47,6 +47,7 @@ export const ERROR_MESSAGES = {
   feed_disabled: 'The audit feed is turned off.',
   sharepoint_browse_failed: 'Couldn’t reach SharePoint — check the site configuration.',
   backup_failed: 'The backup failed — check the server logs.',
+  rate_limited: 'Too many requests in a short time. Please wait a minute or two and try again.',
   server_error: 'Something went wrong on our side. Please try again.',
 };
 

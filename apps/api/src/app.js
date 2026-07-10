@@ -59,13 +59,21 @@ app.use(express.json({ limit: '256kb' }));
 
 // Basic abuse protection (all API traffic). The store is shared across replicas
 // when RATE_LIMIT_REDIS_URL is set (makeStore), else in-memory (single-host).
+// A rate-limited response returns a JSON { error:'rate_limited' } (not the
+// library's default plain text) so the SPA can show a clear "please wait" message
+// instead of a generic failure.
 const { makeStore } = require('./ratelimit');
-app.use('/api', rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false, store: makeStore('api') }));
-// Directory sync is expensive — cap it hard.
-app.use('/api/sync', rateLimit({ windowMs: 5 * 60_000, max: 5, standardHeaders: true, legacyHeaders: false, store: makeStore('sync') }));
+const limited = (detail) => ({ error: 'rate_limited', detail });
+app.use('/api', rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false, store: makeStore('api'),
+  message: limited('Too many requests in a short time. Please wait a minute and try again.') }));
+// Directory sync is expensive (many Graph calls) — cap it, but allow enough
+// manual re-syncs that an admin setting things up doesn't hit it in normal use.
+app.use('/api/sync', rateLimit({ windowMs: 5 * 60_000, max: 15, standardHeaders: true, legacyHeaders: false, store: makeStore('sync'),
+  message: limited('Sync was run several times just now. Please wait a few minutes before syncing again.') }));
 // The consumer feed lives outside /api and authenticates with an API key —
 // give it its own limiter so it can't be hammered / brute-forced.
-app.use('/feed', rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false, store: makeStore('feed') }));
+app.use('/feed', rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false, store: makeStore('feed'),
+  message: limited('Too many requests. Please slow down.') }));
 
 // Liveness probe — is the process up? Deliberately does NOT touch the DB: a DB
 // blip must not cause the orchestrator to kill/restart a healthy process.
