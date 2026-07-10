@@ -8,9 +8,11 @@ solution embodies, and how each is realized here. Companion to
 > additions reflected below: the sign-off workflow (B9) and its decision ledger
 > (D8), GDPR data-subject rights (B10), controls-as-code assurance (B11), the
 > storage abstraction (A12), the shared rate-limit store (A13), HA-safe scheduling
-> via leader election (A10), and metrics/readiness observability (A11). The
-> approval workflow has its own detailed block catalogue in
-> [`approval-workflow/BUILDING-BLOCKS.md`](approval-workflow/BUILDING-BLOCKS.md).
+> via leader election (A10), metrics/readiness observability (A11), and per-user
+> theming/personalization (A14). The approval workflow has its own detailed block
+> catalogue in [`approval-workflow/BUILDING-BLOCKS.md`](approval-workflow/BUILDING-BLOCKS.md);
+> the full requirements catalogue (FR/NFR/candidate) is in
+> [`REQUIREMENTS.md`](REQUIREMENTS.md).
 
 ---
 
@@ -96,6 +98,7 @@ Realization references point at where it lives in the code.
 | **A11 Observability** — structured logs + correlation id + SIEM feed **+ metrics + readiness** | `pino`/`pino-http` + forward/feed; **Prometheus `/metrics` (RED)** + `/readyz` DB check (`metrics.js`) + container healthchecks | **Enterprise-reusable** |
 | **A12 Storage Abstraction** — mediate object/file storage behind one interface | `storage.js` (pluggable **local volume ↔ Azure Blob**) | **Enterprise-reusable** portability seam |
 | **A13 Rate-limit Store** — shared throttling across replicas | `ratelimit.js` (in-memory default → **shared Redis** for HA, ADR-119) | Reusable |
+| **A14 User Preference / Personalization** — persist & apply per-user UI preferences without a round-trip flash | `theme.js` + CSS design tokens (`_tokens.css`) + a no-flash init in `index.html`; per-user light/dark persisted in `localStorage` | **Reusable** personalization pattern |
 
 ### 2.4 Technology Architecture ABBs (platform/infrastructure)
 
