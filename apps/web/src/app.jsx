@@ -231,7 +231,24 @@ function App() {
       } catch (_) { setReader((r) => r ? { ...r, doc: { training: true, error: true } } : r); }
       return;
     }
-    try { const doc = await api.document(p.id); setReader((r) => r ? { ...r, doc } : r); } catch (_) {}
+    try {
+      const doc = await api.document(p.id);
+      setReader((r) => r ? { ...r, doc } : r);
+      // Try an inline preview streamed through our own origin (CSP-safe). Falls
+      // back silently to the SharePoint link if the document can't be proxied.
+      try {
+        const token = await getToken();
+        const res = await fetch(API_BASE + '/api/policies/' + p.id + '/content', { headers: { Authorization: 'Bearer ' + token } });
+        if (res.ok) {
+          const blob = await res.blob();
+          const mime = blob.type || '';
+          if (/pdf|image|video/.test(mime)) {
+            const previewUrl = URL.createObjectURL(blob);
+            setReader((r) => r ? { ...r, doc: { ...r.doc, previewUrl, previewMime: mime } } : r);
+          }
+        }
+      } catch (_) { /* keep the link-only view */ }
+    } catch (_) {}
   };
   const setQuizAnswer = (qid, idx) => setQuizState((s) => ({ ...s, answers: { ...s.answers, [qid]: idx } }));
   const retryQuiz = () => setQuizState((s) => ({ ...s, result: null, answers: {} }));

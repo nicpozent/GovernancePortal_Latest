@@ -20,6 +20,14 @@ test('GET /healthz is open and returns ok', async () => {
   assert.equal(res.body.ok, true);
 });
 
+test('CSP allows blob: for the in-app document preview (PDF/image/video)', async () => {
+  const csp = (await request(h.app).get('/healthz')).headers['content-security-policy'] || '';
+  assert.match(csp, /frame-src[^;]*blob:/, 'blob: must be allowed in frame-src (PDF iframe preview)');
+  assert.match(csp, /img-src[^;]*blob:/, 'blob: must be allowed in img-src (image preview)');
+  assert.match(csp, /media-src[^;]*blob:/, 'blob: must be allowed in media-src (video preview)');
+  assert.match(csp, /default-src 'self'/, 'default-src stays self (hardening preserved)');
+});
+
 test('GET /api/me requires authentication', async (t) => {
   if (!dbUp) return t.skip('no test database');
   h.anon();
@@ -52,6 +60,29 @@ test('policy visibility: members see assigned policies; non-members do not', asy
   h.asUser(outsider, []);
   const notseen = (await request(h.app).get('/api/policies')).body;
   assert.equal(notseen.find((p) => p.id === pol), undefined, 'non-member must not see it');
+});
+
+test('create policy: an admin who is not a synced employee does not 500 (owner_oid FK guard)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const ghostAdmin = db.uuid(9999);              // an oid with NO employees row
+  h.asAdmin(ghostAdmin);
+  const res = await request(h.app).post('/api/policies').send({
+    name: 'Remote Work Policy', docType: 'Policy', version: 'v1.0',
+    sharepointUrl: 'https://sp/doc', ownerOid: ghostAdmin, groupIds: [],
+  });
+  assert.equal(res.status, 201, 'save must not fail with server_error when the admin is not an employee');
+  const row = (await db.superPool.query('select owner_oid, owner from policies where id=$1', [res.body.id])).rows[0];
+  assert.equal(row.owner_oid, null, 'an unknown owner oid is stored as NULL, not an FK violation');
+
+  // A real employee owner is preserved (name + oid).
+  const emp = await db.seedEmployee({ name: 'Real Owner' });
+  const res2 = await request(h.app).post('/api/policies').send({
+    name: 'Travel Policy', docType: 'Policy', version: 'v1.0', sharepointUrl: 'https://sp/doc', ownerOid: emp, groupIds: [],
+  });
+  assert.equal(res2.status, 201);
+  const row2 = (await db.superPool.query('select owner_oid, owner from policies where id=$1', [res2.body.id])).rows[0];
+  assert.equal(row2.owner_oid, emp);
+  assert.equal(row2.owner, 'Real Owner');
 });
 
 test('canRead: document endpoint is 403 for a non-member, 200 for a member', async (t) => {

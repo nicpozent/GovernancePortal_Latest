@@ -1,7 +1,9 @@
 // Generated from the former monolithic routes.js — handler bodies are verbatim.
+const path = require('path');
 const { pool } = require('../db');
 const { requireAdmin } = require('../auth');
-const { getPolicyDocument, resolveSharingUrl } = require('../services/sharepoint');
+const { getPolicyDocument, getPolicyContentStream, resolveSharingUrl } = require('../services/sharepoint');
+const { UPLOAD_TYPES } = require('../uploads');
 const { isAdmin, audit, canRead } = require('../authz');
 
 module.exports = (r) => {
@@ -68,6 +70,30 @@ r.get('/policies/:id/document', async (req, res) => {
   res.json(doc);
 });
 
+// ── inline document bytes, proxied through our origin ────────
+// Lets the SPA preview a SharePoint-hosted policy from a same-origin blob
+// (CSP-safe), rather than embedding the external URL (blocked by SharePoint's
+// X-Frame-Options). Authorization is the same read gate as /document.
+r.get('/policies/:id/content', async (req, res) => {
+  if (!(await canRead(req, req.params.id))) return res.status(403).json({ error: 'forbidden', detail: 'not assigned to you' });
+  const p = (await pool.query('select sharepoint_drive_id, sharepoint_item_id from policies where id = $1', [req.params.id])).rows[0];
+  if (!p) return res.status(404).json({ error: 'not_found' });
+  if (!p.sharepoint_drive_id || !p.sharepoint_item_id) return res.status(404).json({ error: 'no_document', detail: 'This policy has no embedded document.' });
+  let name = 'document';
+  try { const meta = await getPolicyDocument(p.sharepoint_drive_id, p.sharepoint_item_id); if (meta && meta.name) name = meta.name; }
+  catch (e) { return res.status(502).json({ error: 'sharepoint_unavailable', detail: e.message }); }
+  // Content-Type is derived server-side from the file extension (never guessed
+  // from bytes), consistent with the uploaded-file endpoint.
+  res.setHeader('Content-Type', UPLOAD_TYPES[path.extname(name).toLowerCase()] || 'application/octet-stream');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `inline; filename="${name.replace(/["\r\n]/g, '')}"`);
+  let stream;
+  try { stream = await getPolicyContentStream(p.sharepoint_drive_id, p.sharepoint_item_id); }
+  catch (e) { if (req.log) req.log.error({ err: e.message }, 'sharepoint content fetch failed'); return res.status(502).json({ error: 'sharepoint_unavailable' }); }
+  stream.on('error', (e) => { if (req.log) req.log.error({ err: e.message }, 'sharepoint content stream failed'); if (!res.headersSent) res.status(502).json({ error: 'read_failed' }); else res.destroy(e); });
+  stream.pipe(res);
+});
+
 // ── policies CRUD (admin) — assigned to specific GROUPS ──────
 r.post('/policies', requireAdmin, async (req, res) => {
   let { name, docType, version, sharepointUrl, sharepointDriveId, sharepointItemId, owner, ownerOid, groupIds, dueDate, dueDays, reviewDate } = req.body || {};
@@ -77,9 +103,16 @@ r.post('/policies', requireAdmin, async (req, res) => {
     catch { /* keep link-only; document endpoint will fall back to webUrl */ }
   }
   // Owner defaults to the uploader; if an owner_oid is chosen, use that employee's name for display.
+  // owner_oid is an FK to employees(oid): only keep it when the oid is a known
+  // employee. An admin acting outside the directory-sync scope has no employees
+  // row, so we store their display name but a NULL owner_oid (else the insert
+  // fails the FK with a generic 500 — the reported "Save failed: server_error").
   let ownerName = owner || req.user.name;
-  const oOid = ownerOid || req.user.oid;
-  if (oOid) { const e = (await pool.query('select display_name from employees where oid=$1', [oOid])).rows[0]; if (e) ownerName = e.display_name; }
+  let oOid = ownerOid || req.user.oid;
+  if (oOid) {
+    const e = (await pool.query('select display_name from employees where oid=$1', [oOid])).rows[0];
+    if (e) ownerName = e.display_name; else oOid = null;
+  }
   const p = (await pool.query(
     `insert into policies (name, doc_type, version, sharepoint_url, sharepoint_drive_id, sharepoint_item_id, owner, owner_oid, due_date, due_days, review_date)
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning *`,
@@ -96,15 +129,20 @@ r.post('/policies', requireAdmin, async (req, res) => {
 r.put('/policies/:id', requireAdmin, async (req, res) => {
   const { name, docType, version, sharepointUrl, sharepointDriveId, sharepointItemId, owner, ownerOid, groupIds, dueDate, dueDays, reviewDate, versionNote } = req.body || {};
   const prev = (await pool.query('select version from policies where id=$1', [req.params.id])).rows[0];
+  // Same owner_oid FK guard as create: keep the oid only when it is a known employee.
   let ownerName = owner;
-  if (ownerOid) { const e = (await pool.query('select display_name from employees where oid=$1', [ownerOid])).rows[0]; if (e) ownerName = e.display_name; }
+  let oOid = ownerOid || null;
+  if (oOid) {
+    const e = (await pool.query('select display_name from employees where oid=$1', [oOid])).rows[0];
+    if (e) ownerName = e.display_name; else oOid = null;
+  }
   const p = (await pool.query(
     `update policies set name=$2, doc_type=$3, version=$4, sharepoint_url=$5, owner=$6,
             sharepoint_drive_id=coalesce($7, sharepoint_drive_id),
             sharepoint_item_id=coalesce($8, sharepoint_item_id),
             due_date=$9, due_days=$10, review_date=$11, owner_oid=$12, updated_at=now()
        where id=$1 returning *`,
-    [req.params.id, name, docType, version, sharepointUrl, ownerName, sharepointDriveId || null, sharepointItemId || null, dueDate || null, (dueDays || dueDays === 0) ? dueDays : null, reviewDate || null, ownerOid || null]
+    [req.params.id, name, docType, version, sharepointUrl, ownerName, sharepointDriveId || null, sharepointItemId || null, dueDate || null, (dueDays || dueDays === 0) ? dueDays : null, reviewDate || null, oOid]
   )).rows[0];
   if (!p) return res.status(404).json({ error: 'not_found' });
   if (prev && prev.version !== p.version) {

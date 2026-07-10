@@ -163,13 +163,24 @@ export function Reader({ reader, onClose, signFirst, signLast, signAgreed, setSi
                             : <a href={doc.fileUrl} download={doc.name} style={{ display:'flex', alignItems:'center', gap:'13px', background:'var(--cf6f8fb)', border:'1px solid var(--ce6e9f1)', borderRadius:'11px', padding:'13px 16px', textDecoration:'none' }}><div style={{ width:'34px', height:'34px', borderRadius:'8px', background:'#213a9e12', color:'var(--c213a9e)', display:'flex', alignItems:'center', justifyContent:'center', flex:'none' }}><Ico size={18}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></Ico></div><div style={{ flex:1 }}><div style={{ font:'600 13px/1.2 "IBM Plex Sans"', color:'var(--c23283a)' }}>Download training material</div><div style={{ font:'400 11.5px/1.3 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)' }}>{doc.name}</div></div><Ico size={17}><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></Ico></a>}
                       <div style={{ marginTop:'10px', textAlign:'right' }}><a href={doc.fileUrl} download={doc.name} style={{ font:'600 12px/1 "IBM Plex Sans"', color:'var(--c213a9e)', textDecoration:'none' }}>Download a copy</a></div>
                     </div>)
-            : url
-            ? <a href={url} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:'13px', background:'var(--cf6f8fb)', border:'1px solid var(--ce6e9f1)', borderRadius:'11px', padding:'13px 16px', textDecoration:'none', marginBottom:'22px' }}>
-                <div style={{ width:'34px', height:'34px', borderRadius:'8px', background:'#0078c012', color:'var(--c0078c0)', display:'flex', alignItems:'center', justifyContent:'center', flex:'none' }}><Ico size={18}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></Ico></div>
-                <div style={{ flex:1, minWidth:0 }}><div style={{ font:'600 13px/1.2 "IBM Plex Sans"', color:'var(--c23283a)' }}>Open source document in SharePoint</div><div style={{ font:'400 11.5px/1.3 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{url}</div></div>
-                <Ico size={17}><path d="M7 17L17 7M9 7h8v8"/></Ico>
-              </a>
-            : <div style={{ marginBottom:'22px', font:'400 13px/1.5 "IBM Plex Sans"', color:'var(--c8a92a6)' }}>No SharePoint link on file for this document.</div>}
+            : <div style={{ marginBottom:'22px' }}>
+                {doc && doc.previewUrl && (
+                  doc.previewMime.includes('pdf')
+                    ? <iframe src={doc.previewUrl} title={p.name} style={{ width:'100%', height:'440px', border:'1px solid var(--ce6e9f1)', borderRadius:'11px', marginBottom:'12px' }}></iframe>
+                    : doc.previewMime.startsWith('image')
+                      ? <img src={doc.previewUrl} alt={p.name} style={{ width:'100%', borderRadius:'11px', border:'1px solid var(--ce6e9f1)', marginBottom:'12px' }} />
+                      : doc.previewMime.startsWith('video')
+                        ? <video src={doc.previewUrl} controls style={{ width:'100%', maxHeight:'440px', borderRadius:'11px', background:'#000', marginBottom:'12px' }}></video>
+                        : null
+                )}
+                {url
+                  ? <a href={url} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:'13px', background:'var(--cf6f8fb)', border:'1px solid var(--ce6e9f1)', borderRadius:'11px', padding:'13px 16px', textDecoration:'none' }}>
+                      <div style={{ width:'34px', height:'34px', borderRadius:'8px', background:'#0078c012', color:'var(--c0078c0)', display:'flex', alignItems:'center', justifyContent:'center', flex:'none' }}><Ico size={18}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></Ico></div>
+                      <div style={{ flex:1, minWidth:0 }}><div style={{ font:'600 13px/1.2 "IBM Plex Sans"', color:'var(--c23283a)' }}>{doc && doc.previewUrl ? 'Open in SharePoint' : 'Open source document in SharePoint'}</div><div style={{ font:'400 11.5px/1.3 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{url}</div></div>
+                      <Ico size={17}><path d="M7 17L17 7M9 7h8v8"/></Ico>
+                    </a>
+                  : !(doc && doc.previewUrl) && <div style={{ font:'400 13px/1.5 "IBM Plex Sans"', color:'var(--c8a92a6)' }}>No SharePoint link on file for this document.</div>}
+              </div>}
           {!(doc && doc.training) && <div style={{ padding:'14px 16px', border:'1px dashed var(--cd2d7e3)', borderRadius:'10px', background:'repeating-linear-gradient(135deg,var(--cfafbfd),var(--cfafbfd) 9px,var(--cf3f5f9) 9px,var(--cf3f5f9) 18px)', font:'400 11.5px/1.5 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)', textAlign:'center' }}>The authoritative document is stored in SharePoint. Open it above, then acknowledge below. The version you sign is captured automatically ({version}).</div>}
           {quizState && <QuizTake quizState={quizState} alreadyPassed={quizState.passed && !quizState.result} bestPct={p.quiz_best_pct} onAnswer={setQuizAnswer} onSubmit={submitQuizAttempt} onRetry={retryQuiz} />}
         </div>

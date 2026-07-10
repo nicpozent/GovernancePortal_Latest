@@ -35,6 +35,13 @@ async function getPolicyDocument(driveId, itemId) {
   };
 }
 
+// Stream a document's bytes through our own origin (app-only Graph). The SPA
+// renders an inline preview from a SAME-ORIGIN blob (CSP-safe); embedding the
+// external SharePoint URL directly is blocked by SharePoint's X-Frame-Options.
+async function getPolicyContentStream(driveId, itemId) {
+  return graph.api(`/drives/${driveId}/items/${itemId}/content`).getStream();
+}
+
 // Resolve a sharing/web URL to a drive item (handy when an admin
 // pastes a SharePoint link instead of ids when creating a policy).
 async function resolveSharingUrl(webUrl) {
@@ -84,4 +91,4 @@ async function listFolder(driveId, relPath) {
   return { path: rel, items };
 }
 
-module.exports = { getPolicyDocument, resolveSharingUrl, listLibraries, listFolder };
+module.exports = { getPolicyDocument, getPolicyContentStream, resolveSharingUrl, listLibraries, listFolder };

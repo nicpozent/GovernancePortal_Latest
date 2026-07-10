@@ -36,8 +36,21 @@ app.use(pinoHttp({
   autoLogging: { ignore: (req) => req.url === '/healthz' || req.url === '/readyz' || req.url === '/metrics' },
 }));
 
-// Security headers (HSTS, no-sniff, frame-deny, etc.)
-app.use(helmet());
+// Security headers (HSTS, no-sniff, frame-deny, etc.).
+// CSP: helmet defaults, but allow `blob:` for the in-app document viewer — policy
+// and training files are fetched with the user's token and rendered from a
+// same-origin blob URL (PDF <iframe>, image <img>, video). Without this the
+// default `default-src 'self'` blocks the blob and the preview shows blank.
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      'frame-src': ["'self'", 'blob:'],
+      'img-src': ["'self'", 'data:', 'blob:'],
+      'media-src': ["'self'", 'blob:'],
+    },
+  },
+}));
 
 // CORS locked to the single SPA origin — no wildcards.
 app.use(cors({ origin: cfg.frontendOrigin, methods: ['GET', 'POST', 'PUT', 'DELETE'], maxAge: 600 }));
