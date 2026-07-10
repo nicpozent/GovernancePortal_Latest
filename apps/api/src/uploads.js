@@ -5,6 +5,7 @@
 //  served. Files are stored on the /uploads volume with random UUID names.
 // ============================================================
 const multer = require('multer');
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const cfg = require('./config');
@@ -12,6 +13,13 @@ const cfg = require('./config');
 // Multer streams the upload here first (local staging even for the blob driver);
 // storage.finalize() then persists it to the configured backend.
 const UPLOAD_DIR = cfg.uploadDir;
+
+// Ensure the staging directory exists (mirrors the backup-dir guard in admin.js).
+// Without this, a deploy where UPLOAD_DIR isn't present/mounted — a fresh install,
+// local dev, or a removed bind mount — fails EVERY upload with a multer ENOENT
+// surfaced as "upload_failed", which reads to users as "couldn't upload the file".
+try { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); }
+catch (e) { console.error(`[uploads] could not create UPLOAD_DIR (${UPLOAD_DIR}): ${e.message}`); }
 
 const UPLOAD_TYPES = {
   '.pdf': 'application/pdf',
