@@ -313,7 +313,7 @@ _Detailed acceptance criteria: [`approval-workflow/USER-STORIES.md`](approval-wo
 |----|-------------|-----|--------|--------|
 | NFR-CMPL-01 | Controls shall be expressed as data and their coverage proven deterministically in CI (ISO 27001 · NIST CSF · GDPR · Zero Trust · MITRE ATT&CK). | M | ✅ | `compliance/controls.json`, `report.mjs`, `security.yml` |
 | NFR-CMPL-02 | AI-specific frameworks (ISO 42001, EU AI Act, NIST AI RMF) shall be assessed and documented as applicable/N-A. | S | ✅ | documented N/A (no AI), `SECURITY-FRAMEWORKS.md` |
-| NFR-CMPL-03 | A Statement of Applicability and Zero-Trust pillar write-up shall be adopted. | S | ○ | candidate |
+| NFR-CMPL-03 | A Statement of Applicability and Zero-Trust pillar write-up shall be adopted. | S | ✅ | `ISO27001-SOA.md` (93 Annex A:2022 controls), `ZERO-TRUST.md` (NIST 800-207 / CISA ZTMM); catalogue controls GOV-02 / ZT-01 |
 
 ---
 
@@ -330,7 +330,7 @@ ADR deferrals, `NEXT-STEPS.md`, and the evaluation's open items.
 | CR-04 | Move secrets to Key Vault + Managed Identity | Code already supports `DefaultAzureCredential` (T7 gap) |
 | CR-05 | Adopt GDPR artefacts (ROPA/DPIA/notice) with DPO sign-off | Drafted from real behaviour; need review |
 | CR-06 | Incident-response + breach runbook (IR-01 / GDPR-04) | DR exists; security IR does not yet |
-| CR-07 | Zero-Trust pillar write-up + ISO SoA adoption | Compliance maturation (NFR-CMPL-03) |
+| ~~CR-07~~ | ~~Zero-Trust pillar write-up + ISO SoA adoption~~ | **Done** — `ZERO-TRUST.md` + `ISO27001-SOA.md` (NFR-CMPL-03) |
 | CR-08 | Directory-group approvers with **dynamic** (non-frozen) membership | Deliberately not built; snapshot chosen (ADR-120-c/d) |
 | CR-09 | Optional separation-of-duties toggle (exclude submitter from approving) | Today a configuration guideline (approval abuse-case A-1) |
 | CR-10 | Cryptographically signed approvals/attestations | Deferred; append-only + token identity matches current evidence model |

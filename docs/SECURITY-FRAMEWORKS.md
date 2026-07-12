@@ -72,6 +72,13 @@ ATT&CK techniques** mitigated, and these open items:
 
 A dedicated `ZT-01` control tracks writing the full pillar narrative.
 
+## Companion framework artefacts
+
+- [`ZERO-TRUST.md`](ZERO-TRUST.md) — Zero Trust posture mapped to the NIST SP 800-207 / CISA ZTMM pillars (realizes control `ZT-01`).
+- [`ISO27001-SOA.md`](ISO27001-SOA.md) — ISO/IEC 27001:2022 Statement of Applicability, all 93 Annex A controls (realizes control `GOV-02`).
+
+Both are grounded in this catalogue's control IDs and regenerate alongside it.
+
 ## Relationship to the risk register
 
 This catalogue is intentionally **portable JSON** so it can feed an external system
