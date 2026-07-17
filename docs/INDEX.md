@@ -24,7 +24,7 @@ Read top-to-bottom; each step links the authoritative document.
 | 1 | **What it is + how mature** | [`APPLICATION-EVALUATION.md`](APPLICATION-EVALUATION.md) | 18-dimension evidence-based scorecard + verdict; fastest orientation |
 | 2 | **The architecture & the decisions** | [`ARCHITECTURE-AND-DECISIONS.md`](ARCHITECTURE-AND-DECISIONS.md) + [`architecture-diagram.mmd`](architecture-diagram.mmd) | 20 ADRs (each lists rejected alternatives); the system diagram |
 | 3 | **Capabilities, product-neutral (TOGAF)** | [`ARCHITECTURE-BUILDING-BLOCKS.md`](ARCHITECTURE-BUILDING-BLOCKS.md) + [`../architecture-repository/CATALOG.md`](../architecture-repository/CATALOG.md) | ABBs → SBBs; reusable-capability view for the Enterprise Continuum |
-| 4 | **What it must do / the qualities** | [`REQUIREMENTS.md`](REQUIREMENTS.md) | Functional + non-functional + candidate requirements, with traceability |
+| 4 | **What it must do / the qualities** | [`REQUIREMENTS.md`](REQUIREMENTS.md) | Functional + non-functional + technical + candidate requirements, with traceability |
 | 5 | **Security posture** | [`SECURITY-REVIEW.md`](SECURITY-REVIEW.md) → [`SECURITY-FRAMEWORKS.md`](SECURITY-FRAMEWORKS.md) → [`ZERO-TRUST.md`](ZERO-TRUST.md) → [`ISO27001-SOA.md`](ISO27001-SOA.md) | Threats/controls; controls-as-code; Zero Trust pillars; ISO 27001:2022 SoA (93 controls) |
 | 6 | **Privacy / GDPR** | [`GDPR-DATA-RIGHTS.md`](GDPR-DATA-RIGHTS.md) + [`gdpr/`](gdpr/) | Data-subject rights tooling; ROPA / DPIA / privacy-notice drafts |
 | 7 | **A feature end-to-end (depth sample)** | [`approval-workflow/README.md`](approval-workflow/README.md) | HLD, LLD, user stories, security assessment, ABB/SBB, diagrams for one feature |
@@ -58,8 +58,9 @@ Read top-to-bottom; each step links the authoritative document.
 ### Architecture & design
 - [`ARCHITECTURE-AND-DECISIONS.md`](ARCHITECTURE-AND-DECISIONS.md) — 20 Architecture Decision Records (ADR-101…120); each states the decision, alternatives rejected, and trade-offs. **The authoritative design rationale.**
 - [`ARCHITECTURE-BUILDING-BLOCKS.md`](ARCHITECTURE-BUILDING-BLOCKS.md) — TOGAF ABB→SBB catalogue (capabilities vs. their realization); reuse/maturity notes.
-- [`architecture-diagram.mmd`](architecture-diagram.mmd) / [`architecture-diagram.html`](architecture-diagram.html) — the system diagram (Mermaid source + a renderer).
-- [`REQUIREMENTS.md`](REQUIREMENTS.md) — functional (by domain), non-functional (by quality attribute), and candidate/future requirements, with actors, MoSCoW priority, status, and traceability.
+- [`architecture-diagram.mmd`](architecture-diagram.mmd) / [`architecture-diagram.html`](architecture-diagram.html) — the system (container/service) diagram (Mermaid source + a renderer).
+- [`data-model.mmd`](data-model.mmd) / [`data-model.html`](data-model.html) — the whole-application **entity-relationship diagram**: every table drawn as a table (columns + PK/FK/UK) with its relationships, generated from the real schema + migrations.
+- [`REQUIREMENTS.md`](REQUIREMENTS.md) — functional (by domain), non-functional (by quality attribute), technical (technology constraints, by area), and candidate/future requirements, with actors, MoSCoW priority, status, and traceability.
 
 ### Security & compliance
 - [`SECURITY-REVIEW.md`](SECURITY-REVIEW.md) — the platform security review (threats, controls, hardening, residual risks).
@@ -100,13 +101,13 @@ Read top-to-bottom; each step links the authoritative document.
 
 Reviewers can confirm claims independently:
 
-- **Decisions ↔ capabilities ↔ requirements ↔ tests** are cross-referenced (see `REQUIREMENTS.md §8` and `approval-workflow/USER-STORIES.md §5`).
+- **Decisions ↔ capabilities ↔ requirements ↔ tests** are cross-referenced (see `REQUIREMENTS.md §9` and `approval-workflow/USER-STORIES.md §5`).
 - **Controls coverage is computed, not asserted:** run `node compliance/report.mjs` for the coverage/gap report; CI fails if `COVERAGE.md` is stale or the catalogue is invalid.
 - **CI gates** (`.github/workflows/`) enforce lint, unit + integration tests (against a real Postgres), a coverage threshold, dependency/secret/SAST scans, the controls-compliance check, and a docker-compose smoke test on every change.
 
 ## 5. Known open items (for reviewer context — already documented)
 
-These are tracked, not hidden — see `REQUIREMENTS.md §6` (candidates) and the SoA:
+These are tracked, not hidden — see `REQUIREMENTS.md §7` (candidates) and the SoA:
 - **Operator/organizational actions:** enable MFA / Conditional Access; at-rest encryption + `PGSSL`; adopt the GDPR artefacts (DPO sign-off); wire logs to a SIEM.
 - **Deferred by choice:** Azure migration (IaC + CD + managed PostgreSQL PITR + private endpoints + Key Vault).
 - **Planned:** incident-response + breach runbooks (IR-01 / GDPR-04).

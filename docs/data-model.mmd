@@ -1,0 +1,300 @@
+%% Birgma Governance Portal — Data model (entity-relationship diagram)
+%% Tables are drawn AS TABLES (entity + columns + keys), not a database shape.
+%% Source of truth: apps/api/db/schema.sql + migrations 002-022.
+%% PK = primary key · FK = foreign key · UK = unique. Composite primary keys
+%% (join/step tables) are noted in the column comments.
+%%
+%% HOW TO OPEN IN LUCIDCHART:
+%%   Lucidchart → File → Import Diagram → Mermaid  (paste this whole file)
+%% Also renders on github.com, mermaid.live, VS Code Mermaid preview, and the
+%% companion data-model.html in this folder.
+
+erDiagram
+    %% ---- People & directory -------------------------------------------
+    employees {
+        uuid oid PK "Entra objectId (stable identity)"
+        text upn
+        text email
+        text display_name
+        text job_title
+        text department "policy-assignment role"
+        text source "Entra ID|Active Directory|Local"
+        text status
+        bool is_admin "cache of Governance.Admin role"
+        uuid functional_manager_oid FK "self-reference"
+        text manager_name
+        text manager_email
+        timestamptz deactivated_at "leaver; never deleted"
+        timestamptz synced_at
+        timestamptz created_at
+    }
+
+    groups {
+        uuid id PK
+        uuid entra_group_id UK "set for directory groups; null for Local"
+        text name UK
+        text description
+        text kind "Directory|Platform"
+        text source "Entra ID|Local"
+        timestamptz archived_at
+        timestamptz created_at
+    }
+
+    employee_groups {
+        uuid employee_oid FK "PK part"
+        uuid group_id FK "PK part"
+    }
+
+    group_mappings {
+        uuid ad_group_id FK "directory group -> groups.id"
+        uuid platform_group_id FK "platform group -> groups.id"
+    }
+
+    %% ---- Governance documents -----------------------------------------
+    policies {
+        uuid id PK
+        text name
+        text doc_type "Policy|Process|Procedure|Standard|Guideline|Training"
+        text version
+        text sharepoint_drive_id
+        text sharepoint_item_id
+        text sharepoint_url
+        uuid owner_oid FK "owning employee"
+        text owner "display name copy"
+        date effective_date
+        date due_date
+        int due_days
+        date review_date
+        text upload_path "set for uploaded trainings"
+        text upload_name
+        text upload_mime
+        text source "Upload|null (SharePoint)"
+        text approval_state "draft|in_review|changes_requested|rejected|approved|published"
+        bool approved_externally "break-glass"
+        text approved_version
+        timestamptz submitted_at
+        uuid submitted_by FK
+        timestamptz archived_at
+        timestamptz updated_at
+        timestamptz created_at
+    }
+
+    policy_roles {
+        uuid policy_id FK "PK part (legacy targeting)"
+        text role "PK part"
+    }
+
+    policy_groups {
+        uuid policy_id FK "PK part"
+        uuid group_id FK "PK part"
+    }
+
+    policy_versions {
+        bigint id PK
+        uuid policy_id FK
+        text version
+        text note
+        text changed_by
+        timestamptz changed_at
+    }
+
+    %% ---- Acknowledgement ledger (append-only) -------------------------
+    signatures {
+        uuid id PK
+        uuid policy_id FK
+        text policy_version "version actually signed"
+        uuid user_oid FK
+        text full_name "typed at signing"
+        bool acknowledged
+        timestamptz signed_at
+        inet ip_address
+        text user_agent
+    }
+
+    %% ---- Knowledge checks ---------------------------------------------
+    quizzes {
+        uuid id PK
+        uuid policy_id FK "unique (one quiz per policy)"
+        text title
+        int pass_pct
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz archived_at
+    }
+
+    quiz_questions {
+        uuid id PK
+        uuid quiz_id FK
+        int position
+        text prompt
+        jsonb options "answer strings"
+        int correct_index
+        int points
+    }
+
+    quiz_attempts {
+        uuid id PK
+        uuid quiz_id FK
+        uuid policy_id FK
+        uuid user_oid FK
+        int attempt_no
+        int score
+        int max_score
+        int pct
+        bool passed
+        jsonb answers
+        timestamptz at
+    }
+
+    %% ---- Pre-publication approval workflow (per policy) ---------------
+    policy_approval_steps {
+        uuid policy_id FK "PK part"
+        int position "PK part"
+        text rule "all|any|quorum"
+        int required "quorum count"
+    }
+
+    policy_approvers {
+        uuid policy_id FK "PK part"
+        int position "PK part"
+        uuid approver_oid FK "PK part"
+        uuid from_group FK "null=named; set=expanded from group at submit"
+    }
+
+    policy_approver_groups {
+        uuid policy_id FK "PK part"
+        int position "PK part"
+        uuid group_id FK "PK part"
+    }
+
+    policy_approvals {
+        bigint id PK
+        uuid policy_id FK
+        text policy_version
+        int step_position
+        uuid approver_oid FK
+        text decision "approved|rejected|changes_requested"
+        text comment
+        timestamptz decided_at
+    }
+
+    %% ---- Reusable approval templates ----------------------------------
+    approval_workflows {
+        bigint id PK
+        text name
+        text description
+        bool active
+        uuid created_by FK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    approval_workflow_steps {
+        bigint workflow_id FK "PK part"
+        int position "PK part"
+        text rule "all|any|quorum"
+        int required
+    }
+
+    approval_workflow_step_approvers {
+        bigint workflow_id FK "PK part"
+        int position "PK part"
+        uuid approver_oid FK "PK part"
+    }
+
+    approval_workflow_step_groups {
+        bigint workflow_id FK "PK part"
+        int position "PK part"
+        uuid group_id FK "PK part"
+    }
+
+    %% ---- Notifications, sync, audit, integrations ---------------------
+    notifications_sent {
+        bigint id PK
+        uuid policy_id FK
+        uuid user_oid FK
+        text milestone "assigned|due-N|overdue"
+        text policy_version
+        timestamptz sent_at
+    }
+
+    sync_runs {
+        uuid id PK
+        text source
+        timestamptz started_at
+        timestamptz finished_at
+        int added
+        int updated
+        text status "running|success|error"
+        text error
+    }
+
+    audit_log {
+        bigint id PK
+        uuid actor_oid "soft ref to employees.oid (no FK)"
+        text actor_name
+        text action "e.g. policy.create"
+        text target
+        jsonb detail
+        inet ip
+        timestamptz at
+    }
+
+    integration_config {
+        int id PK "singleton (=1)"
+        bool forward_enabled
+        text forward_url
+        text forward_token
+        bool feed_enabled
+        text feed_api_key
+        timestamptz last_forward_at
+        text last_forward_status
+        timestamptz updated_at
+    }
+
+    %% ================= Relationships =================
+    %% People & groups
+    employees ||--o| employees : "manages"
+    employees ||--o{ employee_groups : "member of"
+    groups    ||--o{ employee_groups : "has member"
+    groups    ||--o{ group_mappings : "directory side"
+    groups    ||--o{ group_mappings : "platform side"
+
+    %% Documents & targeting
+    employees ||--o{ policies : "owns"
+    employees ||--o{ policies : "submitted"
+    policies  ||--o{ policy_roles : "legacy target"
+    policies  ||--o{ policy_groups : "assigned to"
+    groups    ||--o{ policy_groups : "targeted by"
+    policies  ||--o{ policy_versions : "has version"
+
+    %% Acknowledgement & quizzes
+    policies  ||--o{ signatures : "acknowledged in"
+    employees ||--o{ signatures : "signs"
+    policies  ||--|| quizzes : "gated by"
+    quizzes   ||--o{ quiz_questions : "contains"
+    quizzes   ||--o{ quiz_attempts : "attempted in"
+    policies  ||--o{ quiz_attempts : "for"
+    employees ||--o{ quiz_attempts : "attempts"
+
+    %% Approval workflow (per policy)
+    policies  ||--o{ policy_approval_steps : "has step"
+    policies  ||--o{ policy_approvers : "named approver"
+    employees ||--o{ policy_approvers : "approves for"
+    groups    ||--o| policy_approvers : "expanded from"
+    policies  ||--o{ policy_approver_groups : "group approver"
+    groups    ||--o{ policy_approver_groups : "approves for"
+    policies  ||--o{ policy_approvals : "decided in"
+    employees ||--o{ policy_approvals : "decides"
+
+    %% Approval templates
+    employees          ||--o{ approval_workflows : "authors"
+    approval_workflows ||--o{ approval_workflow_steps : "has step"
+    approval_workflow_steps ||--o{ approval_workflow_step_approvers : "named approver"
+    employees          ||--o{ approval_workflow_step_approvers : "listed on"
+    approval_workflow_steps ||--o{ approval_workflow_step_groups : "group approver"
+    groups             ||--o{ approval_workflow_step_groups : "listed on"
+
+    %% Notifications
+    policies  ||--o{ notifications_sent : "reminded for"
+    employees ||--o{ notifications_sent : "notified"

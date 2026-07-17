@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Birgma Governance Portal — Data Model</title>
+<style>
+  body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:#eef1f5;color:#161a26}
+  header{padding:24px 32px;background:#fff;border-bottom:1px solid #e6e8ee}
+  h1{margin:0;font-size:20px}
+  p{margin:6px 0 0;color:#7b8294;font-size:13px}
+  .wrap{padding:28px 32px}
+  .card{background:#fff;border:1px solid #e6e8ee;border-radius:14px;padding:20px;overflow:auto}
+  .note{margin-top:18px;font-size:12.5px;color:#54607a;line-height:1.6}
+  code{background:#f3f4f8;padding:1px 6px;border-radius:5px;font-family:Consolas,monospace}
+</style>
+</head>
+<body>
+<header>
+  <h1>Birgma Governance Portal — Data Model (ERD)</h1>
+  <p>Rendered from <code>data-model.mmd</code>. Tables are drawn as tables (entity + columns + keys). To edit in Lucidchart: File → Import Diagram → Mermaid.</p>
+</header>
+<div class="wrap">
+  <div class="card">
+    <pre class="mermaid" id="diagram"></pre>
+  </div>
+  <div class="note">
+    Every table from <code>apps/api/db/schema.sql</code> and migrations 002–022, with its
+    columns and keys. <strong>PK</strong> = primary key, <strong>FK</strong> = foreign key,
+    <strong>UK</strong> = unique; composite primary keys (join and approval-step tables) are
+    noted in the column comments. The append-only ledgers are
+    <code>signatures</code>, <code>quiz_attempts</code>, <code>policy_approvals</code> and
+    <code>audit_log</code> (UPDATE/DELETE revoked at the database grant layer — ADR-109).
+    Four database <em>views</em> derive effective membership and admin sets and are not shown as
+    tables: <code>platform_group_members</code>, <code>admin_users</code>,
+    <code>group_effective_members</code>, and <code>effective_group_membership</code> (the single
+    source of truth for group reach — migration 018). See
+    <code>ARCHITECTURE-AND-DECISIONS.md §6</code> for the domain layering.
+  </div>
+</div>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  const src = await (await fetch('data-model.mmd')).text();
+  document.getElementById('diagram').textContent = src;
+  mermaid.initialize({ startOnLoad:false, theme:'base', themeVariables:{ fontFamily:'Segoe UI' } });
+  await mermaid.run();
+</script>
+</body>
+</html>

@@ -1,8 +1,8 @@
 # Requirements Specification — Birgma Governance Portal
 
-_Consolidated functional, non-functional, and candidate (future) requirements,
-derived from the codebase, tests, CI, and the decision records. Authoritative and
-kept in sync with `main`. Companions:
+_Consolidated functional, non-functional, technical, and candidate (future)
+requirements, derived from the codebase, tests, CI, and the decision records.
+Authoritative and kept in sync with `main`. Companions:
 [`ARCHITECTURE-AND-DECISIONS.md`](ARCHITECTURE-AND-DECISIONS.md) (ADRs),
 [`ARCHITECTURE-BUILDING-BLOCKS.md`](ARCHITECTURE-BUILDING-BLOCKS.md) (ABBs/SBBs),
 [`APPLICATION-EVALUATION.md`](APPLICATION-EVALUATION.md) (maturity),
@@ -20,8 +20,9 @@ approval** chain, targets obligations at people via **groups**, and produces
 leadership. Identity is federated to **Microsoft Entra ID**.
 
 This document specifies **what** the system must do (functional), the **qualities**
-it must exhibit (non-functional), and **candidate** requirements deferred by
-choice. It is technology-aware but requirement-first.
+it must exhibit (non-functional), the **technology constraints** it is built to
+(technical), and **candidate** requirements deferred by choice. It is
+technology-aware but requirement-first.
 
 ## 2. Actors
 
@@ -37,7 +38,7 @@ choice. It is technology-aware but requirement-first.
 
 ## 3. Conventions
 
-- **IDs**: `FR-<domain>-nn` (functional), `NFR-<quality>-nn` (non-functional), `CR-nn` (candidate/future).
+- **IDs**: `FR-<domain>-nn` (functional), `NFR-<quality>-nn` (non-functional), `TR-<area>-nn` (technical), `CR-nn` (candidate/future).
 - **Priority (MoSCoW)**: **M** Must · **S** Should · **C** Could.
 - **Status**: ✅ Implemented · ◑ Partial (operator/org action to complete) · ○ Planned/Candidate.
 - **Source/realization** references code modules, ADRs, or docs.
@@ -68,6 +69,8 @@ choice. It is technology-aware but requirement-first.
 | FR-POL-04 | A policy shall be assignable to one or more groups; assignment may occur in any state. | M | ✅ | `policy_groups` |
 | FR-POL-05 | Version history of a policy shall be viewable. | S | ✅ | `policyVersions`, review history (mig 014) |
 | FR-POL-06 | A policy shall be invisible to employees unless it is approved-externally or published (publish gate). | M | ✅ | `authz.js` `canRead`, ADR-120 |
+| FR-POL-07 | When creating a policy, an admin shall browse the connected SharePoint site and pick a document (drive/item captured), rather than paste a URL. | S | ✅ | `services/sharepoint.js` browse/pick, `routes/policies.js` |
+| FR-POL-08 | A policy/training document shall preview inline in the reader and quiz windows; PDFs render natively and Office files (`.doc(x)`, `.ppt(x)`, `.xls(x)`) are converted to PDF on the fly, with a download/open-in-SharePoint fallback when preview is unavailable. | M | ✅ | `GET /policies/:id/content` (canRead-gated), `getPolicyContentStream` (`?format=pdf`), `app.jsx` reader |
 
 ### 4.3 Acknowledgement / attestation (FR-ACK)
 
@@ -125,6 +128,7 @@ _Detailed acceptance criteria: [`approval-workflow/USER-STORIES.md`](approval-wo
 | FR-DIR-03 | Offboarding shall deactivate (never delete) a user, preserving history. | M | ✅ | sync leaver handling; former employees |
 | FR-DIR-04 | Admins shall add employees individually and via CSV bulk import, and set an employee's functional manager. | S | ✅ | `routes/employees.js` |
 | FR-DIR-05 | The system shall expose sync status/history. | S | ✅ | `sync_runs`, `syncStatus` |
+| FR-DIR-06 | An admin shall trigger a directory sync on demand; repeated triggers shall be rate-limited and surface a friendly "too many requests" message rather than an error. | S | ✅ | `routes/*` sync trigger, `ratelimit.js` (`/api/sync`), `errors.js` `rate_limited` |
 
 ### 4.8 Groups & obligation targeting (FR-GRP)
 
@@ -317,7 +321,100 @@ _Detailed acceptance criteria: [`approval-workflow/USER-STORIES.md`](approval-wo
 
 ---
 
-## 6. Candidate / future requirements (CR)
+## 6. Technical requirements (TR)
+
+The functional and non-functional sections say **what** the system does and the
+**qualities** it must hold. This section records the **technology constraints** the
+solution is built to — the mandated stack, protocols, and platform choices. Each is
+a decision already taken (traceable to an ADR), not a MoSCoW-prioritized option, so
+these rows carry a **status** and their **decision record** rather than a priority.
+Status legend as above (✅ implemented · ◑ partial/operator · ○ target/deferred).
+
+### 6.1 Platform & runtime (TR-PLT)
+
+| ID | Technical requirement | Status | Decision / source |
+|----|-----------------------|--------|-------------------|
+| TR-PLT-01 | The system shall be delivered as three containers (web, api, db) orchestrated by Docker Compose, with Azure Container Apps + managed PostgreSQL + Blob + Key Vault as the target platform. | ✅/○ | ADR-117 |
+| TR-PLT-02 | The API runtime shall be Node.js 22 LTS. | ✅ | ADR-118 |
+| TR-PLT-03 | The sole datastore shall be PostgreSQL 16 (no secondary store; JSONB for flexible columns). | ✅ | ADR-108 |
+| TR-PLT-04 | The web tier shall be nginx: TLS termination, static SPA serving, and reverse proxy of `/api` (not Node-serves-static). | ✅ | ADR-106 |
+
+### 6.2 Frontend stack (TR-FE)
+
+| ID | Technical requirement | Status | Decision / source |
+|----|-----------------------|--------|-------------------|
+| TR-FE-01 | The frontend shall be a React 18 SPA using the **classic** JSX runtime (every JSX module imports `React`; no automatic runtime injection). | ✅ | ADR-103 |
+| TR-FE-02 | The bundle shall be built with Vite 8 (rolldown) and self-host React and MSAL (no CDN, no in-browser transpile). | ✅ | ADR-105, NFR-PRF-03 |
+| TR-FE-03 | Sign-in shall use MSAL.js with the authorization-code + PKCE flow; tokens held in `sessionStorage`; 15-minute idle logout. | ✅ | ADR-104 |
+| TR-FE-04 | SPA runtime configuration shall be injected from environment variables at container start (one image, many environments). | ✅ | ADR-116, FR-ADM-02 |
+
+### 6.3 Identity & protocols (TR-IDP)
+
+| ID | Technical requirement | Status | Decision / source |
+|----|-----------------------|--------|-------------------|
+| TR-IDP-01 | Identity shall be federated to Microsoft Entra ID over OIDC/OAuth2. | ✅ | ADR-101 |
+| TR-IDP-02 | Tokens shall be validated with `jsonwebtoken` + `jwks-rsa` (RS256, JWKS cached with TTL), not a full auth middleware. | ✅ | ADR-102, NFR-PRF-01 |
+| TR-IDP-03 | Authorization shall consume Entra **app roles** from the token; only delegated-user tokens are accepted (app-only rejected). | ✅ | FR-IAM-03/04 |
+| TR-IDP-04 | Directory and document access shall use Microsoft Graph via `DefaultAzureCredential`, least-privilege (`Sites.Selected`), SCIM-first with AU-scoped Graph fallback. | ✅ | ADR-112 |
+
+### 6.4 API & data access (TR-API)
+
+| ID | Technical requirement | Status | Decision / source |
+|----|-----------------------|--------|-------------------|
+| TR-API-01 | The API shall be Express (CommonJS), organized into per-domain route modules with extracted auth/authz/storage/scheduler/rate-limit concerns. | ✅ | ADR-107, NFR-MNT-01 |
+| TR-API-02 | All database access shall use parameterized `pg` queries; no string-built SQL. | ✅ | NFR-SEC-03 |
+| TR-API-03 | Append-only ledgers shall be enforced by PostgreSQL grants (UPDATE/DELETE revoked), not application code or triggers. | ✅ | ADR-109 |
+| TR-API-04 | Admin policies and manager trainings shall share one polymorphic `policies` table (discriminated by `source`/`doc_type`). | ✅ | ADR-110 |
+| TR-API-05 | Schema changes shall be applied by a tracked, transactional, idempotent migration runner. | ✅ | `db/migrate.js`, FR-ADM-03 |
+
+### 6.5 Storage & documents (TR-STO)
+
+| ID | Technical requirement | Status | Decision / source |
+|----|-----------------------|--------|-------------------|
+| TR-STO-01 | File uploads shall use `multer` onto a storage abstraction (local disk volume today, swappable to Azure Blob) with a server-determined content type and an extension allowlist. | ✅ | ADR-111, NFR-SCL-01 |
+| TR-STO-02 | SharePoint documents shall be streamed through the API via Graph; native PDFs pass through, Office formats are converted with Graph `?format=pdf`. | ✅ | `services/sharepoint.js`, FR-POL-08 |
+
+### 6.6 Messaging & scheduling (TR-MSG)
+
+| ID | Technical requirement | Status | Decision / source |
+|----|-----------------------|--------|-------------------|
+| TR-MSG-01 | Outbound email shall be sent via Microsoft Graph `sendMail` (no SMTP infrastructure), inert unless `GRAPH_MAIL_SENDER` is configured. | ✅ | ADR-113, FR-NOT-04 |
+| TR-MSG-02 | Scheduled jobs shall run in-process (`setInterval`) with advisory-lock leader election so exactly one instance runs them when scaled out. | ✅ | ADR-114, NFR-AVL-02 |
+
+### 6.7 Security technology (TR-SEC)
+
+| ID | Technical requirement | Status | Decision / source |
+|----|-----------------------|--------|-------------------|
+| TR-SEC-01 | The browser-facing Content-Security-Policy and security headers shall be set at the nginx edge (`script-src 'self'`, no inline scripts; `frame-src`/`img-src`/`media-src` allow `blob:` for in-app document preview); helmet sets API-side headers. | ✅ | `nginx.conf`, `app.js` helmet, NFR-SEC-01 |
+| TR-SEC-02 | Rate limiting shall use `express-rate-limit` with a pluggable store (in-memory default, shared Redis for HA); throttled responses return JSON `{error:'rate_limited'}`. | ✅ | ADR-119, NFR-SEC-07 |
+| TR-SEC-03 | The application shall connect to PostgreSQL as a least-privilege role; DB-hop TLS (`PGSSL`) is supported. | ✅/◑ | ADR-109, `docker-grants.sql`, NFR-SEC-04/11 |
+| TR-SEC-04 | Secrets shall come from environment/Key Vault (`DefaultAzureCredential`); none committed; CI scans for secrets. | ✅ | NFR-SEC-08, CR-04 |
+
+### 6.8 Observability (TR-OBS)
+
+| ID | Technical requirement | Status | Decision / source |
+|----|-----------------------|--------|-------------------|
+| TR-OBS-01 | Logs shall be structured JSON (`pino`/`pino-http`) with a request/correlation id and secret redaction; optional push/pull integration feed. | ✅ | ADR-115, NFR-OBS-01 |
+| TR-OBS-02 | The API shall expose Prometheus metrics (`/metrics`, RED + runtime) and a DB-checked readiness probe (`/readyz`). | ✅ | `metrics.js`, FR-OBS-01/02 |
+
+### 6.9 Build, test & CI (TR-CI)
+
+| ID | Technical requirement | Status | Decision / source |
+|----|-----------------------|--------|-------------------|
+| TR-CI-01 | CI shall gate every change on lint, unit + integration tests (against a real Postgres), a coverage threshold, security scans, and the controls-compliance check; a docker-compose smoke test shall run end-to-end. | ✅ | `ci.yml`, `security.yml`, `smoke.yml`, NFR-MNT-03 |
+| TR-CI-02 | Dependencies shall be pinned (lockfiles, `npm ci`) and scanned (gitleaks, Trivy, semgrep, Dependabot, `npm audit`). | ✅ | NFR-MNT-05 |
+| TR-CI-03 | Compliance controls shall be expressed as data (`controls.json`) with a deterministic, CI-gated coverage report. | ✅ | `report.mjs`, NFR-CMPL-01 |
+
+### 6.10 Compatibility (TR-CMP)
+
+| ID | Technical requirement | Status | Decision / source |
+|----|-----------------------|--------|-------------------|
+| TR-CMP-01 | The SPA shall target modern evergreen browsers (ES-module capable); no legacy transpile/polyfill target. | ✅ | ADR-105 |
+| TR-CMP-02 | The stack shall run on a Windows VM (VMware) via Docker + WSL2 using Linux containers, and unchanged on Azure Container Apps. | ✅ | ADR-117, NFR-CMP-01 |
+
+---
+
+## 7. Candidate / future requirements (CR)
 
 Deferred by choice or pending an operator/organizational action. Sourced from
 ADR deferrals, `NEXT-STEPS.md`, and the evaluation's open items.
@@ -342,7 +439,7 @@ ADR deferrals, `NEXT-STEPS.md`, and the evaluation's open items.
 
 ---
 
-## 7. Personas & representative user stories
+## 8. Personas & representative user stories
 
 Concise, app-wide stories (the approval workflow has a full set in
 [`approval-workflow/USER-STORIES.md`](approval-workflow/USER-STORIES.md)).
@@ -359,7 +456,7 @@ Concise, app-wide stories (the approval workflow has a full set in
 
 ---
 
-## 8. Traceability
+## 9. Traceability
 
 - **Requirements → decisions:** ADR-101…120 in `ARCHITECTURE-AND-DECISIONS.md`.
 - **Requirements → capabilities:** ABBs/SBBs in `ARCHITECTURE-BUILDING-BLOCKS.md` (B1–B11, D1–D8, A1–A14, T1–T8) and `approval-workflow/BUILDING-BLOCKS.md` (AW-1…AW-7).
