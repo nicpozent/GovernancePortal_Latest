@@ -1,5 +1,9 @@
 # Birgma Governance Portal
 
+> 📖 **Reviewers start here:** [`docs/INDEX.md`](docs/INDEX.md) — documentation
+> index, repository map, and a suggested review order for the Enterprise
+> Application team.
+
 A policy-governance & compliance portal. Admins publish governance documents
 (stored in SharePoint), assign them to groups, and optionally attach quizzes and
 deadlines; managers upload and assign their own documents/trainings to their
