@@ -15,7 +15,7 @@ jobs:
     name: e2e (docker compose)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Synthesize throwaway secrets, certs and volumes
         working-directory: deploy

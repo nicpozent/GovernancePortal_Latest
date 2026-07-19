@@ -19,7 +19,7 @@ jobs:
     name: gitleaks (secret scan)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Run gitleaks (working tree)
         run: |
           set -euo pipefail
@@ -35,7 +35,7 @@ jobs:
     name: trivy (dependency scan)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Run trivy
         run: |
           set -euo pipefail
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     container: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Semgrep scan
         # No --error: findings are reported in the log for triage but don't fail
         # the build yet. Add --error here to enforce once findings are addressed.
@@ -59,7 +59,7 @@ jobs:
     name: compliance catalogue (controls-as-code)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
