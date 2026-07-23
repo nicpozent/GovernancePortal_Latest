@@ -32,7 +32,7 @@ Rating scale: ★★★★★ Excellent · ★★★★☆ Strong · ★★★�
 |---|---|---|---|---|
 | 1 | Functional coverage | ★★★★★ | Policy acknowledgement + version re-sign, quizzes with gated signing, manager trainings & uploads, groups + effective-membership, Entra directory sync, dashboards, pull/push audit feed; **approval workflow delivered** (ADR-120, Phases 1–2d: ordered steps with all/any/quorum, person + directory-group approvers, reusable templates, append-only decision ledger) | — |
 | 2 | Architecture & modularity | ★★★★★ | Three-tier (React SPA / Node-Express / PostgreSQL); per-domain route modules; auth/authz/storage/leader/rate-limit extracted; 20 ADRs + TOGAF ABB/SBB | — |
-| 3 | Frontend engineering | ★★★★☆ | React 18 + Vite 8; app.jsx decomposed 2,613 → 668 lines into domain modules; ESLint (0 errors); code→friendly-message mapping | JavaScript, not TypeScript; component/render tests thin |
+| 3 | Frontend engineering | ★★★★☆ | React 19 + Vite 8; app.jsx decomposed 2,613 → 668 lines into domain modules; ESLint (0 errors); code→friendly-message mapping | JavaScript, not TypeScript; component/render tests thin |
 | 4 | Identity & access | ★★★★★ | Entra SSO (MSAL, PKCE); RS256-pinned token validation (issuer/audience/tenant/scope); app-only rejected; app roles; 15-min idle logout | MFA / Conditional Access is Entra-side, not app-enforced |
 | 5 | Authorization model | ★★★★★ | Server-enforced RBAC + per-object ownership + effective-group-membership gates; integration-tested; no IDOR found | — |
 | 6 | Data & persistence | ★★★★★ | PostgreSQL 16; least-privilege role; append-only signature/audit/quiz ledgers via DB grants; tracked transactional migration runner | — |

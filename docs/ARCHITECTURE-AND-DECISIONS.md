@@ -377,10 +377,11 @@ the most security-critical logic.
 total clarity and minimal dependencies. The trade is justified because token
 validation is the security spine — being explicit beats being terse here.
 
-## ADR-103 — React 18 SPA with the **classic** JSX runtime
+## ADR-103 — React 19 SPA with the **classic** JSX runtime
 **Context.** A single, fairly dense admin/employee UI; no SEO requirement (it's an
 authenticated internal tool).
-**Decision.** React 18 as a client-rendered SPA. JSX uses the **classic** runtime
+**Decision.** React 19 as a client-rendered SPA (upgraded from 18 as a routine
+dependency-currency bump, verified compatible). JSX uses the **classic** runtime
 (`React.createElement`, explicit `import React`) — see `vite.config.js`.
 **Alternatives considered.** (a) *Angular/Vue* — fine choices; React chosen for
 team familiarity and the MSAL React ecosystem. (b) *Server-side rendering / Next.js*
@@ -441,7 +442,7 @@ same-origin model and clean separation.
 ## ADR-107 — Node.js + Express for the API
 **Context.** Need a small, well-understood HTTP/JSON service that talks Postgres
 and Microsoft Graph.
-**Decision.** Node 22 + Express 4, plain CommonJS, thin layering (server →
+**Decision.** Node 22 + Express 5, plain CommonJS, thin layering (server →
 routes → services).
 **Alternatives considered.** (a) *Fastify* — faster and schema-first, but Express's
 ubiquity and middleware ecosystem won for a team-maintained internal app. (b)
@@ -719,17 +720,19 @@ before implementation. Entirely Azure-independent.
 
 | Layer | Technology | Version note |
 |------|-----------|--------------|
-| Frontend | React + `@azure/msal-browser` | React 18, classic JSX |
+| Frontend | React + `@azure/msal-browser` | React 19, msal-browser 5, classic JSX |
 | Build | Vite (rolldown) + `@vitejs/plugin-react` | **Vite 8**, plugin-react 6 |
 | Web tier | nginx (alpine) | TLS, CSP/headers, `/api` proxy |
-| API runtime | Node.js + Express 4 | **Node 22 LTS**, CommonJS |
+| API runtime | Node.js + Express 5 | **Node 22 LTS**, CommonJS |
 | Token validation | `jsonwebtoken` + `jwks-rsa` | RS256, JWKS-cached |
 | Integration | `@microsoft/microsoft-graph-client` + `@azure/identity` | Managed Identity in prod |
 | Uploads | `multer` | **2.x** |
-| Logging | `pino` + `pino-http` | JSON, redacted, correlation id |
+| Logging | `pino` + `pino-http` | **pino 10 / pino-http 11**, JSON, redacted, correlation id |
 | Data | PostgreSQL | **16**, append-only ledgers |
 | Orchestration | Docker Compose | Windows VM / WSL2 (Azure-native target) |
 
 _This document reflects the codebase as of the `claude/code-review-best-practices`
-branch, including the Node 22 / Vite 8 / multer 2 upgrades and the M-1…M-4
-hardening recorded in [`CODE-REVIEW-2026-06.md`](CODE-REVIEW-2026-06.md)._
+branch, including the Node 22 / Vite 8 / multer 2 upgrades, the routine major
+dependency-currency bumps (React 19, Express 5, `@azure/msal-browser` 5, helmet 8,
+express-rate-limit 8, pino 10 / pino-http 11 — each verified compatible), and the
+M-1…M-4 hardening recorded in [`CODE-REVIEW-2026-06.md`](CODE-REVIEW-2026-06.md)._

@@ -343,7 +343,7 @@ Status legend as above (✅ implemented · ◑ partial/operator · ○ target/de
 
 | ID | Technical requirement | Status | Decision / source |
 |----|-----------------------|--------|-------------------|
-| TR-FE-01 | The frontend shall be a React 18 SPA using the **classic** JSX runtime (every JSX module imports `React`; no automatic runtime injection). | ✅ | ADR-103 |
+| TR-FE-01 | The frontend shall be a React 19 SPA using the **classic** JSX runtime (every JSX module imports `React`; no automatic runtime injection). | ✅ | ADR-103 |
 | TR-FE-02 | The bundle shall be built with Vite 8 (rolldown) and self-host React and MSAL (no CDN, no in-browser transpile). | ✅ | ADR-105, NFR-PRF-03 |
 | TR-FE-03 | Sign-in shall use MSAL.js with the authorization-code + PKCE flow; tokens held in `sessionStorage`; 15-minute idle logout. | ✅ | ADR-104 |
 | TR-FE-04 | SPA runtime configuration shall be injected from environment variables at container start (one image, many environments). | ✅ | ADR-116, FR-ADM-02 |
