@@ -1,4 +1,4 @@
-# SBB — React 18 + MSAL.js (Vite 8 build)
+# SBB — React 19 + MSAL.js (Vite 8 build)
 
 _Solution Building Block realizing ABB **A4 Presentation / Experience** in the Birgma Governance Portal._
 

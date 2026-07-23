@@ -27,8 +27,8 @@ architecture-repository/
 └── tools/generate.mjs              # regenerates the tree from one manifest
 ```
 
-Domains: **Business** (B1–B8), **Data** (D1–D7), **Application** (A1–A11),
-**Technology** (T1–T8) — 34 building blocks. Start at [`CATALOG.md`](CATALOG.md).
+Domains: **Business** (B1–B11), **Data** (D1–D8), **Application** (A1–A14),
+**Technology** (T1–T8) — 41 building blocks. Start at [`CATALOG.md`](CATALOG.md).
 
 ## The reusable core
 The spine is **T1 Identity Provider → A1 Token Validation → A2 Policy Decision

@@ -6,7 +6,7 @@ _Solution Building Block realizing ABB **B4 Obligation Assignment & Targeting** 
 Effective membership = direct group membership ∪ directory groups mapped into a group; unassigned ⇒ private.
 
 ## Where it lives (code)
-`apps/api/db/migration_018_effective_membership.sql, routes.js`
+`apps/api/db/migration_018_effective_membership.sql, apps/api/src/routes/groups.js, apps/api/src/authz.js`
 
 ## Maturity
 Production-grade (membership consolidated into one view)

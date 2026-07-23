@@ -6,7 +6,7 @@ _Solution Building Block realizing ABB **A5 Directory Synchronisation** in the B
 Reads only app-assigned principals; deactivates leavers (never deletes); auditable via sync_runs.
 
 ## Where it lives (code)
-`apps/api/src/services/sync.js, scim/scim.routes.js`
+`apps/api/src/services/sync.js, apps/api/scim/scim.routes.js`
 
 ## Maturity
 Production-grade

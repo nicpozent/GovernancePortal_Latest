@@ -6,7 +6,7 @@ _Solution Building Block realizing ABB **B3 Competency Verification** in the Bir
 Server-side grading (answers never trusted from client); capped attempts with an advisory-locked transaction.
 
 ## Where it lives (code)
-`apps/api/src/routes.js (/policies/:id/quiz*)`
+`apps/api/src/routes/quizzes.js`
 
 ## Maturity
 Production-grade

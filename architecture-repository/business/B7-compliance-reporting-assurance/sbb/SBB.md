@@ -6,7 +6,7 @@ _Solution Building Block realizing ABB **B7 Compliance Reporting & Assurance** i
 Set-based SQL joining obligations × effective members × current-version signatures.
 
 ## Where it lives (code)
-`apps/api/src/routes.js (/dashboard*, /reports/compliance)`
+`apps/api/src/routes/dashboards.js (/dashboard*, /reports/compliance)`
 
 ## Maturity
 Production-grade

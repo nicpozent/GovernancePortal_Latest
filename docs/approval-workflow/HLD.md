@@ -92,7 +92,7 @@ flowchart LR
   subgraph API["Node/Express API container"]
     R1[routes/approvals.js]
     R2[routes/approval-templates.js]
-    AZ[authz.js<br/>canRead / canGovern]
+    AZ[authz.js canRead<br/>approvals.js canGovern]
     NT[services/reminders.sendMail]
   end
   subgraph PG["PostgreSQL 16"]
@@ -122,7 +122,7 @@ flowchart LR
 
 - **`routes/approvals.js`** — the state machine: configure, submit (with group expansion), decide, withdraw, publish, approve-externally, status, pending queue, notifications.
 - **`routes/approval-templates.js`** — template CRUD (admin) + `apply-workflow`.
-- **`authz.js`** — `canGovern` (owner/admin drive the flow) and the `canRead` publish gate.
+- **`routes/approvals.js`** — `canGovern` (owner/admin drive the flow); **`authz.js`** — the `canRead` publish gate.
 - **`StepBuilder`** — one shared editor used by both the per-policy modal and the template screen.
 
 ---

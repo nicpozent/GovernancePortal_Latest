@@ -6,7 +6,7 @@ _Solution Building Block realizing ABB **B8 Accountability / Non-repudiation** i
 Every admin mutation writes an immutable, identity+IP-stamped row; best-effort, never blocks the request.
 
 ## Where it lives (code)
-`apps/api/src/routes.js (audit()), db/migration_006_audit.sql`
+`apps/api/src/authz.js (audit()), db/migration_006_audit.sql`
 
 ## Maturity
 Production-grade

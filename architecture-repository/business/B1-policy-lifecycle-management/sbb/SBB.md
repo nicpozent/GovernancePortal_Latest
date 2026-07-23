@@ -6,7 +6,7 @@ _Solution Building Block realizing ABB **B1 Policy Lifecycle Management** in the
 CRUD + archive endpoints; version label mirrored from SharePoint; soft-delete keeps the ledger intact.
 
 ## Where it lives (code)
-`apps/api/src/routes.js (/policies*), db/schema.sql, services/sharepoint.js`
+`apps/api/src/routes/policies.js, db/schema.sql, services/sharepoint.js`
 
 ## Maturity
 Production-grade

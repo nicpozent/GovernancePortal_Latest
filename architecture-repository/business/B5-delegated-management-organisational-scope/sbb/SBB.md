@@ -6,7 +6,7 @@ _Solution Building Block realizing ABB **B5 Delegated Management (Organisational
 Team = functional-manager reports ∪ directory-manager-email match; ownership = policies.owner_oid.
 
 ## Where it lives (code)
-`apps/api/src/routes.js (teamOids, canManage, /manager/*)`
+`apps/api/src/authz.js (teamOids, canManage), apps/api/src/routes/manager.js`
 
 ## Maturity
 Production-grade

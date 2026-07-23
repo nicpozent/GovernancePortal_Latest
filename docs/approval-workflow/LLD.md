@@ -257,10 +257,10 @@ own copy — editing or deleting the template never changes the policy.
 
 ## 7. Authorization & the publish gate
 
-`authz.js`:
+`routes/approvals.js` + `authz.js`:
 
-- **`canGovern(req, p)`** = `isAdmin(req) || p.owner_oid === req.user.oid`. Gates configure/submit/withdraw/publish/apply-template.
-- **`canRead`** returns true for **admin**, **owner**, or a **configured approver** (row in `policy_approvers`); otherwise requires `approved_externally OR approval_state='published'` before the normal effective-membership check.
+- **`canGovern(req, p)`** (defined in `routes/approvals.js`) = `isAdmin(req) || p.owner_oid === req.user.oid`. Gates configure/submit/withdraw/publish/apply-template.
+- **`canRead`** (exported from `authz.js`) returns true for **admin**, **owner**, or a **configured approver** (row in `policy_approvers`); otherwise requires `approved_externally OR approval_state='published'` before the normal effective-membership check.
 - The employee `GET /policies` query carries the same predicate: `... AND (p.approved_externally OR p.approval_state = 'published')`.
 
 Net effect: a policy under review is invisible to employees but visible to the

@@ -361,7 +361,7 @@ Status legend as above (✅ implemented · ◑ partial/operator · ○ target/de
 
 | ID | Technical requirement | Status | Decision / source |
 |----|-----------------------|--------|-------------------|
-| TR-API-01 | The API shall be Express (CommonJS), organized into per-domain route modules with extracted auth/authz/storage/scheduler/rate-limit concerns. | ✅ | ADR-107, NFR-MNT-01 |
+| TR-API-01 | The API shall be Express 5 (CommonJS), organized into per-domain route modules with extracted auth/authz/storage/scheduler/rate-limit concerns. | ✅ | ADR-107, NFR-MNT-01 |
 | TR-API-02 | All database access shall use parameterized `pg` queries; no string-built SQL. | ✅ | NFR-SEC-03 |
 | TR-API-03 | Append-only ledgers shall be enforced by PostgreSQL grants (UPDATE/DELETE revoked), not application code or triggers. | ✅ | ADR-109 |
 | TR-API-04 | Admin policies and manager trainings shall share one polymorphic `policies` table (discriminated by `source`/`doc_type`). | ✅ | ADR-110 |
@@ -458,7 +458,7 @@ Concise, app-wide stories (the approval workflow has a full set in
 
 ## 9. Traceability
 
-- **Requirements → decisions:** ADR-101…120 in `ARCHITECTURE-AND-DECISIONS.md`.
+- **Requirements → decisions:** ADR-101…120 in `ARCHITECTURE-AND-DECISIONS.md`. The sub-lettered **ADR-120-a…d** approval-workflow decisions (cited by FR-APR-04/10 and CR-08) are detailed in the approval-workflow package ([`approval-workflow/HLD.md`](approval-workflow/HLD.md), [`SECURITY-ASSESSMENT.md`](approval-workflow/SECURITY-ASSESSMENT.md)).
 - **Requirements → capabilities:** ABBs/SBBs in `ARCHITECTURE-BUILDING-BLOCKS.md` (B1–B11, D1–D8, A1–A14, T1–T8) and `approval-workflow/BUILDING-BLOCKS.md` (AW-1…AW-7).
 - **Requirements → tests:** API unit+integration (`apps/api/test/**`), web (`apps/web/test/**`), docker-compose smoke; approval coverage matrix in `approval-workflow/USER-STORIES.md §5`.
 - **Requirements → maturity:** scorecard in `APPLICATION-EVALUATION.md`.

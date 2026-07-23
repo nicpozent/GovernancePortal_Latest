@@ -6,7 +6,7 @@ _Solution Building Block realizing ABB **A9 Backup & Recovery Service** in the B
 Daily dump (retained); manual/server-side backups; DB creds passed via PG* env, never argv (L-3).
 
 ## Where it lives (code)
-`apps/api/src/server.js, routes.js (/admin/backup*), docs/RESTORE.md`
+`apps/api/src/server.js, apps/api/src/routes/admin.js (/admin/backup*), docs/RESTORE.md`
 
 ## Maturity
 Production-grade

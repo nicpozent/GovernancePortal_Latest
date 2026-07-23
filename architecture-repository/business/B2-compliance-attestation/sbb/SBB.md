@@ -6,7 +6,7 @@ _Solution Building Block realizing ABB **B2 Compliance Attestation** in the Birg
 Identity taken from the verified token (never the client); version-stamped; quiz gate enforced before signing.
 
 ## Where it lives (code)
-`apps/api/src/routes.js (POST /signatures)`
+`apps/api/src/routes/signatures.js (POST /signatures)`
 
 ## Maturity
 Production-grade

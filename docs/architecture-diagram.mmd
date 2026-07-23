@@ -51,7 +51,7 @@ flowchart TB
     CORE -- "Sites.Selected (documents)" --> GRAPH
     API -- "SQL (internal network)" --> DB
     API -- "pluggable" --> VOL
-    API -. "RATE_LIMIT_STORE=redis" .-> REDIS
+    API -. "RATE_LIMIT_REDIS_URL set" .-> REDIS
     DB --- VOL
 
     classDef client fill:#eef1fb,stroke:#213a9e,stroke-width:2px,color:#161a26;

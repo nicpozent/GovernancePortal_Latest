@@ -85,7 +85,7 @@ location /api/ {
 }
 ```
 
-**(c) The middleware chain runs in a deliberate order** (`apps/api/src/server.js`):
+**(c) The middleware chain runs in a deliberate order** (`apps/api/src/app.js`):
 `helmet()` (headers) → `cors()` (defense-in-depth even though same-origin) →
 `express.json({ limit: '256kb' })` (body cap) → rate limiters → route. Then every
 `/api` route passes through `requireAuth` before any handler.
