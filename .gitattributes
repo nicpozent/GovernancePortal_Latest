@@ -1,0 +1,27 @@
+# Normalize line endings. The containers run Linux, so any script executed
+# inside them MUST use LF — a CRLF shebang (e.g. from git core.autocrlf=true on
+# Windows) breaks `#!/bin/sh` and fails Postgres/container init.
+
+# Sensible default: Git decides text vs binary; text is checked out with LF.
+* text=auto eol=lf
+
+# Files executed inside Linux containers — force LF explicitly.
+*.sh   text eol=lf
+*.sql  text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf
+
+# Windows-only helper scripts stay CRLF.
+*.ps1  text eol=crlf
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+
+# Binaries — never touch.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff binary
+*.woff2 binary
