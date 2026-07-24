@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Birgma Governance Portal — Request Sequence</title>
+<style>
+  body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:#eef1f5;color:#161a26}
+  header{padding:24px 32px;background:#fff;border-bottom:1px solid #e6e8ee}
+  h1{margin:0;font-size:20px}
+  p{margin:6px 0 0;color:#7b8294;font-size:13px}
+  .wrap{padding:28px 32px}
+  .card{background:#fff;border:1px solid #e6e8ee;border-radius:14px;padding:20px;overflow:auto}
+  .note{margin-top:18px;font-size:12.5px;color:#54607a;line-height:1.6}
+  code{background:#f3f4f8;padding:1px 6px;border-radius:5px;font-family:Consolas,monospace}
+</style>
+</head>
+<body>
+<header>
+  <h1>Birgma Governance Portal — Whole-application request sequence</h1>
+  <p>Rendered from <code>request-sequence.mmd</code>. To edit in Lucidchart: File → Import Diagram → Mermaid.</p>
+</header>
+<div class="wrap">
+  <div class="card">
+    <pre class="mermaid" id="diagram"></pre>
+  </div>
+  <div class="note">
+    An end-to-end flow that touches every layer: one-time MSAL PKCE sign-in, then a same-origin,
+    Bearer-token, per-request-authorized call sequence — list assigned policies (effective
+    membership + publish gate), preview the document (SharePoint via <code>Sites.Selected</code>,
+    Office→PDF), pass the server-graded knowledge check (append-only <code>quiz_attempts</code>),
+    and record a binding acknowledgement (append-only <code>signatures</code> + best-effort
+    <code>audit_log</code>). The append-only ledgers have UPDATE/DELETE revoked at the database
+    grant layer. This is the runnable-diagram form of the lifecycle narrative in
+    <code>ARCHITECTURE-AND-DECISIONS.md</code> §3 and <code>HLD.md</code>.
+  </div>
+</div>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  const src = await (await fetch('request-sequence.mmd')).text();
+  document.getElementById('diagram').textContent = src;
+  mermaid.initialize({ startOnLoad:false, theme:'base', themeVariables:{ fontFamily:'Segoe UI' } });
+  await mermaid.run();
+</script>
+</body>
+</html>

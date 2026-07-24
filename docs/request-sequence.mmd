@@ -1,0 +1,53 @@
+%% Birgma Governance Portal — Whole-application request sequence
+%% A representative end-to-end flow that exercises every architectural layer:
+%% an employee signs in, reads an assigned policy, passes its knowledge check,
+%% and records a binding acknowledgement. Mirrors the prose lifecycle in
+%% ARCHITECTURE-AND-DECISIONS.md §3 and HLD.md.
+%%
+%% HOW TO OPEN IN LUCIDCHART: File → Import Diagram → Mermaid (paste this file).
+%% Also renders on github.com, mermaid.live, VS Code, and request-sequence.html.
+
+sequenceDiagram
+    autonumber
+    actor U as Employee (browser SPA)
+    participant N as nginx (web, TLS/CSP/proxy)
+    participant E as Microsoft Entra ID
+    participant A as API (Express 5)
+    participant G as Microsoft Graph / SharePoint
+    participant D as PostgreSQL 16
+
+    Note over U,E: One-time interactive sign-in (MSAL PKCE)
+    U->>E: authorize (PKCE)
+    E-->>U: id/access token (roles, scope)
+
+    Note over U,D: Every API call is same-origin, Bearer-token, per-request authorized
+    U->>N: GET /api/policies (Bearer)
+    N->>A: proxy /api → :8080
+    A->>E: validate JWT (JWKS, iss/aud/tid/scope, delegated-only)
+    E-->>A: JWKS (cached)
+    A->>D: effective-membership + publish-gate query
+    D-->>A: assigned, published policies
+    A-->>U: policy list (private-by-default)
+
+    U->>N: GET /api/policies/:id/content
+    N->>A: proxy
+    A->>A: canRead (role ∪ owner ∪ approver ∪ published)
+    A->>G: Sites.Selected fetch (Office→PDF if needed)
+    G-->>A: document stream
+    A-->>U: inline PDF (blob, CSP frame-src)
+
+    Note over U,D: Knowledge-check gate — graded server-side, never trusted from client
+    U->>N: POST /api/policies/:id/quiz/attempt (answers)
+    N->>A: proxy
+    A->>D: advisory lock; insert quiz_attempts (append-only)
+    D-->>A: pass %, passed=true
+    A-->>U: result (pass)
+
+    Note over U,D: Binding acknowledgement — append-only, identity+version stamped
+    U->>N: POST /api/signatures (policyId, fullName)
+    N->>A: proxy
+    A->>A: quiz-gate check + canRead
+    A->>D: insert signatures (UPDATE/DELETE revoked at grant layer)
+    A->>D: insert audit_log (best-effort, non-blocking)
+    D-->>A: committed
+    A-->>U: acknowledgement recorded

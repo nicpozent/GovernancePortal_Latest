@@ -441,8 +441,10 @@ ADR deferrals, `NEXT-STEPS.md`, and the evaluation's open items.
 
 ## 8. Personas & representative user stories
 
-Concise, app-wide stories (the approval workflow has a full set in
-[`approval-workflow/USER-STORIES.md`](approval-workflow/USER-STORIES.md)).
+Concise persona summaries below; the full **application-wide** Gherkin stories with
+acceptance criteria and a story→endpoint→test matrix are in
+[`USER-STORIES.md`](USER-STORIES.md), and the approval workflow has its own set in
+[`approval-workflow/USER-STORIES.md`](approval-workflow/USER-STORIES.md).
 
 - **Employee** — *"So I stay compliant, I want to see exactly which policies I must acknowledge and complete any required knowledge check, then record my acknowledgement."* (FR-ACK, FR-QIZ)
 - **Employee** — *"I want to switch the portal to dark mode and have it remember my choice, so it's comfortable on my screen."* (FR-UX-01/02/03)

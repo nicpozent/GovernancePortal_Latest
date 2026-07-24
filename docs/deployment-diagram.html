@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Birgma Governance Portal — Deployment</title>
+<style>
+  body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:#eef1f5;color:#161a26}
+  header{padding:24px 32px;background:#fff;border-bottom:1px solid #e6e8ee}
+  h1{margin:0;font-size:20px}
+  p{margin:6px 0 0;color:#7b8294;font-size:13px}
+  .wrap{padding:28px 32px}
+  .card{background:#fff;border:1px solid #e6e8ee;border-radius:14px;padding:20px;overflow:auto}
+  .note{margin-top:18px;font-size:12.5px;color:#54607a;line-height:1.6}
+  code{background:#f3f4f8;padding:1px 6px;border-radius:5px;font-family:Consolas,monospace}
+</style>
+</head>
+<body>
+<header>
+  <h1>Birgma Governance Portal — Deployment / Infrastructure</h1>
+  <p>Rendered from <code>deployment-diagram.mmd</code>. To edit in Lucidchart: File → Import Diagram → Mermaid.</p>
+</header>
+<div class="wrap">
+  <div class="card">
+    <pre class="mermaid" id="diagram"></pre>
+  </div>
+  <div class="note">
+    Runtime topology of the Docker Compose stack (<code>deploy/docker-compose.yml</code>): the
+    <code>web</code> container (nginx) is the only published edge — <code>:443</code> TLS with a
+    <code>:80</code>→443 redirect — and reverse-proxies <code>/api</code> to the <code>api</code>
+    container on the internal Docker network. The <code>db</code> container publishes
+    <code>:5432</code> to <code>127.0.0.1</code> only (loopback), so PostgreSQL is not reachable from
+    the VM network. State lives in the <code>pgdata</code> volume and the <code>uploads</code>/
+    <code>backups</code>/<code>certs</code> mounts. Identity and documents come from Microsoft Entra
+    ID and Graph/SharePoint (external, enterprise-shared). The dashed block is the Azure-native
+    target (ADR-117): Container Apps + managed PostgreSQL (PITR) + Blob + Key Vault + private
+    endpoints — a lift-and-shift, not a rewrite. See <code>ARCHITECTURE-AND-DECISIONS.md</code> and
+    <code>HLD.md</code>.
+  </div>
+</div>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  const src = await (await fetch('deployment-diagram.mmd')).text();
+  document.getElementById('diagram').textContent = src;
+  mermaid.initialize({ startOnLoad:false, theme:'base', themeVariables:{ fontFamily:'Segoe UI' } });
+  await mermaid.run();
+</script>
+</body>
+</html>

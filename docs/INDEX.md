@@ -23,6 +23,7 @@ Read top-to-bottom; each step links the authoritative document.
 |---|----------------|------|-----|
 | 1 | **What it is + how mature** | [`APPLICATION-EVALUATION.md`](APPLICATION-EVALUATION.md) | 18-dimension evidence-based scorecard + verdict; fastest orientation |
 | 2 | **The architecture & the decisions** | [`ARCHITECTURE-AND-DECISIONS.md`](ARCHITECTURE-AND-DECISIONS.md) + [`architecture-diagram.mmd`](architecture-diagram.mmd) | 20 ADRs (each lists rejected alternatives); the system diagram |
+| 2a | **The design (app-wide)** | [`HLD.md`](HLD.md) → [`LLD.md`](LLD.md) + [`deployment-diagram.mmd`](deployment-diagram.mmd) + [`request-sequence.mmd`](request-sequence.mmd) | High- & low-level design: components, deployment topology, end-to-end flow, per-module endpoint reference |
 | 3 | **Capabilities, product-neutral (TOGAF)** | [`ARCHITECTURE-BUILDING-BLOCKS.md`](ARCHITECTURE-BUILDING-BLOCKS.md) + [`../architecture-repository/CATALOG.md`](../architecture-repository/CATALOG.md) | ABBs → SBBs; reusable-capability view for the Enterprise Continuum |
 | 4 | **What it must do / the qualities** | [`REQUIREMENTS.md`](REQUIREMENTS.md) | Functional + non-functional + technical + candidate requirements, with traceability |
 | 5 | **Security posture** | [`SECURITY-REVIEW.md`](SECURITY-REVIEW.md) → [`SECURITY-FRAMEWORKS.md`](SECURITY-FRAMEWORKS.md) → [`ZERO-TRUST.md`](ZERO-TRUST.md) → [`ISO27001-SOA.md`](ISO27001-SOA.md) | Threats/controls; controls-as-code; Zero Trust pillars; ISO 27001:2022 SoA (93 controls) |
@@ -57,9 +58,14 @@ Read top-to-bottom; each step links the authoritative document.
 
 ### Architecture & design
 - [`ARCHITECTURE-AND-DECISIONS.md`](ARCHITECTURE-AND-DECISIONS.md) — 20 Architecture Decision Records (ADR-101…120); each states the decision, alternatives rejected, and trade-offs. **The authoritative design rationale.**
+- [`HLD.md`](HLD.md) — **application-wide High-Level Design**: components, deployment view, key end-to-end flow, cross-cutting design, NFR summary. The discoverable design view (the ADR doc holds the rationale).
+- [`LLD.md`](LLD.md) — **application-wide Low-Level Design**: per-module endpoint reference, key algorithms, data model, security specifics (the approval feature has its own LLD).
 - [`ARCHITECTURE-BUILDING-BLOCKS.md`](ARCHITECTURE-BUILDING-BLOCKS.md) — TOGAF ABB→SBB catalogue (capabilities vs. their realization); reuse/maturity notes.
 - [`architecture-diagram.mmd`](architecture-diagram.mmd) / [`architecture-diagram.html`](architecture-diagram.html) — the system (container/service) diagram (Mermaid source + a renderer).
 - [`data-model.mmd`](data-model.mmd) / [`data-model.html`](data-model.html) — the whole-application **entity-relationship diagram**: every table drawn as a table (columns + PK/FK/UK) with its relationships, generated from the real schema + migrations.
+- [`deployment-diagram.mmd`](deployment-diagram.mmd) / [`deployment-diagram.html`](deployment-diagram.html) — the **deployment/infrastructure view**: hosts, containers, ports, volumes, trust zones, and the Azure-native target.
+- [`request-sequence.mmd`](request-sequence.mmd) / [`request-sequence.html`](request-sequence.html) — the **whole-application sequence**: sign-in → read → quiz → acknowledge, across every layer.
+- [`USER-STORIES.md`](USER-STORIES.md) — application-wide **user stories** (Gherkin + acceptance criteria + story→endpoint→test matrix) for every persona; the approval workflow has its own set.
 - [`REQUIREMENTS.md`](REQUIREMENTS.md) — functional (by domain), non-functional (by quality attribute), technical (technology constraints, by area), and candidate/future requirements, with actors, MoSCoW priority, status, and traceability.
 
 ### Security & compliance
