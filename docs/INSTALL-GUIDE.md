@@ -41,25 +41,37 @@ End-to-end: from a bare Windows VM to a running, Entra-secured portal.
 
 ## Part 4 — Deploy the application
 
-1. Copy the `governance-deploy` folder to the VM, e.g. `C:\governance-deploy`.
-2. Configure secrets:
+The stack **builds from source**, so the **whole repository** must be on the VM —
+`docker-compose.yml` builds `../apps/api` and `../apps/web`. Copy the repo to the
+VM, e.g. `C:\Governance`. All commands below run from the `deploy\` folder.
+
+1. **Configure the two `.env` files** (two files, two locations):
+   - `deploy\.env` — DB passwords + the 3 Entra IDs (read by the stack)
+   - `apps\api\.env` — Graph/Azure secrets (read by the API container)
    ```powershell
-   cd C:\governance-deploy
-   copy .env.example .env
-   notepad .env                 # set POSTGRES_PASSWORD, APP_DB_PASSWORD + the 3 Entra IDs
-   copy birgma-governance\.env.example birgma-governance\.env
-   notepad birgma-governance\.env   # GRAPH_CLIENT_ID + AZURE_CLIENT_SECRET + SHAREPOINT_SITE_ID
-   mkdir backups
-   mkdir certs
+   cd C:\Governance\deploy
+   copy ..\.env.example .env                     # -> deploy\.env
+   notepad .env                                  # POSTGRES_PASSWORD, APP_DB_PASSWORD + AZURE_TENANT_ID / SPA_CLIENT_ID / API_CLIENT_ID
+   copy ..\.env.example ..\apps\api\.env          # -> apps\api\.env
+   notepad ..\apps\api\.env                       # GRAPH_CLIENT_ID + AZURE_CLIENT_SECRET + SHAREPOINT_SITE_ID
+   ```
+   > ⚠️ `deploy\.env` **must** sit in `deploy\` (next to `docker-compose.yml`) —
+   > Compose reads `.env` from the folder you run it in. If it is missing, or the
+   > passwords are blank, the **db** container fails its healthcheck and you get
+   > *"dependency failed to start: container … is unhealthy"* (api/web won't start).
+2. **Create the local state folders** (still in `deploy\`):
+   ```powershell
+   mkdir certs, backups, uploads
    ```
 3. TLS cert + key into `certs\` (`fullchain.pem`, `privkey.pem`) — internal CA or
-   public cert. For a quick test, a self-signed pair (see Part 7).
-4. Build & start (fresh DB runs every migration + grants automatically):
+   public cert. For a quick test, generate a self-signed pair (see Part 7).
+4. Build & start (a fresh DB runs every migration + grants automatically):
    ```powershell
    docker compose up --build -d
-   docker compose ps                       # db, api, web healthy
+   docker compose ps                       # db, api, web all Up / healthy
    curl.exe -k https://localhost/healthz   # {"ok":true}
    ```
+   Rebuild after any code change with the same `docker compose up --build -d`.
 5. Allow inbound **443** (and **80** for redirect) in Windows Defender Firewall.
 
 ---
@@ -77,7 +89,7 @@ You need **two app registrations** in the Entra admin center.
 4. **Manifest** → set `"requestedAccessTokenVersion": 2` (v2 tokens — required, or
    sign-in fails with `invalid_token` / wrong issuer).
 5. **Certificates & secrets** → New client secret → copy the **Value** →
-   `AZURE_CLIENT_SECRET` in `birgma-governance/.env`; set `GRAPH_CLIENT_ID` =
+   `AZURE_CLIENT_SECRET` in `apps/api/.env`; set `GRAPH_CLIENT_ID` =
    this app's client id, and `API_CLIENT_ID` / `API_AUDIENCE` accordingly.
 
 ### 5b. SPA app ("Governance Portal")
@@ -85,7 +97,7 @@ You need **two app registrations** in the Entra admin center.
 2. **Redirect URI** = your exact site origin, e.g. `https://governance.biltemabirgma.com`
    (and/or `http://localhost` for local testing). Must be https for real hosts.
 3. **API permissions** → add the `access_as_user` scope you exposed in 5a → grant consent.
-4. Put this app's client id in `SPA_CLIENT_ID` (root `.env`) and the tenant id in `AZURE_TENANT_ID`.
+4. Put this app's client id in `SPA_CLIENT_ID` (`deploy/.env`) and the tenant id in `AZURE_TENANT_ID`.
 
 ### 5c. Microsoft Graph (directory sync) — on the API app
 API permissions → Microsoft Graph → **Application permissions**, then
@@ -122,12 +134,16 @@ After Azure is configured, restart the API: `docker compose up -d`.
    assign policies to groups, set deadlines, build quizzes.
 
 ## Part 7 — Self-signed cert (testing only)
+Run from `deploy\` (so `${PWD}/certs` is `deploy\certs`, which must already exist
+from Part 4 step 2). No OpenSSL install needed — this uses a throwaway container:
 ```powershell
 docker run --rm -v ${PWD}/certs:/certs alpine/openssl req -x509 -newkey rsa:2048 -nodes -days 825 `
   -keyout /certs/privkey.pem -out /certs/fullchain.pem `
   -subj "/CN=governance.biltemabirgma.com" -addext "subjectAltName=DNS:governance.biltemabirgma.com"
 ```
-Browsers warn (untrusted) — fine for testing, not production.
+For a purely local test at `https://localhost`, use `-subj "/CN=localhost"` and
+`-addext "subjectAltName=DNS:localhost"` instead. Browsers warn (untrusted) — fine
+for testing, not production.
 
 ---
 
@@ -163,11 +179,19 @@ The codebase is built to also run on **Azure App Service / Container Apps** with
 - **Conditional Access** (require MFA / compliant device) on the apps — policy-side,
   no code change.
 This removes the two weakest points of the VM model (secrets in `.env`, host-level
-DB access). See `birgma-governance/IMPLEMENTATION_GUIDE.md` §7 for the target topology.
+DB access). See `apps/api/IMPLEMENTATION_GUIDE.md` §7 for the target topology.
 
 ---
 
 ## Troubleshooting
+- **`dependency failed to start: container … db … is unhealthy`** → Postgres never
+  finished init. Check `docker compose logs db`. Usual causes: (a) `deploy\.env`
+  missing or `POSTGRES_PASSWORD`/`APP_DB_PASSWORD` blank — fix `.env` in `deploy\`;
+  (b) a half-initialized volume from an earlier failed start — wipe and retry:
+  ```powershell
+  docker compose down -v      # removes the pgdata volume (destroys local DB data)
+  docker compose up --build -d
+  ```
 - **502 on every call** → API crashed; `docker compose logs --tail=40 api`.
 - **`invalid_token` / wrong issuer** → set `requestedAccessTokenVersion: 2` (5a.4), re-login.
 - **`permission denied for view`** → grants didn't apply; re-run `docker-grants.sql`.

@@ -70,7 +70,7 @@ Defender Firewall.
 ## 2. Microsoft Graph — directory sync + SharePoint reads
 
 The API authenticates to Graph with a client id + secret (there is no Managed
-Identity on a VMware VM). In `birgma-governance/.env`:
+Identity on a VMware VM). In `apps/api/.env`:
 ```
 GRAPH_CLIENT_ID=655463e2-ab20-45b2-8bd2-be9925be19dd   # = the API app
 AZURE_CLIENT_SECRET=<secret Value generated on that app registration>
