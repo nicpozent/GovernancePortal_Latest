@@ -69,6 +69,28 @@ test('full chain: configure → submit gates visibility → sequential approve �
   assert.equal(await seesPolicy(s.pol), true, 'published again → member sees it');
 });
 
+test('an approved/published version cannot be re-submitted without a new version', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const s = await scenario();
+  h.asAdmin(s.admin);
+  // Configure a single approver, run to approved, then publish (approved_version = v1).
+  await request(h.app).put(`/api/policies/${s.pol}/approvers`).send({ approverOids: [s.a1] });
+  await request(h.app).post(`/api/policies/${s.pol}/submit`);
+  h.asUser(s.a1, []);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/approve`)).body.approval_state, 'approved');
+  h.asAdmin(s.admin);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/publish`)).body.approval_state, 'published');
+
+  // Re-submitting the SAME (already-approved) version is refused.
+  const blocked = await request(h.app).post(`/api/policies/${s.pol}/submit`);
+  assert.equal(blocked.status, 409);
+  assert.equal(blocked.body.error, 'already_approved');
+
+  // Bumping to a new version re-opens approval.
+  await h.pool.query("update policies set version='v2' where id=$1", [s.pol]);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/submit`)).body.approval_state, 'in_review');
+});
+
 test('request-changes needs a comment and moves to changes_requested', async (t) => {
   if (!dbUp) return t.skip('no test database');
   const s = await scenario();

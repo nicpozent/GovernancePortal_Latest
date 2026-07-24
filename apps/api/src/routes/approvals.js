@@ -192,6 +192,14 @@ module.exports = (r) => {
     if (!canGovern(req, pre.p)) return res.status(403).json({ error: 'forbidden' });
     if (!pre.steps.length) return res.status(400).json({ error: 'no_approvers', detail: 'Add at least one approver first.' });
     if (pre.p.approval_state === 'in_review') return res.status(409).json({ error: 'bad_state', detail: 'Already in review.' });
+    // Governance guard: a policy already approved/published for the CURRENT version
+    // must not re-enter approval with no changes — resubmitting would silently
+    // un-publish a live document and re-approve identical content. Require a new
+    // version to re-approve (editing the policy to a new version clears this).
+    if ((pre.p.approval_state === 'approved' || pre.p.approval_state === 'published')
+        && pre.p.approved_version && pre.p.version === pre.p.approved_version) {
+      return res.status(409).json({ error: 'already_approved', detail: 'This version is already approved. Create a new version before submitting it for approval again.' });
+    }
     // Freeze current group membership into the run, then re-read.
     await expandGroups(pre.p.id);
     const c = await ctx(req.params.id);

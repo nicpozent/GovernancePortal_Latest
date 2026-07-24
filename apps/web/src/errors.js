@@ -40,6 +40,7 @@ export const ERROR_MESSAGES = {
   not_pending_approver: 'It’s not your turn to approve this — an earlier approver is up first.',
   comment_required: 'Please add a comment when rejecting or requesting changes.',
   not_approved: 'This policy must be approved before it can be published.',
+  already_approved: 'This version is already approved. Create a new version before submitting it for approval again.',
   bad_state: 'This policy isn’t in the right state for that action — refresh and try again.',
   // Uploads / files / integration / server
   upload_failed: 'Upload failed — check the file type and size (max 250 MB).',

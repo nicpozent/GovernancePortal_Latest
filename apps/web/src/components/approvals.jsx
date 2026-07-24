@@ -262,7 +262,7 @@ export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
 
         {/* Footer: governance actions */}
         <div style={{ flex: 'none', borderTop: '1px solid var(--ceceef4)', background: 'var(--cfafbfd)', padding: '15px 26px', display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          {data.canGovern && ['draft', 'changes_requested', 'rejected', 'published'].includes(st) &&
+          {data.canGovern && (['draft', 'changes_requested', 'rejected'].includes(st) || (st === 'published' && policy.version !== data.approved_version)) &&
             <button disabled={busy || !data.steps.length} style={btn('var(--c213a9e)', '#fff')} onClick={() => run(() => api.submitApproval(policy.id), 'Submitted for approval')}>Submit for approval</button>}
           {data.canGovern && st === 'in_review' &&
             <button disabled={busy} style={btn('var(--surface)', 'var(--c54607a)', 'var(--ce6e8ee)')} onClick={() => run(() => api.withdrawApproval(policy.id), 'Withdrawn')}>Withdraw</button>}
