@@ -3,6 +3,10 @@
 > 📖 **Reviewers start here:** [`docs/INDEX.md`](docs/INDEX.md) — documentation
 > index, repository map, and a suggested review order for the Enterprise
 > Application team.
+>
+> 🗺️ **Where does X live?** [`PROJECT-MAP.md`](PROJECT-MAP.md) — a "where to find
+> it" quick-reference (HLD, LLD, requirements, user stories, ADRs, diagrams…) and
+> a folder-by-folder description of the repository.
 
 A policy-governance & compliance portal. Admins publish governance documents
 (stored in SharePoint), assign them to groups, and optionally attach quizzes and
