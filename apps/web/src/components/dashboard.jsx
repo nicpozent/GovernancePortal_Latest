@@ -58,10 +58,10 @@ export function Dashboard({ kpis, polRows, recent, attention, deptRows, groupRow
             {polRows.map((r)=>(
               <div key={r.id} style={{ display:'flex', alignItems:'center', gap:'14px', padding:'11px 18px', borderTop:'1px solid var(--cf0f1f6)' }}>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'9px', marginBottom:'7px' }}><span style={typePill(r.type)}>{r.type}</span><span style={{ font:'600 13.5px/1.2 "IBM Plex Sans"', color:'var(--c23283a)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.name}</span></div>
-                  <div style={{ height:'8px', background:'var(--ceef1f5)', borderRadius:'5px', overflow:'hidden' }}><div style={{ height:'100%', borderRadius:'5px', width:r.pct+'%', background:pctColor(r.pct), transition:'width .4s' }}></div></div>
+                  <div style={{ display:'flex', alignItems:'center', gap:'9px', marginBottom:'7px' }}><span style={typePill(r.type)}>{r.type}</span><span style={{ font:'600 13.5px/1.2 "IBM Plex Sans"', color:'var(--c23283a)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.name}</span>{r.unassigned && <span title="Assigned to no group — assign it to a group to track completion" style={{ font:'500 11px/1 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)', border:'1px solid var(--ceef1f5)', borderRadius:'6px', padding:'3px 6px', flex:'none' }}>not assigned</span>}</div>
+                  <div style={{ height:'8px', background:'var(--ceef1f5)', borderRadius:'5px', overflow:'hidden' }}><div style={{ height:'100%', borderRadius:'5px', width:(r.unassigned?0:r.pct)+'%', background:pctColor(r.pct), transition:'width .4s' }}></div></div>
                 </div>
-                <div style={{ width:'46px', textAlign:'right', font:'600 15px/1 "IBM Plex Sans"', color:pctColor(r.pct) }}>{r.pct}%</div>
+                <div style={{ width:'46px', textAlign:'right', font:'600 15px/1 "IBM Plex Sans"', color:r.unassigned?'var(--c9aa1b2)':pctColor(r.pct) }} title={r.unassigned?'Not assigned to any group':undefined}>{r.unassigned?'—':r.pct+'%'}</div>
                 <div style={{ width:'54px', textAlign:'right', font:'400 12.5px/1 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)' }}>{r.signed}/{r.assigned}</div>
               </div>
             ))}
@@ -117,10 +117,10 @@ export function Dashboard({ kpis, polRows, recent, attention, deptRows, groupRow
             {polRows.slice().sort((a,b)=>a.pct-b.pct).map((r)=>(
               <div key={r.id} style={{ padding:'9px 0', borderTop:'1px solid var(--cf3f4f8)', display:'flex', alignItems:'center', gap:'12px' }}>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ font:'500 13px/1.3 "IBM Plex Sans"', color:'var(--c23283a)', marginBottom:'7px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.name}</div>
-                  <div style={{ height:'7px', background:'var(--ceef1f5)', borderRadius:'4px', overflow:'hidden' }}><div style={{ height:'100%', borderRadius:'4px', width:r.pct+'%', background:pctColor(r.pct), transition:'width .4s' }}></div></div>
+                  <div style={{ font:'500 13px/1.3 "IBM Plex Sans"', color:'var(--c23283a)', marginBottom:'7px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.name}{r.unassigned && <span style={{ font:'500 10.5px/1 "IBM Plex Mono",monospace', color:'var(--c9aa1b2)', marginLeft:'8px' }}>· not assigned</span>}</div>
+                  <div style={{ height:'7px', background:'var(--ceef1f5)', borderRadius:'4px', overflow:'hidden' }}><div style={{ height:'100%', borderRadius:'4px', width:(r.unassigned?0:r.pct)+'%', background:pctColor(r.pct), transition:'width .4s' }}></div></div>
                 </div>
-                <div style={{ width:'42px', textAlign:'right', font:'600 13.5px/1 "IBM Plex Sans"', color:pctColor(r.pct) }}>{r.pct}%</div>
+                <div style={{ width:'42px', textAlign:'right', font:'600 13.5px/1 "IBM Plex Sans"', color:r.unassigned?'var(--c9aa1b2)':pctColor(r.pct) }} title={r.unassigned?'Not assigned to any group':undefined}>{r.unassigned?'—':r.pct+'%'}</div>
               </div>
             ))}
           </div>

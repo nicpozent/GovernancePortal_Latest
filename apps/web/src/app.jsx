@@ -527,7 +527,7 @@ function App() {
   };
 
   // dashboard
-  const polRows = dashRows.map((r) => { const assigned = Number(r.assigned) || 0, signed = Number(r.signed) || 0; const pct = assigned ? Math.round(signed/assigned*100) : 0; return { id:r.id, name:r.name, type:r.doc_type, version:r.version, assigned, signed, pct }; });
+  const polRows = dashRows.map((r) => { const assigned = Number(r.assigned) || 0, signed = Number(r.signed) || 0; const pct = assigned ? Math.round(signed/assigned*100) : 0; return { id:r.id, name:r.name, type:r.doc_type, version:r.version, assigned, signed, pct, unassigned: assigned === 0 }; });
   const totalReq = polRows.reduce((a,r)=>a+r.assigned,0), totalSigned = polRows.reduce((a,r)=>a+r.signed,0);
   const overall = totalReq ? Math.round(totalSigned/totalReq*100) : 0, pending = totalReq - totalSigned;
   const kpis = [
@@ -537,7 +537,7 @@ function App() {
     { label:'Pending signatures', value:String(pending<0?0:pending), sub:'awaiting acknowledgement', accent:'var(--cd81848)' },
   ];
   const recent = recentSigs.slice(0,6).map((s)=>({ name:s.display_name||s.full_name, policy:s.policy_name, version:s.policy_version, date:fmtDate(s.signed_at), initials:initials(s.display_name||s.full_name) }));
-  const attention = polRows.slice().sort((a,b)=>a.pct-b.pct).slice(0,4);
+  const attention = polRows.filter((r)=>!r.unassigned).slice().sort((a,b)=>a.pct-b.pct).slice(0,4);
   const deptRows = byDept.map((d)=>{ const assigned = Number(d.assigned) || 0, signed = Number(d.signed) || 0; const pct = assigned ? Math.round(signed/assigned*100) : 0; return { role:d.role, count:Number(d.people)||0, pct }; });
   const groupRows = byGroup.map((g)=>{ const assigned = Number(g.assigned)||0, signed = Number(g.signed)||0; const pct = assigned ? Math.round(signed/assigned*100) : 0; return { id:g.id, name:g.name, kind:g.kind, members:Number(g.members)||0, policies:Number(g.policies)||0, assigned, signed, pct, raw:g }; });
 

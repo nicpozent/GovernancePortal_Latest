@@ -276,19 +276,25 @@ export function ReceiptModal({ receipt, onClose }) {
   const timeStr = receipt.at.toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
   const ref = 'BG-' + receipt.at.getTime().toString(36).toUpperCase();
   const printIt = () => {
-    const w = window.open('', '_blank', 'noopener,noreferrer,width=720,height=900');
-    if (!w) return;
-    try { w.opener = null; } catch (_) {}
     const esc = escapeHtml;
-    w.document.write(`<!doctype html><html><head><title>Acknowledgement — ${esc(receipt.policy)}</title>
+    // NB: do NOT pass 'noopener' in the feature string — with it, window.open()
+    // returns null (a blank about:blank popup opens but we get no handle to write
+    // to). We sever the opener link manually after opening instead. And the print
+    // trigger runs here in the opener, not as an inline <script> in the popup —
+    // the edge CSP is `script-src 'self'` so an inline popup script is blocked.
+    // Colours are literal hex (the app's CSS custom properties don't exist in the
+    // new window).
+    const w = window.open('', '_blank', 'width=720,height=900');
+    if (!w) { if (window.__toast) window.__toast('Allow pop-ups for this site to print the certificate.', true); return; }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Acknowledgement — ${esc(receipt.policy)}</title>
       <style>
-        *{box-sizing:border-box} body{font-family:Segoe UI,Arial,sans-serif;color:var(--c23283a);margin:0;padding:48px}
-        .card{max-width:600px;margin:0 auto;border:1px solid var(--ce6e8ee);border-radius:14px;padding:40px}
-        .badge{width:54px;height:54px;border-radius:50%;background:var(--ce6f3ec);color:var(--c1f7a5c);display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:20px}
-        h1{font-size:21px;margin:0 0 4px} .sub{color:var(--c7b8294);font-size:13px;margin:0 0 26px}
-        .row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cf0f1f6);font-size:14px}
-        .row span:first-child{color:var(--c8a92a6)} .row span:last-child{font-weight:600;text-align:right}
-        .foot{margin-top:26px;font-size:11px;color:var(--caab0c0);line-height:1.6}
+        *{box-sizing:border-box} body{font-family:Segoe UI,Arial,sans-serif;color:#23283a;margin:0;padding:48px}
+        .card{max-width:600px;margin:0 auto;border:1px solid #e6e8ee;border-radius:14px;padding:40px}
+        .badge{width:54px;height:54px;border-radius:50%;background:#e6f3ec;color:#1f7a5c;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:20px}
+        h1{font-size:21px;margin:0 0 4px} .sub{color:#7b8294;font-size:13px;margin:0 0 26px}
+        .row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f1f6;font-size:14px}
+        .row span:first-child{color:#8a92a6} .row span:last-child{font-weight:600;text-align:right}
+        .foot{margin-top:26px;font-size:11px;color:#aab0c0;line-height:1.6}
       </style></head><body><div class="card">
       <div class="badge">✓</div>
       <h1>Certificate of Acknowledgement</h1>
@@ -301,8 +307,12 @@ export function ReceiptModal({ receipt, onClose }) {
       <div class="row"><span>Date &amp; time</span><span>${esc(dateStr)}, ${esc(timeStr)}</span></div>
       <div class="row"><span>Reference</span><span>${esc(ref)}</span></div>
       <p class="foot">This certificate confirms the named employee read and acknowledged the document version shown above on the date and time recorded. Generated automatically by the Birgma Governance Portal; the authoritative record is held in the portal's append-only signature ledger.</p>
-      </div><script>window.onload=function(){window.print()}</scr`+`ipt></body></html>`);
+      </div></body></html>`);
     w.document.close();
+    try { w.opener = null; } catch (_) {}
+    w.focus();
+    // Give the popup a moment to lay out, then print from the opener side.
+    setTimeout(() => { try { w.print(); } catch (_) { /* user can Ctrl+P */ } }, 300);
   };
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(20,26,48,.55)', display:'flex', alignItems:'center', justifyContent:'center', padding:'36px', zIndex:60, animation:'ovIn .18s ease' }} onClick={onClose}>
