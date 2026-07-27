@@ -116,6 +116,7 @@ technology-aware but requirement-first.
 | FR-APR-11 | The system shall present each user a "My approvals" queue of policies awaiting their decision. | S | ✅ | `/approvals/pending`, `MyApprovals` |
 | FR-APR-12 | The system shall notify the relevant approver(s) on submit/advance and the owner on outcome (config-gated, idempotent, non-blocking). | S | ✅ | `emailOnce`/`notify`, Phase 2a |
 | FR-APR-13 | An owner/admin (and configured approvers) shall see a policy under review; employees shall not until published. | M | ✅ | `canRead` publish gate |
+| FR-APR-14 | Editing a workflow-governed policy to a **new version** shall return it to Draft (re-approval required before it is visible again); an already-approved/published **current** version shall not be re-submittable without a version change. | M | ✅ | `routes/policies.js` PUT re-gate, `routes/approvals.js` submit guard |
 
 _Detailed acceptance criteria: [`approval-workflow/USER-STORIES.md`](approval-workflow/USER-STORIES.md)._
 

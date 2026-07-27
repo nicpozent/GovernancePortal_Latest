@@ -136,7 +136,7 @@ stateDiagram-v2
   Draft --> InReview: submit (expand groups)
   ChangesRequested --> InReview: resubmit (fresh run)
   Rejected --> InReview: resubmit
-  Published --> InReview: submit (re-approval)
+  Published --> Draft: edit to a new version<br/>(re-approval required)
   InReview --> InReview: step approved,<br/>more steps remain
   InReview --> Approved: final step satisfied
   InReview --> ChangesRequested: request-changes (+comment)
@@ -149,7 +149,7 @@ stateDiagram-v2
 
 Key invariants:
 
-- **Per version.** `approved_version` records which version was approved; a new version drops back out of "approved" until re-approved.
+- **Per version.** `approved_version` records which version was approved. Editing a workflow-governed policy (`approved_externally=false`) to a **new version** resets it from Published/Approved back to **Draft** — the new version must be re-approved before it is visible again. Conversely, a policy already approved/published for the **current** version cannot be re-submitted (guarded) — bump the version to re-approve.
 - **Run = since submit.** A decision counts toward the current run only if `decided_at ≥ submitted_at`. Withdraw/resubmit starts a fresh run without deleting the prior evidence.
 - **Publish gate.** Employees see a policy only when `approved_externally OR approval_state='published'`. Owners, admins, and configured approvers can always see it (so they can act). See [LLD §7](LLD.md#7-authorization--the-publish-gate).
 - **Escape hatch.** `approve-externally` (admin only) sets `approved_externally=true` + `published` for policies signed off outside the portal.

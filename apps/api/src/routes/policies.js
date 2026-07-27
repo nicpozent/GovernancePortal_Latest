@@ -132,7 +132,7 @@ r.post('/policies', requireAdmin, async (req, res) => {
 
 r.put('/policies/:id', requireAdmin, async (req, res) => {
   const { name, docType, version, sharepointUrl, sharepointDriveId, sharepointItemId, owner, ownerOid, groupIds, dueDate, dueDays, reviewDate, versionNote } = req.body || {};
-  const prev = (await pool.query('select version from policies where id=$1', [req.params.id])).rows[0];
+  const prev = (await pool.query('select version, approval_state, approved_externally from policies where id=$1', [req.params.id])).rows[0];
   // Same owner_oid FK guard as create: keep the oid only when it is a known employee.
   let ownerName = owner;
   let oOid = ownerOid || null;
@@ -160,8 +160,20 @@ r.put('/policies/:id', requireAdmin, async (req, res) => {
       await pool.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
     }
   }
+  // A new version of a workflow-governed policy must be re-approved before it is
+  // visible again: reset a live (published/approved) policy back to draft so the
+  // new version re-enters the approval chain. Policies not under the workflow
+  // (approved_externally = true — the default / break-glass) are left published.
+  let approvalReset = false;
+  if (prev && prev.version !== p.version && prev.approved_externally === false
+      && ['published', 'approved'].includes(prev.approval_state)) {
+    await pool.query("update policies set approval_state='draft', updated_at=now() where id=$1", [p.id]);
+    p.approval_state = 'draft';
+    approvalReset = true;
+    await audit(req, 'policy.approval.reset_on_version', p.name, { id: p.id, version: p.version, from: prev.approval_state });
+  }
   await audit(req, 'policy.update', p.name, { id: p.id, version: p.version });
-  res.json(p);
+  res.json({ ...p, approvalReset });
 });
 
 // ── archive (soft-delete) a policy — keeps the signature ledger intact ──

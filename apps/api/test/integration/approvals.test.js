@@ -91,6 +91,30 @@ test('an approved/published version cannot be re-submitted without a new version
   assert.equal((await request(h.app).post(`/api/policies/${s.pol}/submit`)).body.approval_state, 'in_review');
 });
 
+test('bumping a workflow-governed policy to a new version re-gates it (re-approval required)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const s = await scenario();
+  h.asAdmin(s.admin);
+  await request(h.app).put(`/api/policies/${s.pol}/approvers`).send({ approverOids: [s.a1] });
+  await request(h.app).post(`/api/policies/${s.pol}/submit`);
+  h.asUser(s.a1, []);
+  await request(h.app).post(`/api/policies/${s.pol}/approve`);
+  h.asAdmin(s.admin);
+  await request(h.app).post(`/api/policies/${s.pol}/publish`);
+  // Published → the member sees it.
+  h.asUser(s.member, []);
+  assert.equal(await seesPolicy(s.pol), true);
+  // Admin edits it to a new version → it must be re-approved before it is visible.
+  h.asAdmin(s.admin);
+  const upd = await request(h.app).put(`/api/policies/${s.pol}`)
+    .send({ name: 'Access Policy', docType: 'Policy', version: 'v2', sharepointUrl: 'https://sp/x' });
+  assert.equal(upd.body.approval_state, 'draft', 'new version drops back to draft');
+  assert.equal(upd.body.approvalReset, true);
+  // Hidden from the member until re-approved + re-published.
+  h.asUser(s.member, []);
+  assert.equal(await seesPolicy(s.pol), false, 'new version is hidden pending re-approval');
+});
+
 test('request-changes needs a comment and moves to changes_requested', async (t) => {
   if (!dbUp) return t.skip('no test database');
   const s = await scenario();
