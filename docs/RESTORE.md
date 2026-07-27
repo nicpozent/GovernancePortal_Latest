@@ -25,7 +25,7 @@ and recreates** the governance objects before loading data — no manual cleanup
 Use when data was corrupted/wiped but the containers are fine.
 
 ```powershell
-cd C:\governance-deploy
+cd C:\Governance\deploy
 
 # 1. (safety) take a fresh dump of the current state first, in case you need to back out
 docker compose exec db pg_dump -U postgres -d governance --no-owner --clean --if-exists `
@@ -49,23 +49,27 @@ docker compose restart api
 Use when the VM/host is lost. Assumes Docker + WSL2 are installed (see INSTALL-GUIDE.md).
 
 ```powershell
-# 1. unzip a governance-full-*.zip to C:\governance-deploy
-#    (contains: app files, certs\, .env files, and database.sql)
-cd C:\governance-deploy
+# 1. Unzip a governance-full-*.zip to e.g. C:\Governance-restore. Its layout is:
+#      C:\Governance-restore\database.sql   ← the DB dump
+#      C:\Governance-restore\app\           ← the project (compose lives in app\deploy)
+#    Then restore the secrets the zip omits (from your password manager / Key Vault):
+#      app\deploy\.env, app\apps\api\.env, and app\deploy\certs\ (TLS pair).
+cd C:\Governance-restore\app\deploy
 
 # 2. bring up ONLY the database first (fresh empty volume runs migrations automatically)
 docker compose up -d db
 Start-Sleep -Seconds 20         # let the db become healthy + run init migrations
 
-# 3. load the data from the zip's dump (overwrites the empty schema cleanly)
-Get-Content .\app\database.sql | docker compose exec -T db psql -U postgres -d governance
+# 3. load the data from the zip's dump (at the unzip root, two levels up; --clean makes it idempotent)
+Get-Content ..\..\database.sql | docker compose exec -T db psql -U postgres -d governance
 
 # 4. bring up the rest
 docker compose up -d --build
 ```
 
-If you only have a bare `.sql` (no zip), re-deploy the code from the
-`governance-deploy` package first, then follow steps 2–4.
+If you only have a bare `.sql` (no zip), deploy the code first per
+[`INSTALL-GUIDE.md`](INSTALL-GUIDE.md), then run steps 2–4 from `deploy\` using
+that `.sql` in place of `..\..\database.sql`.
 
 ---
 

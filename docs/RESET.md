@@ -13,7 +13,7 @@ migrations or rebuild afterwards. This is destructive and irreversible.
 Run `reset.ps1` (in this folder), or paste these commands:
 
 ```powershell
-cd C:\governance-deploy
+cd C:\Governance\deploy
 
 # 0. (STRONGLY RECOMMENDED) back up first
 docker compose exec db pg_dump -U postgres -d governance --no-owner --clean --if-exists `
@@ -38,7 +38,7 @@ Use this only if you want a TRULY empty database that re-runs every migration fr
 scratch on next start (e.g. to test a clean install).
 
 ```powershell
-cd C:\governance-deploy
+cd C:\Governance\deploy
 docker compose down -v          # -v DELETES the database volume (all data + schema)
 docker compose up --build -d    # fresh volume → every migration + grant runs automatically
 ```

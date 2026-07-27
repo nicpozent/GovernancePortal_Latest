@@ -136,7 +136,7 @@ itself — nobody has to remember.
 
 ```powershell
 # EDIT these two values to match your environment:
-$script = "C:\governance-deploy\deploy\scripts\backup-all.ps1"   # where the script lives
+$script = "C:\Governance\deploy\scripts\backup-all.ps1"   # where the script lives
 $dest   = "\\backup-server\governance"                            # your off-host destination (Step 1)
 
 $action  = New-ScheduledTaskAction -Execute "powershell.exe" `
@@ -184,7 +184,7 @@ Is the HOST (VM) still alive and Docker running?
 Host is fine; data was corrupted, wiped, or a bad bulk change needs rolling back.
 
 ```powershell
-cd C:\governance-deploy      # the folder containing docker-compose.yml
+cd C:\Governance\deploy      # the folder containing docker-compose.yml
 
 # 1. SAFETY NET — dump the current (bad) state first so you can back out.
 docker compose exec -T db pg_dump -U postgres -d governance --no-owner --clean --if-exists `
@@ -232,11 +232,13 @@ The VM is lost/ransomed. Rebuild from off-host backups. **Target RTO ≤ 4 h.**
 
 ```powershell
 # 1. Restore the deployment folder.
-#    Unzip the latest governance-full-*.zip to C:\governance-deploy.
+#    Unzip the latest governance-full-*.zip to e.g. C:\Governance-restore. Its layout:
+#      C:\Governance-restore\database.sql   ← the DB dump
+#      C:\Governance-restore\app\           ← the project (compose is in app\deploy)
 #    Then restore the SECRETS the zip omits (from your password manager / Key Vault):
-#      - deploy\.env  and  apps\api\.env   (from *.env.example templates)
-#      - deploy\certs\  (TLS fullchain.pem + privkey.pem), or re-issue the cert
-cd C:\governance-deploy
+#      - app\deploy\.env  and  app\apps\api\.env   (from the *.env.example templates)
+#      - app\deploy\certs\  (TLS fullchain.pem + privkey.pem), or re-issue the cert
+cd C:\Governance-restore\app\deploy
 
 # 2. Bring up ONLY the database first. A fresh pgdata volume auto-runs the schema
 #    + all migrations from docker-entrypoint-initdb.d.
@@ -244,8 +246,9 @@ docker compose up -d db
 Start-Sleep -Seconds 25        # wait for healthy + init to finish
 docker compose exec db pg_isready -U postgres -d governance   # expect: accepting connections
 
-# 3. Load the data dump over the freshly-initialised schema (--clean makes it idempotent).
-Get-Content .\app\database.sql | docker compose exec -T db psql -U postgres -d governance
+# 3. Load the data dump (at the unzip root, two levels up) over the fresh schema
+#    (--clean makes it idempotent).
+Get-Content ..\..\database.sql | docker compose exec -T db psql -U postgres -d governance
 #    (If you only have a standalone governance-*.sql, use that path instead.)
 
 # 4. ⚠️ RESTORE THE UPLOADS — the step the old procedure missed. Copy the uploads
