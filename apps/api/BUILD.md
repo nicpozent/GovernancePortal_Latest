@@ -15,8 +15,8 @@ Install:
 
 ## Step 2 — Get the code
 ```bash
-unzip birgma-governance.zip      # or clone your repo
-cd birgma-governance
+# clone your repo (or unzip the source), then enter the API project:
+cd apps/api
 npm install
 ```
 

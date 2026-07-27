@@ -97,7 +97,7 @@ Map your Entra **group displayName** → `employees.department` → `policy_role
 
 ## 5. Run it
 ```bash
-cd birgma-governance
+cd apps/api
 cp .env.example .env        # fill in the ids
 npm install
 npm run migrate
@@ -165,7 +165,7 @@ Internal **platform groups** are authorization roles you map directory groups in
 
 ## File map
 ```
-birgma-governance/
+apps/api/
 ├── db/schema.sql                  base schema (employees, policies, signatures, sync_runs)
 ├── db/migration_002_groups.sql    first-class many-to-many groups (§8)
 ├── db/migration_003_group_mapping.sql  platform groups + AD→platform mapping (§9)
