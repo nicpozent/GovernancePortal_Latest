@@ -5,7 +5,7 @@ The architecture diagrams are authored as **Mermaid** (`.mmd`) and shipped in tw
 | File | Purpose |
 |------|---------|
 | `*.mmd` | The **source** (Mermaid). Renders natively on GitHub, in VS Code (Mermaid extension), and at mermaid.live. This is what you edit. |
-| `*.html` | A **self-contained viewer** with the diagram **pre-rendered to a static inline SVG**. It needs **no internet** and **no JavaScript** — it opens correctly on an air-gapped VM, unlike a CDN-based renderer. |
+| `*.html` | A **self-contained viewer** that shows the diagram **pre-rendered to a static inline SVG** *and* the **Mermaid source in a copy-&-paste box** (with a Copy button). It needs **no internet** — it opens correctly on an air-gapped VM, unlike a CDN-based renderer. Use the copy box to paste the diagram into Lucidchart / mermaid.live / Confluence. |
 
 Diagrams in this folder:
 
