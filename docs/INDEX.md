@@ -26,7 +26,7 @@ Read top-to-bottom; each step links the authoritative document.
 | 2a | **The design (app-wide)** | [`HLD.md`](HLD.md) → [`LLD.md`](LLD.md) + [`deployment-diagram.mmd`](deployment-diagram.mmd) + [`request-sequence.mmd`](request-sequence.mmd) | High- & low-level design: components, deployment topology, end-to-end flow, per-module endpoint reference |
 | 3 | **Capabilities, product-neutral (TOGAF)** | [`ARCHITECTURE-BUILDING-BLOCKS.md`](ARCHITECTURE-BUILDING-BLOCKS.md) + [`../architecture-repository/CATALOG.md`](../architecture-repository/CATALOG.md) | ABBs → SBBs; reusable-capability view for the Enterprise Continuum |
 | 4 | **What it must do / the qualities** | [`REQUIREMENTS.md`](REQUIREMENTS.md) | Functional + non-functional + technical + candidate requirements, with traceability |
-| 5 | **Security posture** | [`SECURITY-REVIEW.md`](SECURITY-REVIEW.md) → [`SECURITY-FRAMEWORKS.md`](SECURITY-FRAMEWORKS.md) → [`ZERO-TRUST.md`](ZERO-TRUST.md) → [`ISO27001-SOA.md`](ISO27001-SOA.md) | Threats/controls; controls-as-code; Zero Trust pillars; ISO 27001:2022 SoA (93 controls) |
+| 5 | **Security posture** | [`THREAT-MODEL.md`](THREAT-MODEL.md) → [`SECURITY-REVIEW.md`](SECURITY-REVIEW.md) → [`SECURITY-FRAMEWORKS.md`](SECURITY-FRAMEWORKS.md) → [`ZERO-TRUST.md`](ZERO-TRUST.md) → [`ISO27001-SOA.md`](ISO27001-SOA.md) | STRIDE + MITRE ATT&CK threat model; security review; controls-as-code; Zero Trust pillars; ISO 27001:2022 SoA |
 | 6 | **Privacy / GDPR** | [`GDPR-DATA-RIGHTS.md`](GDPR-DATA-RIGHTS.md) + [`gdpr/`](gdpr/) | Data-subject rights tooling; ROPA / DPIA / privacy-notice drafts |
 | 7 | **A feature end-to-end (depth sample)** | [`approval-workflow/README.md`](approval-workflow/README.md) | HLD, LLD, user stories, security assessment, ABB/SBB, diagrams for one feature |
 | 8 | **Build, run & operate** | [`INSTALL-GUIDE.md`](INSTALL-GUIDE.md), [`DISASTER-RECOVERY.md`](DISASTER-RECOVERY.md), [`OBSERVABILITY.md`](OBSERVABILITY.md), [`DATABASE-MIGRATIONS.md`](DATABASE-MIGRATIONS.md) | Deployment, DR (rehearsed), telemetry, schema management |
@@ -69,6 +69,7 @@ Read top-to-bottom; each step links the authoritative document.
 - [`REQUIREMENTS.md`](REQUIREMENTS.md) — functional (by domain), non-functional (by quality attribute), technical (technology constraints, by area), and candidate/future requirements, with actors, MoSCoW priority, status, and traceability.
 
 ### Security & compliance
+- [`THREAT-MODEL.md`](THREAT-MODEL.md) — the **STRIDE + MITRE ATT&CK** threat model: DFD + trust boundaries ([`threat-model-dfd.mmd`](threat-model-dfd.mmd)), a STRIDE→ATT&CK threat register mapped to controls, an ATT&CK coverage matrix, a LINDDUN privacy pass, and prioritized residual risks.
 - [`SECURITY-REVIEW.md`](SECURITY-REVIEW.md) — the platform security review (threats, controls, hardening, residual risks).
 - [`SECURITY-FRAMEWORKS.md`](SECURITY-FRAMEWORKS.md) — the controls-as-code approach (ISO 27001 · NIST CSF · GDPR · Zero Trust · MITRE ATT&CK); links the artefacts below.
 - [`ZERO-TRUST.md`](ZERO-TRUST.md) — Zero Trust posture across the NIST 800-207 / CISA ZTMM pillars, per-pillar maturity + roadmap.

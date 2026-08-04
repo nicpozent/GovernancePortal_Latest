@@ -18,6 +18,7 @@ folder-by-folder description of the repository. For a **guided review order**
 | **Architecture Decision Records (ADRs)** | [`docs/ARCHITECTURE-AND-DECISIONS.md`](docs/ARCHITECTURE-AND-DECISIONS.md) Part II (ADR-101 … ADR-120) |
 | **Capabilities — ABBs / SBBs** (TOGAF) | [`docs/ARCHITECTURE-BUILDING-BLOCKS.md`](docs/ARCHITECTURE-BUILDING-BLOCKS.md) + [`architecture-repository/`](architecture-repository/CATALOG.md) |
 | **Diagrams** | System: [`docs/architecture-diagram.mmd`](docs/architecture-diagram.mmd) · Data model (ERD): [`docs/data-model.mmd`](docs/data-model.mmd) · Deployment: [`docs/deployment-diagram.mmd`](docs/deployment-diagram.mmd) · Request flow: [`docs/request-sequence.mmd`](docs/request-sequence.mmd) (each has a `.html` renderer) |
+| **Threat model** (STRIDE + MITRE ATT&CK) | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) + DFD [`docs/threat-model-dfd.mmd`](docs/threat-model-dfd.mmd) |
 | **Security & compliance** | [`docs/SECURITY-REVIEW.md`](docs/SECURITY-REVIEW.md), [`docs/SECURITY-FRAMEWORKS.md`](docs/SECURITY-FRAMEWORKS.md), [`docs/ZERO-TRUST.md`](docs/ZERO-TRUST.md), [`docs/ISO27001-SOA.md`](docs/ISO27001-SOA.md), [`compliance/`](compliance/) |
 | **Privacy / GDPR** | [`docs/GDPR-DATA-RIGHTS.md`](docs/GDPR-DATA-RIGHTS.md), [`docs/gdpr/`](docs/gdpr) (ROPA, DPIA, privacy notice) |
 | **Install / build / run** | [`docs/INSTALL-GUIDE.md`](docs/INSTALL-GUIDE.md), [`deploy/docker-compose.yml`](deploy/docker-compose.yml), [`apps/api/BUILD.md`](apps/api/BUILD.md) |

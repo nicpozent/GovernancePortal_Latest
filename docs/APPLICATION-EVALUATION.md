@@ -13,7 +13,7 @@ controls-as-code catalogue (`compliance/controls.json`).
 | Branch | `main` (through ADR-120 / Phase 2d) |
 | Automated tests | 89 (71 API · 18 web + docker-compose smoke e2e) |
 | ADRs | 20 |
-| Mapped controls | 39 (ISO 27001 · NIST CSF · GDPR · Zero Trust · MITRE ATT&CK; 19 techniques) |
+| Mapped controls | 41 (ISO 27001 · NIST CSF · GDPR · Zero Trust · MITRE ATT&CK; 19 techniques) |
 
 ## Summary
 
@@ -22,7 +22,7 @@ controls-as-code catalogue (`compliance/controls.json`).
 | **Overall** | **4.3 / 5** | Internal-production-ready |
 | Dimensions at ★★★★★ | 6 / 18 | Eleven more at ★★★★☆ |
 | Automated tests | 89 | 71 API · 18 web + compose smoke e2e |
-| Compliance | 39 controls | CI-gated coverage · 19 ATT&CK techniques |
+| Compliance | 41 controls | CI-gated coverage · 19 ATT&CK techniques |
 
 Rating scale: ★★★★★ Excellent · ★★★★☆ Strong · ★★★☆☆ Adequate · ★★☆☆☆ Partial.
 
@@ -38,7 +38,7 @@ Rating scale: ★★★★★ Excellent · ★★★★☆ Strong · ★★★�
 | 6 | Data & persistence | ★★★★★ | PostgreSQL 16; least-privilege role; append-only signature/audit/quiz ledgers via DB grants; tracked transactional migration runner | — |
 | 7 | Security & hardening | ★★★★☆ | Token hardening, parameterized SQL, upload allowlist + server-set type, CSP/headers, single-origin CORS, pluggable rate limiting, no committed secrets | At-rest encryption off by default (host); DNS-rebind SSRF residual; SAST non-blocking; no pen-test |
 | 8 | Data protection / GDPR | ★★★★☆ | Per-subject DSAR export; append-only-preserving erasure + retention CLI; data minimization (5-attr Graph, Sites.Selected); drafted ROPA/DPIA/notice | Adopt artefacts (DPO sign-off); breach runbook planned |
-| 9 | Compliance frameworks | ★★★★☆ | Controls-as-code: 39 controls mapped to ISO 27001 / NIST CSF / GDPR / Zero Trust / MITRE ATT&CK; CI-gated; AI-framework N/A documented | Zero-Trust pillar write-up + SoA adoption pending |
+| 9 | Compliance frameworks | ★★★★☆ | Controls-as-code: 41 controls mapped to ISO 27001 / NIST CSF / GDPR / Zero Trust / MITRE ATT&CK; CI-gated; AI-framework N/A documented | Zero-Trust pillar write-up + SoA adoption pending |
 | 10 | Observability | ★★★★☆ | Structured pino logs + correlation ids + redaction; Prometheus /metrics (RED + runtime); DB-checked /readyz; container healthchecks; log-shipping + alert design | SIEM wiring is an operator step; no distributed tracing yet |
 | 11 | Testing | ★★★★☆ | 49 API (node:test unit + integration on real Postgres) + 18 web (vitest) + docker-compose smoke e2e; coverage-gated (78% lines / 70% branches) | No load/perf; UI click-through e2e minimal |
 | 12 | CI/CD | ★★★★☆ | Actions: CI (lint/tests/PG integration/coverage), security (gitleaks/Trivy/semgrep + compliance gate), smoke e2e; Dependabot | No automated deploy pipeline (deferred to Azure) |
@@ -68,7 +68,7 @@ RBAC over append-only compliance ledgers, tested (67 automated tests + a docker-
 smoke e2e), observable (Prometheus metrics + DB-checked readiness), and documented to a
 professional standard (20 ADRs, TOGAF ABB/SBB, full runbooks). HA groundwork makes the
 app tier stateless-ready; a rehearsed DR runbook with off-host backups, GDPR
-subject-rights tooling, and a CI-gated controls-as-code catalogue (39 controls across
+subject-rights tooling, and a CI-gated controls-as-code catalogue (41 controls across
 ISO 27001 · NIST CSF · GDPR · Zero Trust · MITRE ATT&CK; ISO 42001 / EU AI Act scoped
 out — no AI) round it out. Remaining items are operator or organizational actions
 (MFA, at-rest encryption, adopting the GDPR pack) and the deferred Azure migration —

@@ -47,7 +47,7 @@ not become an AI system itself). Neither is true today.
 ## Current coverage (summary)
 
 See **[`compliance/COVERAGE.md`](../compliance/COVERAGE.md)** for the full, generated
-Statement of Applicability. At the time of writing: **39 controls**, **19 MITRE
+Statement of Applicability. At the time of writing: **41 controls**, **19 MITRE
 ATT&CK techniques** mitigated, and these open items:
 
 - **Planned (not built):** breach-notification runbook (`GDPR-04`), Azure private

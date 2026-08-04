@@ -1,0 +1,42 @@
+%% Birgma Governance Portal — Threat-model Data-Flow Diagram (DFD)
+%% Trust boundaries ①–⑤ and the 9 data flows referenced by the STRIDE threat
+%% register in THREAT-MODEL.md. Renders on GitHub / VS Code / mermaid.live.
+
+flowchart LR
+  subgraph TBU["① Untrusted — Internet / client device"]
+    U["Employee / Admin<br/>browser (SPA + MSAL)"]
+    EXT["External integrator<br/>(feed / webhook consumer)"]
+  end
+  subgraph TBM["② Microsoft cloud (external, trust-anchored)"]
+    ENTRA["Entra ID<br/>OIDC · JWKS · app roles"]
+    GRAPH["Microsoft Graph<br/>SharePoint · Exchange · Directory"]
+  end
+  subgraph TBE["③ Edge / DMZ — web container"]
+    NGINX["nginx<br/>TLS · CSP · headers · rate-limit · reverse proxy"]
+  end
+  subgraph TBA["④ Application — api container"]
+    API["Express API<br/>token validation · RBAC/PDP · domain logic · schedulers"]
+  end
+  subgraph TBD["⑤ Data — db container (loopback-only)"]
+    DB[("PostgreSQL 16<br/>least-priv role · append-only ledgers")]
+    VOL[["volumes: uploads · backups"]]
+  end
+
+  U -- "1 OIDC PKCE sign-in" --> ENTRA
+  U -- "2 HTTPS + Bearer JWT" --> NGINX
+  NGINX -- "3 /api proxy (same-origin)" --> API
+  API -- "4 validate JWT (JWKS)" --> ENTRA
+  API -- "5 parameterized SQL" --> DB
+  API -- "6 Graph app-only / Managed Identity (Sites.Selected)" --> GRAPH
+  API -- "7 file put/get" --> VOL
+  API -- "8 outbound webhook (SSRF-guarded)" --> EXT
+  EXT -- "9 GET /feed/audit (API key)" --> NGINX
+
+  classDef ext fill:#e8f0fe,stroke:#0078c0,color:#0b3a5b;
+  classDef edge fill:#e6f3ec,stroke:#1f8a5b,color:#10402a;
+  classDef app fill:#fbf2df,stroke:#caa53d,color:#5b4708;
+  classDef data fill:#f6f3fd,stroke:#6d4bd1,color:#2e1d5b;
+  class U,EXT,ENTRA,GRAPH ext;
+  class NGINX edge;
+  class API app;
+  class DB,VOL data;

@@ -1081,6 +1081,36 @@
       ]
     },
     {
+      "id": "GOV-03",
+      "title": "Application threat model (STRIDE + MITRE ATT&CK) mapped to controls",
+      "status": "implemented",
+      "owner": "governance",
+      "frameworks": {
+        "iso27001": [
+          "A.5.8",
+          "A.8.25",
+          "A.8.27"
+        ],
+        "nistCsf": [
+          "ID.RA-01",
+          "ID.RA-05"
+        ],
+        "zeroTrust": [
+          "visibility"
+        ]
+      },
+      "mitre": [],
+      "risks": [
+        "R-01",
+        "R-03",
+        "R-04"
+      ],
+      "evidence": [
+        "docs/THREAT-MODEL.md",
+        "docs/threat-model-dfd.mmd"
+      ]
+    },
+    {
       "id": "IR-01",
       "title": "Incident-response runbook (Respond/Recover)",
       "status": "planned",
