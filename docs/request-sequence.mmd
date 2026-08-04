@@ -39,8 +39,8 @@ sequenceDiagram
     Note over U,D: Knowledge-check gate — graded server-side, never trusted from client
     U->>N: POST /api/policies/:id/quiz/attempt (answers)
     N->>A: proxy
-    A->>D: advisory lock; insert quiz_attempts (append-only)
-    D-->>A: pass %, passed=true
+    A->>D: advisory lock, insert quiz_attempts (append-only)
+    D-->>A: score + passed=true
     A-->>U: result (pass)
 
     Note over U,D: Binding acknowledgement — append-only, identity+version stamped
