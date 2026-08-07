@@ -29,8 +29,10 @@
 <blockquote>
 <p><strong>How to use this document.</strong> The scope, deliverables, acceptance criteria and
 security/compliance commitments below are grounded in the delivered system.
-Fields in <strong>[brackets]</strong> — parties, dates, effort and commercials — are for the
-contracting parties to complete; they are intentionally not pre-filled.</p>
+Fields in <strong>[brackets]</strong> — parties, dates, effort, commercials and general legal
+terms — are for the contracting parties (and legal) to complete; they are
+intentionally not pre-filled. General legal terms (liability, indemnities,
+termination, dispute resolution) are governed by the MSA (§19), not restated here.</p>
 </blockquote>
 <table>
 <thead>
@@ -53,7 +55,7 @@ contracting parties to complete; they are intentionally not pre-filled.</p>
 </tr>
 <tr>
 <td><strong>SoW version</strong></td>
-<td>1.0 · [date]</td>
+<td>1.1 (draft, for signature) · [date]</td>
 </tr>
 <tr>
 <td><strong>Effective period</strong></td>
@@ -63,24 +65,27 @@ contracting parties to complete; they are intentionally not pre-filled.</p>
 <td><strong>Document owner</strong></td>
 <td>[name, role]</td>
 </tr>
+<tr>
+<td><strong>Executed under</strong></td>
+<td>Master Services Agreement [MSA reference / date] (§19)</td>
+</tr>
 </tbody></table>
 <hr>
-<h2>1. Purpose</h2>
-<p>This Statement of Work defines the scope, deliverables, approach, acceptance
-criteria and responsibilities for the design, build and hand-over of the <strong>Birgma
-Governance Portal</strong> — a web application that distributes governance documents,
-collects binding acknowledgements (optionally gated on a knowledge check), routes
-documents through a pre-publication approval chain, targets obligations at people
-via groups, and produces tamper-evident compliance evidence, with identity federated
-to <strong>Microsoft Entra ID</strong>.</p>
-<h2>2. Background</h2>
+<h2>1. Purpose &amp; background</h2>
+<p>This Statement of Work defines the scope, deliverables, approach, schedule,
+acceptance criteria, commercial framework and responsibilities for the design,
+build and hand-over of the <strong>Birgma Governance Portal</strong> — a web application that
+distributes governance documents, collects binding acknowledgements (optionally
+gated on a knowledge check), routes documents through a pre-publication approval
+chain, targets obligations at people via groups, and produces tamper-evident
+compliance evidence, with identity federated to <strong>Microsoft Entra ID</strong>.</p>
 <p>The organisation needs a defensible, auditable way to prove that the right people
 have read and understood the right policies, and to satisfy ISO 27001 / GDPR
 obligations without manual spreadsheet tracking. The portal replaces ad-hoc
 distribution with a controlled lifecycle and an append-only evidence ledger.</p>
-<h2>3. Objectives</h2>
+<h2>2. Objectives</h2>
 <ol>
-<li>Federated single sign-on and least-privilege authorisation (Entra ID).</li>
+<li>Federated single sign-on and least-privilege, server-authoritative authorisation.</li>
 <li>A controlled <strong>policy lifecycle</strong> with versioning and pre-publication approval.</li>
 <li><strong>Binding acknowledgement</strong> bound to identity + version + time, optionally gated
 on a <strong>knowledge check</strong>.</li>
@@ -89,8 +94,8 @@ on a <strong>knowledge check</strong>.</li>
 <li><strong>Compliance by design</strong>: GDPR data-subject rights and a controls-as-code posture.</li>
 <li><strong>Portability</strong>: container-first, ready for an Azure-native target.</li>
 </ol>
-<h2>4. Scope of work</h2>
-<h3>4.1 In scope (work packages)</h3>
+<h2>3. Scope of work</h2>
+<h3>3.1 In scope (work packages)</h3>
 <table>
 <thead>
 <tr>
@@ -160,7 +165,7 @@ on a <strong>knowledge check</strong>.</li>
 <td>Architecture (HLD/LLD/ADRs/ABB-SBB), requirements, user &amp; install guides, runbooks, diagrams</td>
 </tr>
 </tbody></table>
-<h3>4.2 Out of scope</h3>
+<h3>3.2 Out of scope</h3>
 <ul>
 <li>Hosting, network, and identity-tenant administration beyond configuration guidance
 (Entra tenant, VMware/Windows host, corporate network, firewalls).</li>
@@ -171,7 +176,7 @@ an operator/IT action.</li>
 <li>The Azure-native production migration (designed for; delivered under a separate SoW).</li>
 <li>Any AI/ML capability (explicitly not applicable — see <code>SECURITY-FRAMEWORKS.md</code>).</li>
 </ul>
-<h2>5. Deliverables</h2>
+<h2>4. Deliverables</h2>
 <table>
 <thead>
 <tr>
@@ -236,7 +241,7 @@ an operator/IT action.</li>
 <td><code>USER-GUIDE.md</code>, <code>FUNCTIONAL-FLOWS.md</code></td>
 </tr>
 </tbody></table>
-<h2>6. Approach &amp; delivery phases</h2>
+<h2>5. Approach &amp; delivery phases</h2>
 <p>Iterative delivery; each phase is independently shippable and CI-gated. (Phases
 reflect the actual delivery history and forward plan; see the ADRs.)</p>
 <table>
@@ -293,6 +298,61 @@ reflect the actual delivery history and forward plan; see the ADRs.)</p>
 <td>Planned (separate SoW)</td>
 </tr>
 </tbody></table>
+<h2>6. Timeline &amp; schedule</h2>
+<p>Phases P0–P7 are <strong>delivered</strong>. The remaining schedule covers acceptance,
+hand-over, the live sign-off, and the optional Azure phase. Durations and dates are
+<strong>[to be completed]</strong> against the effective period.</p>
+<table>
+<thead>
+<tr>
+<th>Activity</th>
+<th>Duration</th>
+<th>Depends on</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Build phases P0–P7</td>
+<td>complete</td>
+<td>—</td>
+<td>Delivered</td>
+</tr>
+<tr>
+<td>Documentation &amp; hand-over (D4–D9)</td>
+<td>[N] wks</td>
+<td>P0–P7</td>
+<td>[date]</td>
+</tr>
+<tr>
+<td>Milestone acceptance M1–M5</td>
+<td>[N] wks</td>
+<td>D1–D9</td>
+<td>[date]</td>
+</tr>
+<tr>
+<td>Staging deploy + live Entra sign-off (M6)</td>
+<td>[N] days</td>
+<td>Client environment</td>
+<td>[date]</td>
+</tr>
+<tr>
+<td>Warranty period</td>
+<td>[N] months</td>
+<td>Final acceptance</td>
+<td>[date]</td>
+</tr>
+<tr>
+<td>P8 Azure migration (optional)</td>
+<td>[N] wks</td>
+<td>Separate SoW</td>
+<td>On request</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>The critical-path dependency to go-live is <strong>client-side environment readiness</strong>
+(Entra app registrations + MFA, SharePoint <code>Sites.Selected</code> consent, host/TLS) —
+see §11.</p>
+</blockquote>
 <h2>7. Milestones &amp; acceptance criteria</h2>
 <table>
 <thead>
@@ -328,7 +388,73 @@ reflect the actual delivery history and forward plan; see the ADRs.)</p>
 </tbody></table>
 <p><strong>Definition of Done (per work package):</strong> code merged to <code>main</code> behind green CI;
 tests for the behaviour; documentation updated; no High/Critical security findings.</p>
-<h2>8. Roles &amp; responsibilities (RACI)</h2>
+<h2>8. Acceptance &amp; remediation process</h2>
+<p>For each milestone the supplier submits the deliverable for acceptance with its
+evidence. The client reviews within <strong>[N]</strong> business days and either accepts or
+rejects in writing citing defects by severity.</p>
+<table>
+<thead>
+<tr>
+<th>Severity</th>
+<th>Definition</th>
+<th>Effect on acceptance</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Critical</td>
+<td>Core function unusable; data-integrity or security failure</td>
+<td>Blocks acceptance; fix before re-submission</td>
+</tr>
+<tr>
+<td>Major</td>
+<td>Significant feature impaired; no reasonable workaround</td>
+<td>Blocks acceptance</td>
+</tr>
+<tr>
+<td>Minor</td>
+<td>Cosmetic or low-impact; workaround exists</td>
+<td>Tracked as a snag; does not block</td>
+</tr>
+</tbody></table>
+<ul>
+<li>The supplier remediates Critical/Major defects within <strong>[N]</strong> business days and
+re-submits.</li>
+<li><strong>Deemed acceptance</strong>: a deliverable is accepted if the client raises no
+Critical/Major defect within the review window, or on first productive use.</li>
+<li>Minor snags are logged and cleared during the warranty period (§15).</li>
+</ul>
+<h2>9. User roles &amp; interaction flows</h2>
+<p>Authorization is enforced server-side per request. Each role follows a primary
+journey; the full set of diagrammed flows is in <code>FUNCTIONAL-FLOWS.md</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Primary journey</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Employee</td>
+<td>See assigned policies → read → pass quiz → acknowledge → certificate</td>
+</tr>
+<tr>
+<td>Manager</td>
+<td>Team compliance dashboard; upload &amp; assign trainings; send reminders</td>
+</tr>
+<tr>
+<td>Administrator</td>
+<td>Author/target/publish policies; groups &amp; sync; dashboards; integrations; backups</td>
+</tr>
+<tr>
+<td>Approver</td>
+<td>Decide items awaiting sign-off (approve / reject / request changes)</td>
+</tr>
+<tr>
+<td>DPO / Auditor</td>
+<td>DSAR export; evidence-preserving erasure; audit trail &amp; feed</td>
+</tr>
+</tbody></table>
+<h2>10. Roles &amp; responsibilities (RACI)</h2>
 <table>
 <thead>
 <tr>
@@ -390,7 +516,40 @@ tests for the behaviour; documentation updated; no High/Critical security findin
 </tr>
 </tbody></table>
 <p><em>R = Responsible · A = Accountable · C = Consulted · I = Informed. Names: [to complete].</em></p>
-<h2>9. Assumptions &amp; dependencies</h2>
+<h2>11. Governance &amp; communication</h2>
+<table>
+<thead>
+<tr>
+<th>Forum</th>
+<th>Cadence</th>
+<th>Purpose / participants</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Delivery status</td>
+<td>Weekly</td>
+<td>Progress, risks, decisions, next steps — delivery lead + client PO</td>
+</tr>
+<tr>
+<td>Milestone review</td>
+<td>Per milestone</td>
+<td>Demo + acceptance walk-through against §7 criteria</td>
+</tr>
+<tr>
+<td>Steering</td>
+<td>[Monthly]</td>
+<td>Scope, budget, risk escalation — sponsor + delivery lead</td>
+</tr>
+<tr>
+<td>Escalation</td>
+<td>As needed</td>
+<td>Delivery lead → sponsor → [executive owner]</td>
+</tr>
+</tbody></table>
+<p>Decisions of architectural significance are recorded as <strong>ADRs</strong> in the repository;
+day-to-day work is tracked on <code>main</code> with green-CI gating. Primary contacts:
+[names / channels].</p>
+<h2>12. Assumptions &amp; dependencies</h2>
 <ul>
 <li>An <strong>Entra ID tenant</strong> is available with rights to create app registrations and
 grant admin consent; <strong>MFA/Conditional Access</strong> will be enabled organisation-side.</li>
@@ -400,39 +559,210 @@ is provisioned; TLS certificates are supplied.</li>
 <li>The client provides directory data via Entra and nominates admins/approvers.</li>
 <li>Off-host, access-controlled <strong>backup storage</strong> is available.</li>
 </ul>
-<h2>10. Constraints</h2>
+<h2>13. Constraints &amp; environment</h2>
 <ul>
 <li>Single-instance deployment on the VM model (availability target RTO ≤ 4h; the value
 is durability of the evidence, not high availability — see <code>DISASTER-RECOVERY.md</code>).</li>
 <li>No AI/ML processing (by design).</li>
 <li>Runs on Node 22 / PostgreSQL 16 / modern evergreen browsers.</li>
-</ul>
-<h2>11. Environment &amp; technical requirements</h2>
-<p>Technical requirements are specified in <code>REQUIREMENTS.md</code> §6 (TR-*): platform,
+<li>Technical requirements are specified in <code>REQUIREMENTS.md</code> §6 (TR-*): platform,
 frontend, identity, API/data, storage, messaging, security, observability, CI and
-compatibility. Deployment steps are in <code>INSTALL-GUIDE.md</code>.</p>
-<h2>12. Security &amp; compliance obligations</h2>
+compatibility. Deployment steps are in <code>INSTALL-GUIDE.md</code>.</li>
+</ul>
+<h2>14. Security &amp; compliance obligations</h2>
 <p>The supplier will deliver and maintain: a <strong>STRIDE + MITRE ATT&amp;CK threat model</strong>
 (<code>THREAT-MODEL.md</code>), a <strong>controls-as-code</strong> catalogue mapped to ISO 27001 / NIST CSF
 / GDPR / Zero Trust / MITRE ATT&amp;CK (<code>compliance/controls.json</code>, CI-gated), an ISO
 27001:2022 <strong>Statement of Applicability</strong> (<code>ISO27001-SOA.md</code>), a <strong>Zero-Trust</strong> posture
 mapping (<code>ZERO-TRUST.md</code>), and a <strong>GDPR</strong> pack (ROPA/DPIA/privacy notice). Residual
-risks and the hardening backlog are tracked in the threat model and <code>NEXT-STEPS.md</code>.</p>
-<h2>13. Change control &amp; governance</h2>
-<p>Changes to scope, deliverables or acceptance criteria are handled by written <strong>change
-request</strong>: description, rationale, impact on schedule/effort, and sign-off by [sponsor]
-and [delivery lead]. Day-to-day delivery is tracked on <code>main</code> with green-CI gating and
-ADRs for significant decisions.</p>
-<h2>14. Risks</h2>
-<p>Key delivery/operational risks and their mitigations are catalogued in
-<code>THREAT-MODEL.md</code> §7 and <code>NEXT-STEPS.md</code>. The highest residual items are
-organisation-side: enabling MFA/Conditional Access, at-rest encryption, and SIEM
-forwarding.</p>
-<h2>15. Commercials</h2>
-<p>[To be completed by the parties — effort estimate, rate/fixed price, payment schedule,
-expenses, and any support/maintenance terms. Not pre-filled.]</p>
-<h2>16. Acceptance &amp; sign-off</h2>
-<p>Acceptance is granted per milestone (§7). Final acceptance follows M6 (live sign-off).</p>
+risks and the hardening backlog are tracked in the threat model and <code>NEXT-STEPS.md</code>.
+The highest residual items are organisation-side: enabling MFA/Conditional Access,
+at-rest encryption, and SIEM forwarding.</p>
+<h2>15. Data protection &amp; confidentiality</h2>
+<p><strong>Roles.</strong> The <strong>Client is the data controller</strong>; the Supplier acts as <strong>processor</strong>
+for any personal data it accesses during delivery/support and processes it only on
+the Client's documented instructions. Records of processing, the DPIA and the privacy
+notice are provided in the GDPR pack (<code>gdpr/</code>).</p>
+<p><strong>Data-processing terms</strong> (data categories, purposes, retention, sub-processors,
+transfer mechanism, security measures, breach-notification, and assistance with
+data-subject rights) are agreed in a <strong>Data Processing Agreement</strong> —
+[DPA reference / to be executed].</p>
+<p><strong>Confidentiality.</strong> Each party protects the other's confidential information; the
+Supplier commits no secrets to the repository (secrets live in <code>.env</code>/Key Vault,
+gitleaks-scanned in CI). Data residency and permitted sub-processors: [to specify].</p>
+<h2>16. Intellectual property &amp; licensing</h2>
+<ul>
+<li><strong>Bespoke deliverables</strong> (the application source, documentation and diagrams
+produced under this SoW) are [assigned to / licensed to] the Client on <strong>full
+payment</strong>; the exact model is a commercial term to confirm.</li>
+<li><strong>Supplier background IP</strong> (pre-existing tooling, generic know-how) remains the
+Supplier's, with a licence to the Client to use it as embedded in the deliverables.</li>
+<li><strong>Third-party / open-source.</strong> The stack uses permissively-licensed OSS (Node.js,
+Express, React, PostgreSQL, nginx, and the dependencies in the lockfiles) under
+their respective licences (predominantly MIT / Apache-2.0 / BSD / the PostgreSQL
+licence). No copyleft (GPL/AGPL) obligation is introduced. A dependency manifest
+(committed lockfiles) serves as the SBOM.</li>
+<li><strong>Microsoft services</strong> (Entra ID, Graph, SharePoint, Exchange) are consumed under
+the <strong>Client's own licences/subscriptions</strong>.</li>
+</ul>
+<h2>17. Warranty, support &amp; maintenance</h2>
+<p><strong>Warranty.</strong> For <strong>[N] months</strong> after final acceptance the Supplier corrects, at no
+charge, defects where a deliverable does not conform to this SoW. Excludes issues
+caused by client-side configuration, third-party outages, or unauthorised modification.</p>
+<table>
+<thead>
+<tr>
+<th>Severity</th>
+<th>Response target</th>
+<th>Resolution target</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Critical (down / security / data)</td>
+<td>[e.g. 4 business hrs]</td>
+<td>[e.g. 1 business day]</td>
+</tr>
+<tr>
+<td>Major</td>
+<td>[1 business day]</td>
+<td>[5 business days]</td>
+</tr>
+<tr>
+<td>Minor</td>
+<td>[3 business days]</td>
+<td>Next release</td>
+</tr>
+</tbody></table>
+<p><strong>Maintenance (optional, separate agreement).</strong> Ongoing dependency updates (grouped
+Dependabot + <code>npm audit</code>/Trivy gates), security patching, and minor enhancements can
+be provided under a support/maintenance agreement — [scope &amp; rate to confirm].</p>
+<h2>18. Delivery risk register</h2>
+<p>Security/technical risks to the running system are catalogued in <code>THREAT-MODEL.md</code> §7;
+the delivery/operational risks are below (L = likelihood, I = impact).</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Risk</th>
+<th>L</th>
+<th>I</th>
+<th>Mitigation</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DR-1</td>
+<td>MFA / Conditional Access not enabled</td>
+<td>Med</td>
+<td>High</td>
+<td>Enable org-side (control IAM-06) before go-live</td>
+<td>Client/IT</td>
+</tr>
+<tr>
+<td>DR-2</td>
+<td>Data at rest unencrypted (host/DB)</td>
+<td>Med</td>
+<td>Med</td>
+<td>BitLocker + <code>PGSSL</code>/managed encryption</td>
+<td>Client/IT</td>
+</tr>
+<tr>
+<td>DR-3</td>
+<td>Backups not off-host (ransomware / VM loss)</td>
+<td>Low</td>
+<td>High</td>
+<td>Scheduled off-host backup + rehearsed DR</td>
+<td>Client/IT · Delivery</td>
+</tr>
+<tr>
+<td>DR-4</td>
+<td>Dependency vulnerabilities over time</td>
+<td>Med</td>
+<td>Med</td>
+<td>CI audit/Trivy gate + grouped Dependabot</td>
+<td>Delivery</td>
+</tr>
+<tr>
+<td>DR-5</td>
+<td>Client environment readiness delays go-live</td>
+<td>Med</td>
+<td>Med</td>
+<td>Early install-guide checklist; §12 dependencies tracked</td>
+<td>Client/IT</td>
+</tr>
+<tr>
+<td>DR-6</td>
+<td>SharePoint / Graph permission misconfiguration</td>
+<td>Low</td>
+<td>Med</td>
+<td>Documented consent steps; verify in staging</td>
+<td>Client/IT</td>
+</tr>
+<tr>
+<td>DR-7</td>
+<td>Azure migration scope creep</td>
+<td>Med</td>
+<td>Med</td>
+<td>Separate SoW; ADR-gated; explicitly out of scope here</td>
+<td>Sponsor</td>
+</tr>
+</tbody></table>
+<h2>19. Change control</h2>
+<p>Any change to scope, deliverables, acceptance criteria, schedule or price is handled
+by a written <strong>Change Request</strong>. Work continues on the unchanged baseline until the CR
+is approved by both parties.</p>
+<table>
+<thead>
+<tr>
+<th>CR field</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CR-ID / date</td>
+<td>Sequential id + raised date</td>
+</tr>
+<tr>
+<td>Requestor</td>
+<td>Name / party</td>
+</tr>
+<tr>
+<td>Description &amp; rationale</td>
+<td>What changes and why</td>
+</tr>
+<tr>
+<td>Impact</td>
+<td>Scope · schedule · effort · <strong>price</strong> · risk</td>
+</tr>
+<tr>
+<td>Decision</td>
+<td>Approved / rejected / deferred</td>
+</tr>
+<tr>
+<td>Approvals</td>
+<td>[Sponsor] + [Delivery lead], with dates</td>
+</tr>
+</tbody></table>
+<h2>20. Commercials</h2>
+<p>[To be completed by the parties.] Structure to confirm:</p>
+<ul>
+<li><strong>Pricing model</strong>: [fixed price / time &amp; materials / capped T&amp;M].</li>
+<li><strong>Total / rates</strong>: [amount or day-rate + estimated effort].</li>
+<li><strong>Payment schedule</strong>: tied to milestone acceptance (M1–M6) — [% or amount per milestone].</li>
+<li><strong>Expenses</strong>: [pass-through / included]; <strong>invoicing</strong>: [Net N days].</li>
+<li><strong>Third-party costs</strong> (Azure, Entra/M365 licences, TLS) are the Client's and are
+excluded from the above.</li>
+</ul>
+<h2>21. Contractual framework</h2>
+<p>This Statement of Work is executed under, and incorporates the terms of, the
+<strong>Master Services Agreement</strong> between the parties — [MSA reference / date]. General
+legal terms — <strong>liability, indemnities, insurance, termination and dispute
+resolution</strong> — are governed by the MSA and are not restated here. Where this SoW and
+the MSA conflict, the MSA prevails except where this SoW expressly states otherwise.
+Governing law: [jurisdiction].</p>
+<h2>22. Acceptance &amp; sign-off</h2>
+<p>Acceptance is granted per milestone (§7, §8). Final acceptance follows M6 (live
+sign-off).</p>
 <table>
 <thead>
 <tr>
@@ -460,8 +790,14 @@ expenses, and any support/maintenance terms. Not pre-filled.]</p>
 <td></td>
 <td></td>
 </tr>
+<tr>
+<td>Architecture / IT</td>
+<td>[ ]</td>
+<td></td>
+<td></td>
+</tr>
 </tbody></table>
-<h2>17. References</h2>
+<h2>23. References</h2>
 <p><code>REQUIREMENTS.md</code> · <code>USER-STORIES.md</code> · <code>HLD.md</code> · <code>LLD.md</code> ·
 <code>ARCHITECTURE-AND-DECISIONS.md</code> · <code>THREAT-MODEL.md</code> · <code>ISO27001-SOA.md</code> ·
 <code>ZERO-TRUST.md</code> · <code>SECURITY-FRAMEWORKS.md</code> · GDPR pack (<code>gdpr/</code>) · <code>INSTALL-GUIDE.md</code> ·
