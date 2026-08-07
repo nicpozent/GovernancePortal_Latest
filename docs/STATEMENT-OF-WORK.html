@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<title>Statement of Work — Birgma Governance Portal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+  :root{color-scheme:light}
+  body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:#eef1f5;color:#1c2230;line-height:1.6}
+  .top{background:#0f1b3d;color:#fff;padding:20px 32px}
+  .top h1{margin:0;font-size:20px} .top p{margin:6px 0 0;color:#aab6d8;font-size:12.5px}
+  .doc{max-width:900px;margin:26px auto;background:#fff;border:1px solid #e6e8ee;border-radius:14px;padding:36px 44px}
+  .doc h1{font-size:24px;margin:.2em 0 .4em;border-bottom:2px solid #eef0f5;padding-bottom:.2em}
+  .doc h2{font-size:18px;margin:1.6em 0 .5em;color:#0f1b3d;border-bottom:1px solid #eef0f5;padding-bottom:.2em}
+  .doc h3{font-size:15px;margin:1.3em 0 .4em;color:#213a9e}
+  .doc table{border-collapse:collapse;width:100%;margin:1em 0;font-size:13.5px;display:block;overflow-x:auto}
+  .doc th,.doc td{border:1px solid #e2e5ee;padding:7px 10px;text-align:left;vertical-align:top}
+  .doc th{background:#f5f7fb}
+  .doc code{background:#f3f4f8;padding:1px 6px;border-radius:5px;font-family:Consolas,monospace;font-size:.9em}
+  .doc pre{background:#f7f8fb;border:1px solid #e6e8ee;border-radius:10px;padding:14px;overflow-x:auto}
+  .doc pre code{background:none;padding:0}
+  .doc blockquote{margin:1em 0;padding:.4em 1em;border-left:4px solid #c9d3f0;background:#f6f8fd;color:#41506e}
+  .doc .mmd{margin:1.2em 0;overflow-x:auto}
+  .doc .mmd svg{max-width:100%;height:auto;display:block;margin:0 auto}
+  .doc hr{border:none;border-top:1px solid #e6e8ee;margin:1.6em 0}
+  .doc a{color:#213a9e}
+</style></head>
+<body>
+<div class="top"><h1>Statement of Work — Birgma Governance Portal</h1><p>Birgma Governance Portal · self-contained (works offline, no internet needed)</p></div>
+<div class="doc"><h1>Statement of Work — Birgma Governance Portal</h1>
+<blockquote>
+<p><strong>How to use this document.</strong> The scope, deliverables, acceptance criteria and
+security/compliance commitments below are grounded in the delivered system.
+Fields in <strong>[brackets]</strong> — parties, dates, effort and commercials — are for the
+contracting parties to complete; they are intentionally not pre-filled.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Project</strong></td>
+<td>Birgma Governance Portal — policy governance, attestation &amp; compliance evidence</td>
+</tr>
+<tr>
+<td><strong>Client / Sponsor</strong></td>
+<td>[Birgma / Biltema — sponsor name]</td>
+</tr>
+<tr>
+<td><strong>Supplier / Delivery</strong></td>
+<td>[Delivery team / vendor]</td>
+</tr>
+<tr>
+<td><strong>SoW version</strong></td>
+<td>1.0 · [date]</td>
+</tr>
+<tr>
+<td><strong>Effective period</strong></td>
+<td>[start] – [end]</td>
+</tr>
+<tr>
+<td><strong>Document owner</strong></td>
+<td>[name, role]</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>1. Purpose</h2>
+<p>This Statement of Work defines the scope, deliverables, approach, acceptance
+criteria and responsibilities for the design, build and hand-over of the <strong>Birgma
+Governance Portal</strong> — a web application that distributes governance documents,
+collects binding acknowledgements (optionally gated on a knowledge check), routes
+documents through a pre-publication approval chain, targets obligations at people
+via groups, and produces tamper-evident compliance evidence, with identity federated
+to <strong>Microsoft Entra ID</strong>.</p>
+<h2>2. Background</h2>
+<p>The organisation needs a defensible, auditable way to prove that the right people
+have read and understood the right policies, and to satisfy ISO 27001 / GDPR
+obligations without manual spreadsheet tracking. The portal replaces ad-hoc
+distribution with a controlled lifecycle and an append-only evidence ledger.</p>
+<h2>3. Objectives</h2>
+<ol>
+<li>Federated single sign-on and least-privilege authorisation (Entra ID).</li>
+<li>A controlled <strong>policy lifecycle</strong> with versioning and pre-publication approval.</li>
+<li><strong>Binding acknowledgement</strong> bound to identity + version + time, optionally gated
+on a <strong>knowledge check</strong>.</li>
+<li><strong>Targeting</strong> obligations at the right population via groups and directory sync.</li>
+<li><strong>Assurance</strong>: dashboards, reporting/export, and a tamper-evident audit trail.</li>
+<li><strong>Compliance by design</strong>: GDPR data-subject rights and a controls-as-code posture.</li>
+<li><strong>Portability</strong>: container-first, ready for an Azure-native target.</li>
+</ol>
+<h2>4. Scope of work</h2>
+<h3>4.1 In scope (work packages)</h3>
+<table>
+<thead>
+<tr>
+<th>WP</th>
+<th>Work package</th>
+<th>Summary</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WP1</td>
+<td>Identity &amp; access</td>
+<td>Entra SSO (MSAL/PKCE); RS256 token validation (issuer/audience/tenant/scope); app roles; three-layer authorization (role · ownership · effective-group-membership); idle logout</td>
+</tr>
+<tr>
+<td>WP2</td>
+<td>Policy lifecycle &amp; documents</td>
+<td>Author/version/archive policies; SharePoint document source (Sites.Selected); in-app document preview</td>
+</tr>
+<tr>
+<td>WP3</td>
+<td>Acknowledgement &amp; knowledge checks</td>
+<td>Append-only signature ledger; server-graded quizzes; quiz-gated signing; printable certificate</td>
+</tr>
+<tr>
+<td>WP4</td>
+<td>Pre-publication approval workflow</td>
+<td>Ordered steps with all/any/quorum rules; person + directory-group approvers; reusable templates; append-only decision ledger; new-version re-approval</td>
+</tr>
+<tr>
+<td>WP5</td>
+<td>Targeting: groups &amp; directory sync</td>
+<td>Platform/local groups; directory-group mapping; effective-membership rollup; least-privilege Entra/Graph sync (assigned principals only)</td>
+</tr>
+<tr>
+<td>WP6</td>
+<td>Manager delegation &amp; trainings</td>
+<td>Team-scoped dashboards; manager training uploads; team reminders</td>
+</tr>
+<tr>
+<td>WP7</td>
+<td>Reporting &amp; assurance</td>
+<td>Compliance dashboards (overall / by department / by group), drill-down, CSV export; immutable audit log; pull/push audit feed</td>
+</tr>
+<tr>
+<td>WP8</td>
+<td>Notifications</td>
+<td>Scheduled, idempotent reminder ladder (assigned → due → overdue) via Microsoft Graph mail</td>
+</tr>
+<tr>
+<td>WP9</td>
+<td>Data protection (GDPR)</td>
+<td>Per-subject DSAR export; evidence-preserving erasure; retention purge; ROPA/DPIA/privacy notice</td>
+</tr>
+<tr>
+<td>WP10</td>
+<td>Security &amp; compliance posture</td>
+<td>Controls-as-code catalogue (ISO 27001 / NIST CSF / GDPR / Zero Trust / MITRE ATT&amp;CK); STRIDE + ATT&amp;CK threat model; CI security scanning</td>
+</tr>
+<tr>
+<td>WP11</td>
+<td>Reliability &amp; operations</td>
+<td>Docker Compose stack; healthchecks; leader-locked schedulers; backup + rehearsed disaster recovery</td>
+</tr>
+<tr>
+<td>WP12</td>
+<td>Documentation &amp; hand-over</td>
+<td>Architecture (HLD/LLD/ADRs/ABB-SBB), requirements, user &amp; install guides, runbooks, diagrams</td>
+</tr>
+</tbody></table>
+<h3>4.2 Out of scope</h3>
+<ul>
+<li>Hosting, network, and identity-tenant administration beyond configuration guidance
+(Entra tenant, VMware/Windows host, corporate network, firewalls).</li>
+<li>Organisation-side security controls (MFA/Conditional Access enablement, at-rest
+disk encryption, SIEM ingestion) — the application supports them; enabling them is
+an operator/IT action.</li>
+<li>Data migration from legacy systems (unless added by change request).</li>
+<li>The Azure-native production migration (designed for; delivered under a separate SoW).</li>
+<li>Any AI/ML capability (explicitly not applicable — see <code>SECURITY-FRAMEWORKS.md</code>).</li>
+</ul>
+<h2>5. Deliverables</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Deliverable</th>
+<th>Form</th>
+<th>Acceptance evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>D1</td>
+<td>Web application (SPA + API + database)</td>
+<td>Running containerised stack</td>
+<td>Builds &amp; runs via <code>docker compose up --build -d</code>; healthy <code>/healthz</code>·<code>/readyz</code></td>
+</tr>
+<tr>
+<td>D2</td>
+<td>Source code + CI pipelines</td>
+<td>Git repository</td>
+<td>CI (lint/unit/integration/coverage), security (gitleaks/Trivy/semgrep + compliance gate), smoke e2e all green</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>Automated test suite</td>
+<td>Code</td>
+<td>Unit + integration (real Postgres) + docker-compose smoke; coverage gate (lines ≥70, branches ≥60, functions ≥65)</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>Architecture &amp; design docs</td>
+<td>Markdown</td>
+<td><code>HLD.md</code>, <code>LLD.md</code>, <code>ARCHITECTURE-AND-DECISIONS.md</code> (ADRs), ABB/SBB catalogue, diagrams</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>Requirements &amp; user stories</td>
+<td>Markdown</td>
+<td><code>REQUIREMENTS.md</code> (FR/NFR/TR), <code>USER-STORIES.md</code></td>
+</tr>
+<tr>
+<td>D6</td>
+<td>Security &amp; compliance pack</td>
+<td>Markdown + JSON</td>
+<td><code>THREAT-MODEL.md</code>, <code>controls.json</code> + <code>COVERAGE.md</code>, <code>ISO27001-SOA.md</code>, <code>ZERO-TRUST.md</code></td>
+</tr>
+<tr>
+<td>D7</td>
+<td>GDPR pack</td>
+<td>Markdown</td>
+<td>ROPA, DPIA, privacy notice, data-rights guide</td>
+</tr>
+<tr>
+<td>D8</td>
+<td>Operations runbooks</td>
+<td>Markdown</td>
+<td>Install guide, disaster recovery, restore, reset, observability, migrations, TLS</td>
+</tr>
+<tr>
+<td>D9</td>
+<td>User &amp; functional documentation</td>
+<td>Markdown + HTML</td>
+<td><code>USER-GUIDE.md</code>, <code>FUNCTIONAL-FLOWS.md</code></td>
+</tr>
+</tbody></table>
+<h2>6. Approach &amp; delivery phases</h2>
+<p>Iterative delivery; each phase is independently shippable and CI-gated. (Phases
+reflect the actual delivery history and forward plan; see the ADRs.)</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Focus</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P0 — MVP</td>
+<td>SSO, policy CRUD, acknowledgement ledger, dashboards</td>
+<td>Delivered</td>
+</tr>
+<tr>
+<td>P1 — Groups &amp; targeting</td>
+<td>First-class groups, directory mapping, effective membership</td>
+<td>Delivered</td>
+</tr>
+<tr>
+<td>P2 — Quizzes &amp; trainings</td>
+<td>Server-graded quizzes, manager trainings/uploads</td>
+<td>Delivered</td>
+</tr>
+<tr>
+<td>P3 — Assurance &amp; audit</td>
+<td>Reporting/export, immutable audit log, pull/push feed</td>
+<td>Delivered</td>
+</tr>
+<tr>
+<td>P4 — HA hardening</td>
+<td>Leader-locked schedulers, shared rate-limit store, storage abstraction</td>
+<td>Delivered</td>
+</tr>
+<tr>
+<td>P5 — Approval workflow</td>
+<td>Ordered steps (all/any/quorum), group approvers, templates, re-approval</td>
+<td>Delivered (ADR-120)</td>
+</tr>
+<tr>
+<td>P6 — Compliance-as-code &amp; threat model</td>
+<td>Controls catalogue, STRIDE + ATT&amp;CK model, Zero-Trust/ISO SoA</td>
+<td>Delivered</td>
+</tr>
+<tr>
+<td>P7 — Dependency currency</td>
+<td>Framework majors (React 19, Express 5, MSAL 5) + CI hygiene</td>
+<td>Delivered</td>
+</tr>
+<tr>
+<td>P8 — Azure-native migration</td>
+<td>Key Vault + Managed Identity, managed Postgres (PITR), Blob, private networking, WAF</td>
+<td>Planned (separate SoW)</td>
+</tr>
+</tbody></table>
+<h2>7. Milestones &amp; acceptance criteria</h2>
+<table>
+<thead>
+<tr>
+<th>Milestone</th>
+<th>Acceptance criteria</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>M1 Functional acceptance</td>
+<td>All in-scope features demonstrable against <code>REQUIREMENTS.md</code> (FR-*) and <code>USER-STORIES.md</code>; integration tests green</td>
+</tr>
+<tr>
+<td>M2 Security acceptance</td>
+<td>Threat model reviewed; controls-as-code <code>report.mjs --check</code> green; no High findings in <code>npm audit</code>/Trivy; secrets scan clean</td>
+</tr>
+<tr>
+<td>M3 Operational acceptance</td>
+<td><code>docker compose</code> deployment per <code>INSTALL-GUIDE.md</code>; healthchecks pass; <strong>DR restore rehearsed</strong> per <code>DISASTER-RECOVERY.md</code></td>
+</tr>
+<tr>
+<td>M4 Compliance acceptance</td>
+<td>ISO 27001 SoA populated; GDPR pack reviewed by [DPO]; audit trail verified</td>
+</tr>
+<tr>
+<td>M5 Documentation &amp; hand-over</td>
+<td>D4–D9 delivered; knowledge-transfer session held</td>
+</tr>
+<tr>
+<td>M6 Live sign-off</td>
+<td>A real Entra interactive sign-in verified in [staging/production]; go-live approved by [sponsor]</td>
+</tr>
+</tbody></table>
+<p><strong>Definition of Done (per work package):</strong> code merged to <code>main</code> behind green CI;
+tests for the behaviour; documentation updated; no High/Critical security findings.</p>
+<h2>8. Roles &amp; responsibilities (RACI)</h2>
+<table>
+<thead>
+<tr>
+<th>Activity</th>
+<th>Delivery team</th>
+<th>Client/IT</th>
+<th>Sponsor</th>
+<th>DPO</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Build &amp; test the application</td>
+<td>R/A</td>
+<td>C</td>
+<td>I</td>
+<td>I</td>
+</tr>
+<tr>
+<td>Entra tenant + app registrations, MFA/CA</td>
+<td>C</td>
+<td>R/A</td>
+<td>I</td>
+<td>I</td>
+</tr>
+<tr>
+<td>Host / network / TLS certificates</td>
+<td>C</td>
+<td>R/A</td>
+<td>I</td>
+<td>—</td>
+</tr>
+<tr>
+<td>SharePoint site + Graph consent</td>
+<td>C</td>
+<td>R/A</td>
+<td>I</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Security &amp; compliance artefacts</td>
+<td>R/A</td>
+<td>C</td>
+<td>I</td>
+<td>C</td>
+</tr>
+<tr>
+<td>GDPR sign-off (ROPA/DPIA/notice)</td>
+<td>C</td>
+<td>C</td>
+<td>I</td>
+<td>R/A</td>
+</tr>
+<tr>
+<td>Acceptance &amp; go-live approval</td>
+<td>C</td>
+<td>C</td>
+<td>R/A</td>
+<td>C</td>
+</tr>
+</tbody></table>
+<p><em>R = Responsible · A = Accountable · C = Consulted · I = Informed. Names: [to complete].</em></p>
+<h2>9. Assumptions &amp; dependencies</h2>
+<ul>
+<li>An <strong>Entra ID tenant</strong> is available with rights to create app registrations and
+grant admin consent; <strong>MFA/Conditional Access</strong> will be enabled organisation-side.</li>
+<li>A <strong>SharePoint</strong> site holds the governed documents; <code>Sites.Selected</code> consent is granted.</li>
+<li>A <strong>Windows/VMware host</strong> with Docker Desktop + WSL2 (or the agreed Azure target)
+is provisioned; TLS certificates are supplied.</li>
+<li>The client provides directory data via Entra and nominates admins/approvers.</li>
+<li>Off-host, access-controlled <strong>backup storage</strong> is available.</li>
+</ul>
+<h2>10. Constraints</h2>
+<ul>
+<li>Single-instance deployment on the VM model (availability target RTO ≤ 4h; the value
+is durability of the evidence, not high availability — see <code>DISASTER-RECOVERY.md</code>).</li>
+<li>No AI/ML processing (by design).</li>
+<li>Runs on Node 22 / PostgreSQL 16 / modern evergreen browsers.</li>
+</ul>
+<h2>11. Environment &amp; technical requirements</h2>
+<p>Technical requirements are specified in <code>REQUIREMENTS.md</code> §6 (TR-*): platform,
+frontend, identity, API/data, storage, messaging, security, observability, CI and
+compatibility. Deployment steps are in <code>INSTALL-GUIDE.md</code>.</p>
+<h2>12. Security &amp; compliance obligations</h2>
+<p>The supplier will deliver and maintain: a <strong>STRIDE + MITRE ATT&amp;CK threat model</strong>
+(<code>THREAT-MODEL.md</code>), a <strong>controls-as-code</strong> catalogue mapped to ISO 27001 / NIST CSF
+/ GDPR / Zero Trust / MITRE ATT&amp;CK (<code>compliance/controls.json</code>, CI-gated), an ISO
+27001:2022 <strong>Statement of Applicability</strong> (<code>ISO27001-SOA.md</code>), a <strong>Zero-Trust</strong> posture
+mapping (<code>ZERO-TRUST.md</code>), and a <strong>GDPR</strong> pack (ROPA/DPIA/privacy notice). Residual
+risks and the hardening backlog are tracked in the threat model and <code>NEXT-STEPS.md</code>.</p>
+<h2>13. Change control &amp; governance</h2>
+<p>Changes to scope, deliverables or acceptance criteria are handled by written <strong>change
+request</strong>: description, rationale, impact on schedule/effort, and sign-off by [sponsor]
+and [delivery lead]. Day-to-day delivery is tracked on <code>main</code> with green-CI gating and
+ADRs for significant decisions.</p>
+<h2>14. Risks</h2>
+<p>Key delivery/operational risks and their mitigations are catalogued in
+<code>THREAT-MODEL.md</code> §7 and <code>NEXT-STEPS.md</code>. The highest residual items are
+organisation-side: enabling MFA/Conditional Access, at-rest encryption, and SIEM
+forwarding.</p>
+<h2>15. Commercials</h2>
+<p>[To be completed by the parties — effort estimate, rate/fixed price, payment schedule,
+expenses, and any support/maintenance terms. Not pre-filled.]</p>
+<h2>16. Acceptance &amp; sign-off</h2>
+<p>Acceptance is granted per milestone (§7). Final acceptance follows M6 (live sign-off).</p>
+<table>
+<thead>
+<tr>
+<th>Party</th>
+<th>Name</th>
+<th>Signature</th>
+<th>Date</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Client / Sponsor</td>
+<td>[ ]</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Delivery lead</td>
+<td>[ ]</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>DPO (compliance)</td>
+<td>[ ]</td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<h2>17. References</h2>
+<p><code>REQUIREMENTS.md</code> · <code>USER-STORIES.md</code> · <code>HLD.md</code> · <code>LLD.md</code> ·
+<code>ARCHITECTURE-AND-DECISIONS.md</code> · <code>THREAT-MODEL.md</code> · <code>ISO27001-SOA.md</code> ·
+<code>ZERO-TRUST.md</code> · <code>SECURITY-FRAMEWORKS.md</code> · GDPR pack (<code>gdpr/</code>) · <code>INSTALL-GUIDE.md</code> ·
+<code>DISASTER-RECOVERY.md</code> · <code>FUNCTIONAL-FLOWS.md</code> · <code>PROJECT-MAP.md</code>.</p>
+</div>
+</body></html>

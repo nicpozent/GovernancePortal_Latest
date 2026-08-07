@@ -66,6 +66,8 @@ Read top-to-bottom; each step links the authoritative document.
 - [`deployment-diagram.mmd`](deployment-diagram.mmd) / [`deployment-diagram.html`](deployment-diagram.html) — the **deployment/infrastructure view**: hosts, containers, ports, volumes, trust zones, and the Azure-native target.
 - [`request-sequence.mmd`](request-sequence.mmd) / [`request-sequence.html`](request-sequence.html) — the **whole-application sequence**: sign-in → read → quiz → acknowledge, across every layer.
 - [`USER-STORIES.md`](USER-STORIES.md) — application-wide **user stories** (Gherkin + acceptance criteria + story→endpoint→test matrix) for every persona; the approval workflow has its own set.
+- [`STATEMENT-OF-WORK.md`](STATEMENT-OF-WORK.md) — project **Statement of Work**: scope, deliverables, phases, milestones/acceptance, RACI, assumptions, sign-off (offline `.html` alongside).
+- [`FUNCTIONAL-FLOWS.md`](FUNCTIONAL-FLOWS.md) — **functional flows & features**: the feature catalogue and per-persona user-interaction flows (with diagrams); offline `.html` alongside.
 - [`REQUIREMENTS.md`](REQUIREMENTS.md) — functional (by domain), non-functional (by quality attribute), technical (technology constraints, by area), and candidate/future requirements, with actors, MoSCoW priority, status, and traceability.
 
 ### Security & compliance
