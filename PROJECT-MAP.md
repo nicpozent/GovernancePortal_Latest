@@ -11,7 +11,7 @@ folder-by-folder description of the repository. For a **guided review order**
 | I'm looking for… | Open this |
 |------------------|-----------|
 | **Description of the solution** (what it is, overview) | [`README.md`](README.md) → then [`docs/HLD.md`](docs/HLD.md) §1–3 and [`docs/ARCHITECTURE-AND-DECISIONS.md`](docs/ARCHITECTURE-AND-DECISIONS.md) Part I |
-| **Statement of Work (SoW)** | [`docs/STATEMENT-OF-WORK.md`](docs/STATEMENT-OF-WORK.md) (+ offline [`.html`](docs/STATEMENT-OF-WORK.html)) |
+| **Statement of Work (SoW)** | [`docs/sow/STATEMENT-OF-WORK.md`](docs/sow/STATEMENT-OF-WORK.md) (+ offline [`.html`](docs/sow/STATEMENT-OF-WORK.html)) |
 | **Functional flows & features** (feature catalogue + user interaction flows) | [`docs/FUNCTIONAL-FLOWS.md`](docs/FUNCTIONAL-FLOWS.md) (+ offline [`.html`](docs/FUNCTIONAL-FLOWS.html)) |
 | **Requirements** (functional / non-functional / technical / candidate) | [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) |
 | **High-Level Design (HLD)** | [`docs/HLD.md`](docs/HLD.md) (application-wide) · [`docs/approval-workflow/HLD.md`](docs/approval-workflow/HLD.md) (approval feature) |
