@@ -1,0 +1,11 @@
+graph LR
+  U(["Administrator"]):::start --> A["Policy library → New policy"]
+  A --> B["Browse SharePoint → pick document"]
+  B --> C["Set name, version, due date, owner"]
+  C --> D["Assign to group(s) → effective audience"]
+  D --> E{"Use approval workflow?"}
+  E -- no --> G["Publish (or mark approved externally)"]
+  E -- yes --> F["Configure approvers → Submit (03)"]
+  F --> G
+  G --> H(["Visible to assigned population"]):::start
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

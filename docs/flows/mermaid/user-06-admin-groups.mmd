@@ -1,0 +1,10 @@
+graph LR
+  U(["Administrator"]):::start --> A["Employees → Sync now (06)"]
+  A --> B["Groups & access"]
+  B --> C{"Targeting method"}
+  C -- map --> D["Map AD group → platform group"]
+  C -- local --> E["Create local group + members"]
+  D --> F["Effective membership (05)"]
+  E --> F
+  F --> G(["Assign policies/trainings to groups"]):::start
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

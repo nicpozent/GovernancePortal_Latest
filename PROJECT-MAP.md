@@ -12,7 +12,7 @@ folder-by-folder description of the repository. For a **guided review order**
 |------------------|-----------|
 | **Description of the solution** (what it is, overview) | [`README.md`](README.md) → then [`docs/HLD.md`](docs/HLD.md) §1–3 and [`docs/ARCHITECTURE-AND-DECISIONS.md`](docs/ARCHITECTURE-AND-DECISIONS.md) Part I |
 | **Statement of Work (SoW)** | [`docs/sow/STATEMENT-OF-WORK.md`](docs/sow/STATEMENT-OF-WORK.md) (+ offline [`.html`](docs/sow/STATEMENT-OF-WORK.html)) |
-| **Functional flows** (system & data · user journeys · dev interaction — 31 diagrams) | [`docs/FUNCTIONAL-FLOWS.md`](docs/FUNCTIONAL-FLOWS.md) (+ offline [`.html`](docs/FUNCTIONAL-FLOWS.html) and inline-SVG gallery [`flows-gallery.html`](docs/flows-gallery.html)) |
+| **Functional flows** (system & data · user journeys · dev interaction — 31 diagrams) | [`docs/FUNCTIONAL-FLOWS.md`](docs/FUNCTIONAL-FLOWS.md) — PNG images in [`docs/flows/images/`](docs/flows/images), editable Mermaid sources in [`docs/flows/mermaid/`](docs/flows/mermaid); offline [`.html`](docs/FUNCTIONAL-FLOWS.html) and inline-SVG gallery [`flows-gallery.html`](docs/flows-gallery.html) |
 | **Requirements** (functional / non-functional / technical / candidate) | [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) |
 | **High-Level Design (HLD)** | [`docs/HLD.md`](docs/HLD.md) (application-wide) · [`docs/approval-workflow/HLD.md`](docs/approval-workflow/HLD.md) (approval feature) |
 | **Low-Level Design (LLD)** | [`docs/LLD.md`](docs/LLD.md) (application-wide) · [`docs/approval-workflow/LLD.md`](docs/approval-workflow/LLD.md) (approval feature) |

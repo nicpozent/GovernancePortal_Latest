@@ -2,8 +2,8 @@
 
 A functional, **user-perspective** view of the Birgma Governance Portal presented as
 flow diagrams in three views: **system & data flows**, **user journeys**
-(persona → goal), and **software-development interaction**. Each entry shows a live
-Mermaid diagram; the self-contained, air-gapped gallery
+(persona → goal), and **software-development interaction**. Each entry is shown as a **PNG image** (copy-paste ready), with its editable
+**Mermaid source** linked beneath it (kept under [`flows/mermaid/`](flows/mermaid/)); the self-contained, air-gapped gallery
 ([`flows-gallery.html`](flows-gallery.html)) renders every diagram as inline SVG for
 offline viewing. For the technical request path see
 [`request-sequence.mmd`](request-sequence.mmd); for endpoints see [`LLD.md`](LLD.md);
@@ -95,57 +95,27 @@ on every request — the client is never a security boundary.
 
 ## Application map & navigation
 
-```mermaid
-graph LR
-  APP(["Governance Portal"]):::start
-  APP --> EMP["Employee"]
-  APP --> MGR["Manager"]
-  APP --> ADM["Administrator"]
-  EMP --> E1["My policies · My signatures<br/>Reader · quizzes · certificates"]
-  MGR --> M1["Team dashboard · Trainings<br/>Reminders"]
-  ADM --> A1["Dashboard · Policy library · Approvals<br/>Employees · Groups & access"]
-  ADM --> A2["Audit log · Reports<br/>Integrations · Backups"]
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Application map & navigation](flows/images/00-app-map.png)
+
+_Mermaid source: [`flows/mermaid/00-app-map.mmd`](flows/mermaid/00-app-map.mmd)_
 
 
 <a id="01-auth-rbac"></a>
 
 ## Authentication & RBAC gate
 
-```mermaid
-graph TD
-  U(["User opens the portal"]):::start --> MSAL["MSAL sign-in (PKCE) → Entra ID"]
-  MSAL --> TOK["Bearer access token"]
-  TOK --> API["Call /api/*"]
-  API --> V{"Validate token<br/>signature · issuer · audience · tenant · scope (RS256)"}
-  V -- app-only / invalid --> D1["401 Unauthorized"]:::deny
-  V -- valid user token --> RBAC{"Server authorization<br/>role · ownership · effective group"}
-  RBAC -- deny --> D2["403 Forbidden"]:::deny
-  RBAC -- allow --> OK(["200 + data"]):::start
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![Authentication & RBAC gate](flows/images/01-auth-rbac.png)
+
+_Mermaid source: [`flows/mermaid/01-auth-rbac.mmd`](flows/mermaid/01-auth-rbac.mmd)_
 
 
 <a id="02-policy-lifecycle"></a>
 
 ## Policy lifecycle — author → version → archive
 
-```mermaid
-graph LR
-  N(["New policy"]):::start --> SRC["Pick SharePoint document (Sites.Selected)"]
-  SRC --> META["Set name · version · due date · owner"]
-  META --> ASG["Assign to group(s) → effective audience"]
-  ASG --> WF{"Approval workflow?"}
-  WF -- no --> PUB["Publish (or mark approved externally)"]
-  WF -- yes --> APR["Approval chain (see 03)"]
-  APR --> PUB
-  PUB --> VIS["Visible to assigned population"]
-  VIS --> NV["Edit to a NEW version → re-acknowledge required"]
-  NV --> META
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Policy lifecycle — author → version → archive](flows/images/02-policy-lifecycle.png)
+
+_Mermaid source: [`flows/mermaid/02-policy-lifecycle.mmd`](flows/mermaid/02-policy-lifecycle.mmd)_
 
 
 <a id="03-approval"></a>
@@ -156,211 +126,108 @@ Ordered **steps**; each step is satisfied by **all**, **any**, or a **quorum** o
 approvers (people and/or directory groups, frozen to members at submit). Every
 decision is written to an append-only decision ledger.
 
-```mermaid
-stateDiagram-v2
-  [*] --> Draft
-  Draft --> InReview: submit (freeze group approvers)
-  InReview --> InReview: step approved, more steps remain
-  InReview --> Approved: final step satisfied
-  InReview --> ChangesRequested: request changes (+comment)
-  InReview --> Rejected: reject (+comment)
-  ChangesRequested --> InReview: resubmit (fresh run)
-  Rejected --> InReview: resubmit
-  Approved --> Published: publish
-  Published --> Draft: edit to a NEW version (re-approval)
-  InReview --> Draft: withdraw
-```
+![Approval workflow — submit → decide → publish](flows/images/03-approval.png)
+
+_Mermaid source: [`flows/mermaid/03-approval.mmd`](flows/mermaid/03-approval.mmd)_
 
 
 <a id="04-acknowledge"></a>
 
 ## Acknowledgement + knowledge check
 
-```mermaid
-graph TD
-  O(["Open an assigned policy"]):::start --> R["In-app preview (read)"]
-  R --> Q{"Quiz required?"}
-  Q -- no --> SIGN["Type full name + confirm 'read & understood'"]
-  Q -- yes --> TAKE["Take quiz (graded server-side)"]
-  TAKE --> P{"Passed?"}
-  P -- no --> RETRY["Review & retry"]:::deny
-  RETRY --> TAKE
-  P -- yes --> SIGN
-  SIGN --> LEDGER["Write to append-only signature ledger<br/>(identity + version + timestamp)"]
-  LEDGER --> CERT(["Acknowledged → printable certificate"]):::start
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![Acknowledgement + knowledge check](flows/images/04-acknowledge.png)
+
+_Mermaid source: [`flows/mermaid/04-acknowledge.mmd`](flows/mermaid/04-acknowledge.mmd)_
 
 
 <a id="05-targeting"></a>
 
 ## Targeting — groups, mapping & effective membership
 
-```mermaid
-graph TD
-  G(["Groups & access"]):::start --> T{"Targeting method"}
-  T -- map directory group --> MAP["Map AD group → platform group"]
-  T -- local group --> LOC["Create local group + add members"]
-  MAP --> EFF["Effective membership = direct ∪ mapped"]
-  LOC --> EFF
-  EFF --> ASG["Assign policies / trainings to groups"]
-  ASG --> AUD["Audience resolves per policy"]
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Targeting — groups, mapping & effective membership](flows/images/05-targeting.png)
+
+_Mermaid source: [`flows/mermaid/05-targeting.mmd`](flows/mermaid/05-targeting.mmd)_
 
 
 <a id="06-directory-sync"></a>
 
 ## Directory sync — least-privilege Entra/Graph
 
-```mermaid
-sequenceDiagram
-  autonumber
-  actor A as Admin / Scheduler
-  participant API as Portal API
-  participant G as Microsoft Graph
-  A->>API: Sync now
-  API->>G: Read principals ASSIGNED to the app (least privilege)
-  G-->>API: Users + groups (5 attributes only)
-  API->>API: Upsert users & groups
-  API->>API: Deactivate leavers (never hard-delete)
-  API-->>A: Sync summary (added / updated / deactivated)
-```
+![Directory sync — least-privilege Entra/Graph](flows/images/06-directory-sync.png)
+
+_Mermaid source: [`flows/mermaid/06-directory-sync.mmd`](flows/mermaid/06-directory-sync.mmd)_
 
 
 <a id="07-documents"></a>
 
 ## Document source & preview (SharePoint)
 
-```mermaid
-graph LR
-  B(["Browse SharePoint (Sites.Selected)"]):::start --> PICK["Pick the governed document"]
-  PICK --> TYPE{"File type"}
-  TYPE -- PDF --> PREV["Inline preview"]
-  TYPE -- Office --> CONV["Convert to PDF → preview"]
-  TYPE -- unavailable --> FALL["Download / open in SharePoint"]:::deny
-  PREV --> ACK["Available to read & acknowledge (see 04)"]
-  CONV --> ACK
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![Document source & preview (SharePoint)](flows/images/07-documents.png)
+
+_Mermaid source: [`flows/mermaid/07-documents.mmd`](flows/mermaid/07-documents.mmd)_
 
 
 <a id="08-reminders"></a>
 
 ## Reminder ladder — escalating notifications
 
-```mermaid
-graph LR
-  S(["Scheduler tick"]):::start --> DUE{"Where in the ladder?"}
-  DUE --> A["Assigned"]
-  DUE --> D["Due − 20 / 15 / 7 / 1 days"]
-  DUE --> O["Overdue"]:::deny
-  A --> ONCE["Send at most once per person/version (idempotent)"]
-  D --> ONCE
-  O --> ONCE
-  ONCE --> MAIL["Microsoft Graph mail"]
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![Reminder ladder — escalating notifications](flows/images/08-reminders.png)
+
+_Mermaid source: [`flows/mermaid/08-reminders.mmd`](flows/mermaid/08-reminders.mmd)_
 
 
 <a id="09-reporting"></a>
 
 ## Reporting & dashboards roll-up
 
-```mermaid
-graph TD
-  SIG["Signature ledger"] --> AGG["Aggregate by scope"]
-  AGG --> OV["Overall"]
-  AGG --> DP["By department"]
-  AGG --> GP["By group"]
-  OV --> DR["Drill-down: who has / hasn't signed"]
-  DP --> DR
-  GP --> DR
-  DR --> CSV(["CSV export for auditors"]):::start
-  AGG --> NA["Unassigned documents read 'not assigned' (not 0%)"]
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Reporting & dashboards roll-up](flows/images/09-reporting.png)
+
+_Mermaid source: [`flows/mermaid/09-reporting.mmd`](flows/mermaid/09-reporting.mmd)_
 
 
 <a id="10-audit"></a>
 
 ## Immutable audit log + pull/push feed
 
-```mermaid
-graph LR
-  ACT(["Admin action / decision"]):::start --> LOG["Append to immutable audit log"]
-  LOG --> VIEW["Browse in-app"]
-  LOG --> PULL["Pull feed (query off-host)"]
-  LOG --> PUSH["Push feed (forward to SIEM)"]
-  LOG -. "DB grants prevent update/delete" .-> APPEND["Append-only enforced"]
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Immutable audit log + pull/push feed](flows/images/10-audit.png)
+
+_Mermaid source: [`flows/mermaid/10-audit.mmd`](flows/mermaid/10-audit.mmd)_
 
 
 <a id="11-gdpr"></a>
 
 ## GDPR data-subject rights (DSAR / erasure / retention)
 
-```mermaid
-graph TD
-  DSR(["Data-subject request"]):::start --> T{"Type"}
-  T -- Access --> EXP["DSAR export — full per-subject package (admin-only, audited)"]
-  T -- Erasure --> ERA["Pseudonymise / redact — ledger rows preserved for integrity"]
-  T -- Retention --> PUR["Purge data past the configured window"]
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![GDPR data-subject rights (DSAR / erasure / retention)](flows/images/11-gdpr.png)
+
+_Mermaid source: [`flows/mermaid/11-gdpr.mmd`](flows/mermaid/11-gdpr.mmd)_
 
 
 <a id="12-backup-dr"></a>
 
 ## Backup & disaster recovery
 
-```mermaid
-graph LR
-  DB[("PostgreSQL")] --> BK["Daily backup (DB + uploads)"]
-  BK --> OFF["Off-host, access-controlled storage"]
-  OFF --> DR{"Disaster?"}
-  DR -- yes --> REST["Restore per DISASTER-RECOVERY.md (RTO ≤ 4h)"]
-  DR -- no --> KEEP["Retain per policy"]
-  REST --> VERIFY(["Rehearsed restore verified"]):::start
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Backup & disaster recovery](flows/images/12-backup-dr.png)
+
+_Mermaid source: [`flows/mermaid/12-backup-dr.mmd`](flows/mermaid/12-backup-dr.mmd)_
 
 
 <a id="13-scheduler"></a>
 
 ## Leader election & scheduled jobs
 
-```mermaid
-graph TD
-  INST(["Instances (1..N)"]):::start --> LOCK{"Postgres advisory lock"}
-  LOCK -- acquired --> LEADER["Leader runs timers"]
-  LOCK -- not acquired --> FOLLOW["Followers idle"]
-  LEADER --> J1["Reminder ladder (08)"]
-  LEADER --> J2["Directory sync (06)"]
-  LEADER --> J3["Daily backup (12)"]
-  J1 -. "failures never block user actions" .-> SAFE["Isolated"]
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Leader election & scheduled jobs](flows/images/13-scheduler.png)
+
+_Mermaid source: [`flows/mermaid/13-scheduler.mmd`](flows/mermaid/13-scheduler.mmd)_
 
 
 <a id="14-observability"></a>
 
 ## Observability — metrics, health, logs
 
-```mermaid
-graph LR
-  API(["Portal API"]):::start --> LOG["Structured pino logs<br/>correlation ids · redaction"]
-  API --> MET["/metrics (Prometheus — RED + runtime)"]
-  API --> HZ["/healthz (liveness)"]
-  API --> RZ["/readyz (DB-checked readiness)"]
-  LOG --> SHIP["Optional log shipping → SIEM"]
-  MET --> ALERT["Alerting (operator step)"]
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Observability — metrics, health, logs](flows/images/14-observability.png)
+
+_Mermaid source: [`flows/mermaid/14-observability.mmd`](flows/mermaid/14-observability.mmd)_
 
 
 ---
@@ -372,49 +239,27 @@ graph LR
 
 ## Employee — acknowledge a policy (quiz-gated)
 
-```mermaid
-graph LR
-  U(["Employee"]):::start --> A["Sign in (Microsoft)"]
-  A --> B["My policies — assigned & outstanding"]
-  B --> C["Open a policy → in-app preview"]
-  C --> D["Take quiz if required → pass (server-graded)"]
-  D --> E["Type name + confirm → sign"]
-  E --> F(["Acknowledged → printable certificate"]):::start
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Employee — acknowledge a policy (quiz-gated)](flows/images/user-01-employee-ack.png)
+
+_Mermaid source: [`flows/mermaid/user-01-employee-ack.mmd`](flows/mermaid/user-01-employee-ack.mmd)_
 
 
 <a id="user-02-employee-outstanding"></a>
 
 ## Employee — outstanding & re-sign on new version
 
-```mermaid
-graph LR
-  U(["Employee"]):::start --> A["My signatures"]
-  A --> B{"Status?"}
-  B -- outstanding --> C["Read & sign (user-01)"]
-  B -- signed --> D["Nothing to do"]
-  B -- new version --> E["Re-acknowledge required"]:::deny
-  E --> C
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![Employee — outstanding & re-sign on new version](flows/images/user-02-employee-outstanding.png)
+
+_Mermaid source: [`flows/mermaid/user-02-employee-outstanding.mmd`](flows/mermaid/user-02-employee-outstanding.mmd)_
 
 
 <a id="user-03-manager-team"></a>
 
 ## Manager — team compliance, trainings & nudges
 
-```mermaid
-graph LR
-  U(["Manager"]):::start --> A["Switch to Manager view"]
-  A --> B["Team dashboard: who is outstanding"]
-  B --> C{"Action?"}
-  C -- upload training --> T["Upload file → assign to my groups → 'reaches N people'"]
-  C -- send reminders --> R["Run reminders (idempotent, config-gated)"]
-  C -- review --> B
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Manager — team compliance, trainings & nudges](flows/images/user-03-manager-team.png)
+
+_Mermaid source: [`flows/mermaid/user-03-manager-team.mmd`](flows/mermaid/user-03-manager-team.mmd)_
 
 Managers only ever see and act on **their own team** (functional-manager reports ∪
 directory-manager matches) and their **own** trainings.
@@ -424,39 +269,18 @@ directory-manager matches) and their **own** trainings.
 
 ## Administrator — onboard & publish a policy
 
-```mermaid
-graph LR
-  U(["Administrator"]):::start --> A["Policy library → New policy"]
-  A --> B["Browse SharePoint → pick document"]
-  B --> C["Set name, version, due date, owner"]
-  C --> D["Assign to group(s) → effective audience"]
-  D --> E{"Use approval workflow?"}
-  E -- no --> G["Publish (or mark approved externally)"]
-  E -- yes --> F["Configure approvers → Submit (03)"]
-  F --> G
-  G --> H(["Visible to assigned population"]):::start
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Administrator — onboard & publish a policy](flows/images/user-04-admin-publish.png)
+
+_Mermaid source: [`flows/mermaid/user-04-admin-publish.mmd`](flows/mermaid/user-04-admin-publish.mmd)_
 
 
 <a id="user-05-approver-decide"></a>
 
 ## Approver — decide (approve / reject / request changes)
 
-```mermaid
-graph LR
-  U(["Approver"]):::start --> A["Approvals — items awaiting me"]
-  A --> B["Open item → read policy + context"]
-  B --> C{"Decision"}
-  C -- approve --> D["Step satisfied → advance / final approve"]
-  C -- request changes --> E["Back to owner (+comment)"]:::deny
-  C -- reject --> F["Rejected (+comment)"]:::deny
-  D --> G(["Decision written to append-only ledger"]):::start
-  E --> G
-  F --> G
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![Approver — decide (approve / reject / request changes)](flows/images/user-05-approver-decide.png)
+
+_Mermaid source: [`flows/mermaid/user-05-approver-decide.mmd`](flows/mermaid/user-05-approver-decide.mmd)_
 
 Employees cannot see a policy while it is under review — only owner, admin and
 configured approvers can (so they can act).
@@ -466,34 +290,18 @@ configured approvers can (so they can act).
 
 ## Administrator — groups, directory mapping & sync
 
-```mermaid
-graph LR
-  U(["Administrator"]):::start --> A["Employees → Sync now (06)"]
-  A --> B["Groups & access"]
-  B --> C{"Targeting method"}
-  C -- map --> D["Map AD group → platform group"]
-  C -- local --> E["Create local group + members"]
-  D --> F["Effective membership (05)"]
-  E --> F
-  F --> G(["Assign policies/trainings to groups"]):::start
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Administrator — groups, directory mapping & sync](flows/images/user-06-admin-groups.png)
+
+_Mermaid source: [`flows/mermaid/user-06-admin-groups.mmd`](flows/mermaid/user-06-admin-groups.mmd)_
 
 
 <a id="user-07-dpo-audit"></a>
 
 ## DPO / Auditor — data-subject rights & audit export
 
-```mermaid
-graph LR
-  U(["DPO / Auditor"]):::start --> A{"Task"}
-  A -- data-subject request --> B["DSAR export / erasure / retention (11)"]
-  A -- assurance --> C["Browse immutable audit log (10)"]
-  C --> D["Export CSV / consume pull-push feed"]
-  B --> E(["Defensible evidence package"]):::start
-  D --> E
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![DPO / Auditor — data-subject rights & audit export](flows/images/user-07-dpo-audit.png)
+
+_Mermaid source: [`flows/mermaid/user-07-dpo-audit.mmd`](flows/mermaid/user-07-dpo-audit.mmd)_
 
 
 ---
@@ -505,150 +313,81 @@ graph LR
 
 ## Change lifecycle — branch → PR → CI → merge
 
-```mermaid
-graph LR
-  I(["Change / issue"]):::start --> B["Branch (claude/…)"]
-  B --> IMP["Implement · ADR if architectural"]
-  IMP --> PR["Open PR"]
-  PR --> CI{"CI green?"}
-  CI -- no --> FIX["Fix → push"]:::deny
-  FIX --> CI
-  CI -- yes --> M(["Fast-forward merge to main"]):::start
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![Change lifecycle — branch → PR → CI → merge](flows/images/dev-01-change-lifecycle.png)
+
+_Mermaid source: [`flows/mermaid/dev-01-change-lifecycle.mmd`](flows/mermaid/dev-01-change-lifecycle.mmd)_
 
 
 <a id="dev-02-ci-pipeline"></a>
 
 ## CI pipeline — the gating jobs
 
-```mermaid
-graph TD
-  P(["Push / Pull request"]):::start --> J{"Workflows — parallel"}
-  J --> CI["ci: lint · unit · integration (real Postgres) · coverage · web build"]
-  J --> SEC["security: gitleaks · Trivy · semgrep · controls-compliance gate"]
-  J --> SMK["smoke: docker-compose end-to-end"]
-  CI --> G{"All required green?"}
-  SEC --> G
-  SMK --> G
-  G -- yes --> OK(["Mergeable"]):::start
-  G -- no --> BL["Blocked"]:::deny
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![CI pipeline — the gating jobs](flows/images/dev-02-ci-pipeline.png)
+
+_Mermaid source: [`flows/mermaid/dev-02-ci-pipeline.mmd`](flows/mermaid/dev-02-ci-pipeline.mmd)_
 
 
 <a id="dev-03-controls-gate"></a>
 
 ## Controls-as-code compliance gate
 
-```mermaid
-graph LR
-  CJ["compliance/controls.json"] --> RPT["report.mjs --check"]
-  RPT --> V{"Schema + coverage valid?"}
-  V -- no --> FAIL["Fail CI — fix the catalogue"]:::deny
-  V -- yes --> OK(["Gate passes"]):::start
-  CJ --> MD["report.mjs --md → COVERAGE.md (SoA snapshot)"]
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![Controls-as-code compliance gate](flows/images/dev-03-controls-gate.png)
+
+_Mermaid source: [`flows/mermaid/dev-03-controls-gate.mmd`](flows/mermaid/dev-03-controls-gate.mmd)_
 
 
 <a id="dev-04-test-strategy"></a>
 
 ## Test strategy — unit → integration → smoke
 
-```mermaid
-graph TD
-  U["Unit — node:test (API) · vitest (web)"] --> I["Integration — against a real Postgres"]
-  I --> E["Smoke — docker-compose end-to-end"]
-  E --> COV(["Coverage floors gated in CI<br/>(lines ≥70 · branches ≥60 · functions ≥65)"]):::start
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Test strategy — unit → integration → smoke](flows/images/dev-04-test-strategy.png)
+
+_Mermaid source: [`flows/mermaid/dev-04-test-strategy.mmd`](flows/mermaid/dev-04-test-strategy.mmd)_
 
 
 <a id="dev-05-local-dev"></a>
 
 ## Local dev loop
 
-```mermaid
-graph LR
-  D(["Developer"]):::start --> A["docker compose up (db) + api + web"]
-  A --> B{"Auth mode"}
-  B -- dev --> C["Local roles / stubbed identity"]
-  B -- real --> E["Entra SSO + Graph/SharePoint"]
-  C --> F["Iterate → tests → lint"]
-  E --> F
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Local dev loop](flows/images/dev-05-local-dev.png)
+
+_Mermaid source: [`flows/mermaid/dev-05-local-dev.mmd`](flows/mermaid/dev-05-local-dev.mmd)_
 
 
 <a id="dev-06-build-deploy"></a>
 
 ## Build & air-gapped deploy
 
-```mermaid
-graph LR
-  SRC(["Source (downloaded, no egress)"]):::start --> BUILD["docker compose build"]
-  BUILD --> IMG["web · api · db images"]
-  IMG --> ENV["deploy/.env + certs/ (self-signed or supplied)"]
-  ENV --> UP["docker compose up -d"]
-  UP --> HC{"Healthchecks pass?"}
-  HC -- yes --> LIVE(["nginx edge: SPA · /api · TLS"]):::start
-  HC -- no --> DIAG["Troubleshoot (.env in deploy/, LF endings, TLS)"]:::deny
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![Build & air-gapped deploy](flows/images/dev-06-build-deploy.png)
+
+_Mermaid source: [`flows/mermaid/dev-06-build-deploy.mmd`](flows/mermaid/dev-06-build-deploy.mmd)_
 
 
 <a id="dev-07-runtime-topology"></a>
 
 ## Runtime topology (component interaction)
 
-```mermaid
-graph LR
-  BR(["Browser · React SPA"]):::start --> NG["nginx (TLS, CSP, same-origin)"]
-  NG --> API["Node/Express API · /api"]
-  API --> DB[("PostgreSQL 16")]
-  API --> GR["Microsoft Graph (mail · directory)"]
-  API --> SP["SharePoint (Sites.Selected)"]
-  BR -. "MSAL bearer" .-> ENTRA["Entra ID (SSO)"]
-  API -. "validate token" .-> ENTRA
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Runtime topology (component interaction)](flows/images/dev-07-runtime-topology.png)
+
+_Mermaid source: [`flows/mermaid/dev-07-runtime-topology.mmd`](flows/mermaid/dev-07-runtime-topology.mmd)_
 
 
 <a id="dev-08-migrations"></a>
 
 ## Database migrations & append-only grants
 
-```mermaid
-graph LR
-  M(["migration_0NN_*.sql"]):::start --> RUN["migrate.js (tracked, transactional)"]
-  RUN --> APPLY{"Applied already?"}
-  APPLY -- yes --> SKIP["Skip"]
-  APPLY -- no --> TX["Apply in a transaction → record"]
-  TX --> GRANT["docker-grants.sql: revoke UPDATE/DELETE on ledgers"]
-  GRANT --> AO(["Append-only enforced at the DB"]):::start
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-```
+![Database migrations & append-only grants](flows/images/dev-08-migrations.png)
+
+_Mermaid source: [`flows/mermaid/dev-08-migrations.mmd`](flows/mermaid/dev-08-migrations.mmd)_
 
 
 <a id="dev-09-dependencies"></a>
 
 ## Dependency currency (Dependabot + audit/Trivy)
 
-```mermaid
-graph LR
-  DB2(["Dependabot (grouped)"]):::start --> PR["Update PR"]
-  PR --> AUD{"npm audit + Trivy gate"}
-  AUD -- High/Critical --> BLOCK["Blocked → pin / override"]:::deny
-  AUD -- clean --> CI["CI green"]
-  CI --> MG(["Merge — lockfiles + npm ci"]):::start
-  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
-  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
-```
+![Dependency currency (Dependabot + audit/Trivy)](flows/images/dev-09-dependencies.png)
+
+_Mermaid source: [`flows/mermaid/dev-09-dependencies.mmd`](flows/mermaid/dev-09-dependencies.mmd)_
 
 
 ---

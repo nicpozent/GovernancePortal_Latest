@@ -1,0 +1,13 @@
+graph TD
+  O(["Open an assigned policy"]):::start --> R["In-app preview (read)"]
+  R --> Q{"Quiz required?"}
+  Q -- no --> SIGN["Type full name + confirm 'read & understood'"]
+  Q -- yes --> TAKE["Take quiz (graded server-side)"]
+  TAKE --> P{"Passed?"}
+  P -- no --> RETRY["Review & retry"]:::deny
+  RETRY --> TAKE
+  P -- yes --> SIGN
+  SIGN --> LEDGER["Write to append-only signature ledger<br/>(identity + version + timestamp)"]
+  LEDGER --> CERT(["Acknowledged → printable certificate"]):::start
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;

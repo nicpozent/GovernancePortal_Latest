@@ -1,0 +1,12 @@
+stateDiagram-v2
+  [*] --> Draft
+  Draft --> InReview: submit (freeze group approvers)
+  InReview --> InReview: step approved, more steps remain
+  InReview --> Approved: final step satisfied
+  InReview --> ChangesRequested: request changes (+comment)
+  InReview --> Rejected: reject (+comment)
+  ChangesRequested --> InReview: resubmit (fresh run)
+  Rejected --> InReview: resubmit
+  Approved --> Published: publish
+  Published --> Draft: edit to a NEW version (re-approval)
+  InReview --> Draft: withdraw

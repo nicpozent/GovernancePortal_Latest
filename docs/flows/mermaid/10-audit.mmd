@@ -1,0 +1,7 @@
+graph LR
+  ACT(["Admin action / decision"]):::start --> LOG["Append to immutable audit log"]
+  LOG --> VIEW["Browse in-app"]
+  LOG --> PULL["Pull feed (query off-host)"]
+  LOG --> PUSH["Push feed (forward to SIEM)"]
+  LOG -. "DB grants prevent update/delete" .-> APPEND["Append-only enforced"]
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

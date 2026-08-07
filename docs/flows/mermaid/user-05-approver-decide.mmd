@@ -1,0 +1,12 @@
+graph LR
+  U(["Approver"]):::start --> A["Approvals — items awaiting me"]
+  A --> B["Open item → read policy + context"]
+  B --> C{"Decision"}
+  C -- approve --> D["Step satisfied → advance / final approve"]
+  C -- request changes --> E["Back to owner (+comment)"]:::deny
+  C -- reject --> F["Rejected (+comment)"]:::deny
+  D --> G(["Decision written to append-only ledger"]):::start
+  E --> G
+  F --> G
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;

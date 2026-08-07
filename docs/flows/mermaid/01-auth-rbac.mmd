@@ -1,0 +1,11 @@
+graph TD
+  U(["User opens the portal"]):::start --> MSAL["MSAL sign-in (PKCE) → Entra ID"]
+  MSAL --> TOK["Bearer access token"]
+  TOK --> API["Call /api/*"]
+  API --> V{"Validate token<br/>signature · issuer · audience · tenant · scope (RS256)"}
+  V -- app-only / invalid --> D1["401 Unauthorized"]:::deny
+  V -- valid user token --> RBAC{"Server authorization<br/>role · ownership · effective group"}
+  RBAC -- deny --> D2["403 Forbidden"]:::deny
+  RBAC -- allow --> OK(["200 + data"]):::start
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;

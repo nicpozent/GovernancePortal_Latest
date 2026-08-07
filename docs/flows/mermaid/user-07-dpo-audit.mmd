@@ -1,0 +1,8 @@
+graph LR
+  U(["DPO / Auditor"]):::start --> A{"Task"}
+  A -- data-subject request --> B["DSAR export / erasure / retention (11)"]
+  A -- assurance --> C["Browse immutable audit log (10)"]
+  C --> D["Export CSV / consume pull-push feed"]
+  B --> E(["Defensible evidence package"]):::start
+  D --> E
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

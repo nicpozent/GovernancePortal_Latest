@@ -1,0 +1,11 @@
+graph TD
+  SIG["Signature ledger"] --> AGG["Aggregate by scope"]
+  AGG --> OV["Overall"]
+  AGG --> DP["By department"]
+  AGG --> GP["By group"]
+  OV --> DR["Drill-down: who has / hasn't signed"]
+  DP --> DR
+  GP --> DR
+  DR --> CSV(["CSV export for auditors"]):::start
+  AGG --> NA["Unassigned documents read 'not assigned' (not 0%)"]
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

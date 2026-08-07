@@ -1,0 +1,9 @@
+graph TD
+  INST(["Instances (1..N)"]):::start --> LOCK{"Postgres advisory lock"}
+  LOCK -- acquired --> LEADER["Leader runs timers"]
+  LOCK -- not acquired --> FOLLOW["Followers idle"]
+  LEADER --> J1["Reminder ladder (08)"]
+  LEADER --> J2["Directory sync (06)"]
+  LEADER --> J3["Daily backup (12)"]
+  J1 -. "failures never block user actions" .-> SAFE["Isolated"]
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

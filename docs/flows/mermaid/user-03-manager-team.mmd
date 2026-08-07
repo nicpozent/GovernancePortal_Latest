@@ -1,0 +1,8 @@
+graph LR
+  U(["Manager"]):::start --> A["Switch to Manager view"]
+  A --> B["Team dashboard: who is outstanding"]
+  B --> C{"Action?"}
+  C -- upload training --> T["Upload file → assign to my groups → 'reaches N people'"]
+  C -- send reminders --> R["Run reminders (idempotent, config-gated)"]
+  C -- review --> B
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

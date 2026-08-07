@@ -1,0 +1,12 @@
+graph TD
+  P(["Push / Pull request"]):::start --> J{"Workflows — parallel"}
+  J --> CI["ci: lint · unit · integration (real Postgres) · coverage · web build"]
+  J --> SEC["security: gitleaks · Trivy · semgrep · controls-compliance gate"]
+  J --> SMK["smoke: docker-compose end-to-end"]
+  CI --> G{"All required green?"}
+  SEC --> G
+  SMK --> G
+  G -- yes --> OK(["Mergeable"]):::start
+  G -- no --> BL["Blocked"]:::deny
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;

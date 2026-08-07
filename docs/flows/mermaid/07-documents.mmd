@@ -1,0 +1,10 @@
+graph LR
+  B(["Browse SharePoint (Sites.Selected)"]):::start --> PICK["Pick the governed document"]
+  PICK --> TYPE{"File type"}
+  TYPE -- PDF --> PREV["Inline preview"]
+  TYPE -- Office --> CONV["Convert to PDF → preview"]
+  TYPE -- unavailable --> FALL["Download / open in SharePoint"]:::deny
+  PREV --> ACK["Available to read & acknowledge (see 04)"]
+  CONV --> ACK
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;

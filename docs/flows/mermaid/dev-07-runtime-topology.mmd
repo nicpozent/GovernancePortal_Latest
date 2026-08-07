@@ -1,0 +1,9 @@
+graph LR
+  BR(["Browser · React SPA"]):::start --> NG["nginx (TLS, CSP, same-origin)"]
+  NG --> API["Node/Express API · /api"]
+  API --> DB[("PostgreSQL 16")]
+  API --> GR["Microsoft Graph (mail · directory)"]
+  API --> SP["SharePoint (Sites.Selected)"]
+  BR -. "MSAL bearer" .-> ENTRA["Entra ID (SSO)"]
+  API -. "validate token" .-> ENTRA
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

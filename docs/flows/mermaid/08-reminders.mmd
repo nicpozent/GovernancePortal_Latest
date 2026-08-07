@@ -1,0 +1,11 @@
+graph LR
+  S(["Scheduler tick"]):::start --> DUE{"Where in the ladder?"}
+  DUE --> A["Assigned"]
+  DUE --> D["Due − 20 / 15 / 7 / 1 days"]
+  DUE --> O["Overdue"]:::deny
+  A --> ONCE["Send at most once per person/version (idempotent)"]
+  D --> ONCE
+  O --> ONCE
+  ONCE --> MAIL["Microsoft Graph mail"]
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;

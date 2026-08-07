@@ -1,0 +1,5 @@
+graph TD
+  U["Unit — node:test (API) · vitest (web)"] --> I["Integration — against a real Postgres"]
+  I --> E["Smoke — docker-compose end-to-end"]
+  E --> COV(["Coverage floors gated in CI<br/>(lines ≥70 · branches ≥60 · functions ≥65)"]):::start
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

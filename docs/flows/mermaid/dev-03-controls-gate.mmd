@@ -1,0 +1,8 @@
+graph LR
+  CJ["compliance/controls.json"] --> RPT["report.mjs --check"]
+  RPT --> V{"Schema + coverage valid?"}
+  V -- no --> FAIL["Fail CI — fix the catalogue"]:::deny
+  V -- yes --> OK(["Gate passes"]):::start
+  CJ --> MD["report.mjs --md → COVERAGE.md (SoA snapshot)"]
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;

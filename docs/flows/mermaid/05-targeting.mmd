@@ -1,0 +1,9 @@
+graph TD
+  G(["Groups & access"]):::start --> T{"Targeting method"}
+  T -- map directory group --> MAP["Map AD group → platform group"]
+  T -- local group --> LOC["Create local group + add members"]
+  MAP --> EFF["Effective membership = direct ∪ mapped"]
+  LOC --> EFF
+  EFF --> ASG["Assign policies / trainings to groups"]
+  ASG --> AUD["Audience resolves per policy"]
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

@@ -1,0 +1,8 @@
+graph LR
+  D(["Developer"]):::start --> A["docker compose up (db) + api + web"]
+  A --> B{"Auth mode"}
+  B -- dev --> C["Local roles / stubbed identity"]
+  B -- real --> E["Entra SSO + Graph/SharePoint"]
+  C --> F["Iterate → tests → lint"]
+  E --> F
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

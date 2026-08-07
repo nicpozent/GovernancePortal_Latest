@@ -1,0 +1,8 @@
+graph LR
+  DB[("PostgreSQL")] --> BK["Daily backup (DB + uploads)"]
+  BK --> OFF["Off-host, access-controlled storage"]
+  OFF --> DR{"Disaster?"}
+  DR -- yes --> REST["Restore per DISASTER-RECOVERY.md (RTO ≤ 4h)"]
+  DR -- no --> KEEP["Retain per policy"]
+  REST --> VERIFY(["Rehearsed restore verified"]):::start
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

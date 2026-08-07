@@ -1,0 +1,6 @@
+graph TD
+  DSR(["Data-subject request"]):::start --> T{"Type"}
+  T -- Access --> EXP["DSAR export — full per-subject package (admin-only, audited)"]
+  T -- Erasure --> ERA["Pseudonymise / redact — ledger rows preserved for integrity"]
+  T -- Retention --> PUR["Purge data past the configured window"]
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

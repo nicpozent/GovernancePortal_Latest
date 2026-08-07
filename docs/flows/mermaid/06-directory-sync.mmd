@@ -1,0 +1,11 @@
+sequenceDiagram
+  autonumber
+  actor A as Admin / Scheduler
+  participant API as Portal API
+  participant G as Microsoft Graph
+  A->>API: Sync now
+  API->>G: Read principals ASSIGNED to the app (least privilege)
+  G-->>API: Users + groups (5 attributes only)
+  API->>API: Upsert users & groups
+  API->>API: Deactivate leavers (never hard-delete)
+  API-->>A: Sync summary (added / updated / deactivated)

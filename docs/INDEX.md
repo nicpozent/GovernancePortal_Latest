@@ -67,7 +67,7 @@ Read top-to-bottom; each step links the authoritative document.
 - [`request-sequence.mmd`](request-sequence.mmd) / [`request-sequence.html`](request-sequence.html) — the **whole-application sequence**: sign-in → read → quiz → acknowledge, across every layer.
 - [`USER-STORIES.md`](USER-STORIES.md) — application-wide **user stories** (Gherkin + acceptance criteria + story→endpoint→test matrix) for every persona; the approval workflow has its own set.
 - [`sow/STATEMENT-OF-WORK.md`](sow/STATEMENT-OF-WORK.md) — project **Statement of Work**: scope, deliverables, phases, milestones/acceptance, RACI, assumptions, sign-off (offline `.html` alongside in [`sow/`](sow/)).
-- [`FUNCTIONAL-FLOWS.md`](FUNCTIONAL-FLOWS.md) — **functional flows** in three views (system & data · per-persona user journeys · software-development interaction — 31 Mermaid diagrams); offline `.html` alongside, plus the inline-SVG gallery [`flows-gallery.html`](flows-gallery.html).
+- [`FUNCTIONAL-FLOWS.md`](FUNCTIONAL-FLOWS.md) — **functional flows** in three views (system & data · per-persona user journeys · software-development interaction — 31 diagrams). Rendered as PNG images ([`flows/images/`](flows/images)) with editable Mermaid sources ([`flows/mermaid/`](flows/mermaid)); offline `.html` alongside, plus the inline-SVG gallery [`flows-gallery.html`](flows-gallery.html).
 - [`REQUIREMENTS.md`](REQUIREMENTS.md) — functional (by domain), non-functional (by quality attribute), technical (technology constraints, by area), and candidate/future requirements, with actors, MoSCoW priority, status, and traceability.
 
 ### Security & compliance

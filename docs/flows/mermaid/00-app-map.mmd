@@ -1,0 +1,10 @@
+graph LR
+  APP(["Governance Portal"]):::start
+  APP --> EMP["Employee"]
+  APP --> MGR["Manager"]
+  APP --> ADM["Administrator"]
+  EMP --> E1["My policies · My signatures<br/>Reader · quizzes · certificates"]
+  MGR --> M1["Team dashboard · Trainings<br/>Reminders"]
+  ADM --> A1["Dashboard · Policy library · Approvals<br/>Employees · Groups & access"]
+  ADM --> A2["Audit log · Reports<br/>Integrations · Backups"]
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

@@ -1,0 +1,8 @@
+graph LR
+  DB2(["Dependabot (grouped)"]):::start --> PR["Update PR"]
+  PR --> AUD{"npm audit + Trivy gate"}
+  AUD -- High/Critical --> BLOCK["Blocked → pin / override"]:::deny
+  AUD -- clean --> CI["CI green"]
+  CI --> MG(["Merge — lockfiles + npm ci"]):::start
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;

@@ -1,0 +1,10 @@
+graph LR
+  I(["Change / issue"]):::start --> B["Branch (claude/…)"]
+  B --> IMP["Implement · ADR if architectural"]
+  IMP --> PR["Open PR"]
+  PR --> CI{"CI green?"}
+  CI -- no --> FIX["Fix → push"]:::deny
+  FIX --> CI
+  CI -- yes --> M(["Fast-forward merge to main"]):::start
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;

@@ -1,0 +1,8 @@
+graph LR
+  API(["Portal API"]):::start --> LOG["Structured pino logs<br/>correlation ids · redaction"]
+  API --> MET["/metrics (Prometheus — RED + runtime)"]
+  API --> HZ["/healthz (liveness)"]
+  API --> RZ["/readyz (DB-checked readiness)"]
+  LOG --> SHIP["Optional log shipping → SIEM"]
+  MET --> ALERT["Alerting (operator step)"]
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

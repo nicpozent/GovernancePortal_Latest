@@ -1,0 +1,8 @@
+graph LR
+  M(["migration_0NN_*.sql"]):::start --> RUN["migrate.js (tracked, transactional)"]
+  RUN --> APPLY{"Applied already?"}
+  APPLY -- yes --> SKIP["Skip"]
+  APPLY -- no --> TX["Apply in a transaction → record"]
+  TX --> GRANT["docker-grants.sql: revoke UPDATE/DELETE on ledgers"]
+  GRANT --> AO(["Append-only enforced at the DB"]):::start
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

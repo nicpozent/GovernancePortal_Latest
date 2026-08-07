@@ -1,0 +1,8 @@
+graph LR
+  U(["Employee"]):::start --> A["Sign in (Microsoft)"]
+  A --> B["My policies — assigned & outstanding"]
+  B --> C["Open a policy → in-app preview"]
+  C --> D["Take quiz if required → pass (server-graded)"]
+  D --> E["Type name + confirm → sign"]
+  E --> F(["Acknowledged → printable certificate"]):::start
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

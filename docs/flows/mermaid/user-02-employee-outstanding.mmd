@@ -1,0 +1,9 @@
+graph LR
+  U(["Employee"]):::start --> A["My signatures"]
+  A --> B{"Status?"}
+  B -- outstanding --> C["Read & sign (user-01)"]
+  B -- signed --> D["Nothing to do"]
+  B -- new version --> E["Re-acknowledge required"]:::deny
+  E --> C
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;

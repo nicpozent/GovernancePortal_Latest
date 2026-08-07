@@ -1,0 +1,12 @@
+graph LR
+  N(["New policy"]):::start --> SRC["Pick SharePoint document (Sites.Selected)"]
+  SRC --> META["Set name · version · due date · owner"]
+  META --> ASG["Assign to group(s) → effective audience"]
+  ASG --> WF{"Approval workflow?"}
+  WF -- no --> PUB["Publish (or mark approved externally)"]
+  WF -- yes --> APR["Approval chain (see 03)"]
+  APR --> PUB
+  PUB --> VIS["Visible to assigned population"]
+  VIS --> NV["Edit to a NEW version → re-acknowledge required"]
+  NV --> META
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;

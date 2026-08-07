@@ -1,0 +1,10 @@
+graph LR
+  SRC(["Source (downloaded, no egress)"]):::start --> BUILD["docker compose build"]
+  BUILD --> IMG["web · api · db images"]
+  IMG --> ENV["deploy/.env + certs/ (self-signed or supplied)"]
+  ENV --> UP["docker compose up -d"]
+  UP --> HC{"Healthchecks pass?"}
+  HC -- yes --> LIVE(["nginx edge: SPA · /api · TLS"]):::start
+  HC -- no --> DIAG["Troubleshoot (.env in deploy/, LF endings, TLS)"]:::deny
+  classDef start fill:#2a4c8f,stroke:#22407a,color:#ffffff,font-weight:600;
+  classDef deny fill:#f7dede,stroke:#b23a3a,color:#7a1f1f;
