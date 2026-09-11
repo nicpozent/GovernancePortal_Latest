@@ -146,7 +146,7 @@ test('PUT /trainings refuses a SharePoint-sourced policy (#7b)', async (t) => {
 test('updating a workflow-governed upload resets its approval (#7b)', async (t) => {
   if (!dbUp) return t.skip('no test database');
   const admin = await db.seedEmployee({ name: 'Admin' });
-  const pol = db.uuid();
+  const pol = db.uuid(990002);
   await db.superPool.query(
     `insert into policies (id, name, doc_type, version, sharepoint_url, source, owner, owner_oid, approval_state, approved_externally, approved_version)
      values ($1,'T','Training','v1','','Upload','Admin',$2,'published',false,'v1')`, [pol, admin]);

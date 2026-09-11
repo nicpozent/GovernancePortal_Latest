@@ -143,10 +143,10 @@ test('policy create is transactional: a bad group id leaves no half-written poli
   const admin = await db.seedEmployee({ name: 'Admin' });
   const grp = await db.seedGroup({ kind: 'Local' });
   h.asAdmin(admin);
-  const bogus = db.uuid(); // not a real group id → policy_groups FK violation mid-loop
+  const bogus = db.uuid(990001); // valid format, but not a real group id → policy_groups FK violation mid-loop
   const before = (await db.superPool.query('select count(*)::int n from policies')).rows[0].n;
   const res = await request(h.app).post('/api/policies')
-    .send({ name: 'Half', docType: 'Policy', version: 'v1', groupIds: [grp, bogus] });
+    .send({ name: 'Half', docType: 'Policy', version: 'v1', sharepointUrl: 'https://sp/x', groupIds: [grp, bogus] });
   assert.equal(res.status, 500, 'the FK violation fails the request');
   const after = (await db.superPool.query('select count(*)::int n from policies')).rows[0].n;
   assert.equal(after, before, 'no policy row persisted — the whole create rolled back');
