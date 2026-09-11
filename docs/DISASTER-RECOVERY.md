@@ -34,7 +34,7 @@ optimise:
 
 | Objective | Target | How it's met |
 |---|---|---|
-| **RPO** (max data loss) | ≤ 24 h; ~0 for planned changes | Daily DB dump + daily uploads mirror; **manual backup before any risky change** |
+| **RPO** (max data loss) | ≤ 24 h; ~0 for planned changes | Daily DB dump + daily dated uploads snapshot; **manual backup before any risky change** |
 | **RTO** (time to recover) | ≤ 4 h onto a fresh host | This runbook, rehearsed |
 | **Availability** | Single instance; restart-on-failure | `restart: unless-stopped` + host monitoring |
 
@@ -82,7 +82,7 @@ off the VM.** Confirm all four:
 2. **A full application backup is going OFF-HOST.** Schedule
    `backup-all.ps1 -Dest \\backup-server\governance` (or a mounted Azure Files path).
    It now writes the zip (code + `database.sql`) **and** mirrors `uploads/` to
-   `<Dest>\uploads-mirror` in one run — so a single off-host `-Dest` covers assets
+   `<Dest>\uploads-<timestamp>` in one run — so a single off-host `-Dest` covers assets
    1 **and** 2. It warns if `-Dest` is a local path.
 3. **(Optional, more frequent) uploads-only mirror.** If you want uploads captured
    more often than the full backup, schedule `backup-uploads.ps1 -Dest <off-host>`
@@ -156,7 +156,7 @@ files** off-host in a single run.
 Start-ScheduledTask -TaskName "Governance Full Backup"   # run it now, don't wait for 2am
 Get-ScheduledTaskInfo -TaskName "Governance Full Backup" # check LastTaskResult = 0 (success)
 ```
-Then confirm a fresh `governance-full-*.zip` **and** an `uploads-mirror\` folder
+Then confirm a fresh `governance-full-*.zip` **and** a matching `uploads-<timestamp>\` folder
 appeared at your `-Dest`.
 
 > If you want the uploaded files captured *more often* than the daily full backup,
@@ -207,14 +207,14 @@ mandatory.)
 ## 5. SCENARIO B — A training file is missing/corrupt (data intact)
 
 The DB is fine but a specific uploaded document won't open (the serve route returns
-`missing_file`). Restore just that file from the uploads mirror.
+`missing_file`). Restore just that file from the matching-day uploads snapshot.
 
 ```powershell
 # Find the storage key: the portal shows the doc; or query it.
 docker compose exec -T db psql -U postgres -d governance `
   -c "select id, name, upload_path from policies where source='Upload' order by updated_at desc limit 20;"
 
-# Copy the file back from the off-host uploads mirror into the live volume.
+# Copy the file back from the matching-day off-host uploads snapshot into the live volume.
 Copy-Item "\\backup-server\governance\uploads\<upload_path>" ".\uploads\<upload_path>" -Force
 ```
 
@@ -263,7 +263,7 @@ docker compose up -d --build
 Then **§7 Verify**, then repoint DNS/Front Door to the new host.
 
 > **Data-loss window (RPO):** the restore is as fresh as your newest DB dump AND
-> uploads mirror. Restore matching-day copies of both so the ledger and the files
+> uploads snapshot. Restore the SAME-timestamp copies of both so the ledger and the files
 > agree.
 
 ---
