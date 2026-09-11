@@ -22,8 +22,20 @@ function isSafeHttpUrl(raw) {
   let u;
   try { u = new URL(String(raw)); } catch { return false; }
   if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
-  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');   // strip IPv6 brackets
+  let host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');   // strip IPv6 brackets
   if (!host) return false;
+  // Normalise an IPv4-mapped IPv6 address down to its embedded IPv4 so the v4
+  // loopback/metadata rules below apply. Node stores ::ffff:127.0.0.1 in HEX
+  // form (::ffff:7f00:1), so decode the two trailing hextets back to dotted IPv4;
+  // otherwise ::ffff:127.0.0.1 / ::ffff:169.254.169.254 would slip past.
+  const hexMapped = host.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hexMapped) {
+    const hi = parseInt(hexMapped[1], 16), lo = parseInt(hexMapped[2], 16);
+    host = `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+  } else {
+    const dotMapped = host.match(/:ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+    if (dotMapped) host = dotMapped[1];
+  }
   if (host === 'localhost' || host.endsWith('.localhost')) return false;
   if (host === '127.0.0.1' || host.startsWith('127.')) return false;
   if (host === '0.0.0.0' || host === '::' || host === '::1') return false;

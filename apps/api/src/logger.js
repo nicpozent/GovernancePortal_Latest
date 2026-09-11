@@ -40,6 +40,9 @@ async function forwardEvent(cfgRow, event) {
   try {
     const res = await fetch(cfgRow.forward_url, {
       method: 'POST', headers, body: JSON.stringify(event), signal: ctrl.signal,
+      // Never follow a redirect — a permitted host could 302 to an internal
+      // target (SSRF). A 3xx is treated as a failed delivery instead.
+      redirect: 'manual',
     });
     return { ok: res.ok, status: res.status };
   } catch (e) {

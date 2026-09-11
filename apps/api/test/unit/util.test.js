@@ -27,6 +27,14 @@ test('isSafeHttpUrl blocks loopback, link-local and bad schemes', () => {
   assert.equal(isSafeHttpUrl(''), false);
 });
 
+test('isSafeHttpUrl blocks IPv4-mapped IPv6 loopback/metadata (#19)', () => {
+  assert.equal(isSafeHttpUrl('http://[::ffff:127.0.0.1]/x'), false);        // mapped loopback
+  assert.equal(isSafeHttpUrl('http://[::ffff:169.254.169.254]/x'), false);  // mapped metadata
+  assert.equal(isSafeHttpUrl('http://[0:0:0:0:0:0:0:1]/x'), false);         // expanded ::1
+  // A genuinely internal SIEM on a private range is still allowed (by design).
+  assert.equal(isSafeHttpUrl('http://[::ffff:10.0.0.5]/ingest'), true);
+});
+
 test('pgEnvFrom maps a connection string to PG* env without leaking into argv', () => {
   const env = pgEnvFrom('postgres://user:p%40ss@db.host:6432/governance', { PATH: '/bin' });
   assert.equal(env.PGHOST, 'db.host');
