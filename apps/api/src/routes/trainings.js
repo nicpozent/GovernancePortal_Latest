@@ -4,6 +4,7 @@ const { requireManager } = require('../auth');
 const { isAdmin, audit, canManage, canRead } = require('../authz');
 const { UPLOAD_TYPES, withUpload, MGR_DOC_TYPES } = require('../uploads');
 const storage = require('../storage');
+const { guardConfidentialShare } = require('./share');
 const path = require('path');
 
 module.exports = (r) => {
@@ -72,8 +73,15 @@ r.put('/trainings/:id', requireManager, withUpload, async (req, res) => {
   if (!(await canManage(req, req.params.id))) return res.status(403).json({ error: 'forbidden', detail: 'not your training' });
   const { name, version, groupIds, dueDate, dueDays, reviewDate, versionNote } = req.body || {};
   let { docType } = req.body || {};
-  const prev = (await pool.query('select version, upload_path, doc_type, source, approval_state, approved_externally from policies where id=$1', [req.params.id])).rows[0];
+  const prev = (await pool.query('select version, upload_path, doc_type, source, approval_state, approved_externally, confidential, confidential_by from policies where id=$1', [req.params.id])).rows[0];
   if (!prev) return res.status(404).json({ error: 'not_found' });
+  // #17: on a confidential document, a non-gatekeeper/non-admin cannot expand the
+  // recipient set here — they must file a share request the gatekeeper approves.
+  if (prev.confidential && (Array.isArray(req.body.groupIds) || typeof req.body.groupIds === 'string')) {
+    const desired = Array.isArray(req.body.groupIds) ? req.body.groupIds : String(req.body.groupIds).split(',').filter(Boolean);
+    const guard = await guardConfidentialShare(req, { id: req.params.id, confidential: prev.confidential, confidential_by: prev.confidential_by }, desired);
+    if (!guard.ok) return res.status(403).json({ error: 'confidential_share_request_required', detail: 'This document is confidential — request approval to share it with additional groups.', groups: guard.added });
+  }
   // This route manages UPLOADED documents only. A SharePoint-sourced policy must
   // be edited through the policy editor (PUT /policies/:id), which resets approval
   // on a content change — otherwise this route would be a way to change an

@@ -43,5 +43,6 @@ require('./admin')(r);
 require('./dashboards')(r);
 require('./approvals')(r);
 require('./approval-templates')(r);
+require('./share')(r);
 
 module.exports = r;

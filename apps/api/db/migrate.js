@@ -41,6 +41,7 @@ const MIGRATIONS = [
   'migration_025_gdpr_approver_nullable.sql',
   'migration_026_immutable_revisions.sql',
   'migration_027_signature_idempotent.sql',
+  'migration_028_confidential_share.sql',
 ];
 const GRANTS = 'docker-grants.sql';
 
