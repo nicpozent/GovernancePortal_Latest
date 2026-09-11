@@ -373,3 +373,63 @@ export function PolicyHistoryModal({ detail, onClose }) {
     </div>
   );
 }
+
+// Frozen content revisions (ADR-121): the immutable, content-addressed snapshots
+// that acknowledgements are bound to. Each row can be verified on demand — the
+// server re-hashes the stored bytes and compares to what was recorded at freeze.
+export function PolicyRevisionsModal({ detail, onClose, onVerify }) {
+  const stop = (e) => e.stopPropagation();
+  const rows = detail.rows;
+  const [checks, setChecks] = useState({});   // revId -> { loading } | { ok } | { error }
+  const short = (h) => (h ? h.slice(0, 12) + '…' : '—');
+  const kb = (n) => (n == null ? '—' : n < 1024 ? n + ' B' : (n / 1024).toFixed(1) + ' KB');
+  const verify = async (rev) => {
+    setChecks((c) => ({ ...c, [rev.id]: { loading: true } }));
+    try { const r = await onVerify(rev.id); setChecks((c) => ({ ...c, [rev.id]: { ok: !!r.ok, integrity: r.integrity, detail: r.detail } })); }
+    catch (e) { setChecks((c) => ({ ...c, [rev.id]: { error: e.message } })); }
+  };
+  const badge = (bg, fg, txt) => (
+    <span style={{ font:'600 9.5px/1.3 "IBM Plex Mono",monospace', letterSpacing:'.05em', textTransform:'uppercase', color:fg, background:bg, padding:'2px 7px', borderRadius:'999px' }}>{txt}</span>
+  );
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(20,26,48,.55)', display:'flex', alignItems:'center', justifyContent:'center', padding:'36px', zIndex:58, animation:'ovIn .18s ease' }} onClick={onClose}>
+      <div style={{ width:'620px', maxWidth:'100%', maxHeight:'82vh', background:'var(--surface)', borderRadius:'16px', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 24px 60px rgba(10,16,40,.34)', animation:'cardUp .22s ease' }} onClick={stop}>
+        <div style={{ flex:'none', padding:'22px 26px 16px', borderBottom:'1px solid var(--ceceef4)', display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
+          <div><div style={{ font:'600 17px/1.2 "IBM Plex Sans"', color:'var(--c161a26)' }}>Content revisions</div><div style={{ font:'400 12px/1.3 "IBM Plex Sans"', color:'var(--c7b8294)', marginTop:'3px' }}>{detail.policy.name} — immutable snapshots employees acknowledged</div></div>
+          <button style={{ border:'none', background:'var(--cf3f4f8)', width:'34px', height:'34px', borderRadius:'9px', cursor:'pointer', color:'var(--c54607a)', display:'flex', alignItems:'center', justifyContent:'center' }} onClick={onClose}><Ico size={17} sw={2.2} d="M6 6l12 12M18 6L6 18" /></button>
+        </div>
+        <div style={{ flex:1, overflowY:'auto', padding:'18px 26px' }}>
+          {!rows && <div style={{ height:'120px', display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ width:'24px', height:'24px', border:'3px solid var(--cd2d7e3)', borderTopColor:'var(--c213a9e)', borderRadius:'50%', display:'inline-block', animation:'spin .7s linear infinite' }}></span></div>}
+          {rows && rows.map((v) => {
+            const chk = checks[v.id];
+            return (
+              <div key={v.id} style={{ border:'1px solid var(--ceceef4)', borderRadius:'12px', padding:'13px 15px', marginBottom:'12px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'9px', flexWrap:'wrap' }}>
+                  <span style={{ font:'600 14px/1.2 "IBM Plex Sans"', color:'var(--c23283a)' }}>{v.version_label}</span>
+                  {v.is_current && badge('var(--ceef1fb)', 'var(--c213a9e)', 'Current')}
+                  {v.integrity === 'verified'
+                    ? badge('var(--surface)', 'var(--c1f9d6b)', 'Verified')
+                    : badge('var(--surface)', 'var(--caab0c0)', 'Legacy')}
+                  <span style={{ marginLeft:'auto', font:'400 12px/1.3 "IBM Plex Sans"', color:'var(--c54607a)' }}>{v.signatures} signature{v.signatures === 1 ? '' : 's'}</span>
+                </div>
+                <div style={{ font:'400 11px/1.5 "IBM Plex Mono",monospace', color:'var(--caab0c0)', marginTop:'6px' }}>
+                  {v.source} · {kb(v.content_size)} · sha256 {short(v.content_sha256)} · frozen {fmtDate(v.frozen_at)}
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:'10px', marginTop:'10px' }}>
+                  <button disabled={v.integrity !== 'verified' || (chk && chk.loading)} onClick={() => verify(v)}
+                    style={{ border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c213a9e)', borderRadius:'9px', padding:'7px 13px', font:'600 12.5px/1 "IBM Plex Sans"', cursor:v.integrity==='verified'?'pointer':'not-allowed', opacity:v.integrity==='verified'?1:.5 }}>
+                    {chk && chk.loading ? 'Verifying…' : 'Verify integrity'}
+                  </button>
+                  {chk && !chk.loading && chk.ok === true && <span style={{ font:'600 12.5px/1.3 "IBM Plex Sans"', color:'var(--c1f9d6b)' }}>✓ Bytes match the recorded hash</span>}
+                  {chk && !chk.loading && chk.ok === false && <span style={{ font:'600 12.5px/1.3 "IBM Plex Sans"', color:'var(--cc0143c)' }}>✗ {chk.detail || 'Content does not match — tampered or corrupted'}</span>}
+                  {chk && chk.error && <span style={{ font:'600 12.5px/1.3 "IBM Plex Sans"', color:'var(--cc0143c)' }}>Could not verify: {chk.error}</span>}
+                </div>
+              </div>
+            );
+          })}
+          {rows && !rows.length && <Empty msg="No frozen revisions yet — one is captured the first time this document is acknowledged." />}
+        </div>
+      </div>
+    </div>
+  );
+}

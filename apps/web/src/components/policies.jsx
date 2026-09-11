@@ -6,7 +6,7 @@ import { StatCard, Empty } from './common.jsx';
 import { QuizTake } from './quiz.jsx';
 import { ApprovalBadge } from './approvals.jsx';
 
-export function PolicyLibrary({ typeTabs, setActiveType, polCards, polTab, switchPolTab, archivedCards, openAddPolicy, openEdit, openReader, onArchive, onRestore, onQuiz, onHistory, onApprovals }) {
+export function PolicyLibrary({ typeTabs, setActiveType, polCards, polTab, switchPolTab, archivedCards, openAddPolicy, openEdit, openReader, onArchive, onRestore, onQuiz, onHistory, onRevisions, onApprovals }) {
   return (
     <div>
       <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'18px' }}>
@@ -55,6 +55,7 @@ export function PolicyLibrary({ typeTabs, setActiveType, polCards, polTab, switc
               <button title="Knowledge check" style={{ border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c6d4bd1)', borderRadius:'9px', padding:'9px 12px', cursor:'pointer', display:'flex', alignItems:'center', gap:'6px', font:'600 13px/1 "IBM Plex Sans"' }} onClick={()=>onQuiz(p)}><Ico size={15} sw={1.9}><path d="M9.1 9a3 3 0 1 1 4 2.8c-.8.3-1.1.9-1.1 1.7v.5"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></Ico>Quiz</button>
               <button title="Approval workflow" style={{ border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c213a9e)', borderRadius:'9px', padding:'9px 11px', cursor:'pointer', display:'flex', alignItems:'center' }} onClick={()=>onApprovals(p)}><Ico size={16} sw={1.9}><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></Ico></button>
               <button title="Version history" style={{ border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c54607a)', borderRadius:'9px', padding:'9px 11px', cursor:'pointer', display:'flex', alignItems:'center' }} onClick={()=>onHistory(p)}><Ico size={16} sw={1.9}><path d="M3 3v5h5"/><path d="M3 8a9 9 0 1 0 2.5-5.3L3 8"/><path d="M12 8v5l3 2"/></Ico></button>
+              <button title="Content revisions" style={{ border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c54607a)', borderRadius:'9px', padding:'9px 11px', cursor:'pointer', display:'flex', alignItems:'center' }} onClick={()=>onRevisions(p)}><Ico size={16} sw={1.9}><path d="M12 2l7 4v6c0 4.5-3 7.3-7 8-4-.7-7-3.5-7-8V6z"/><path d="M9 12l2 2 4-4"/></Ico></button>
               <button title="Archive" style={{ border:'1px solid var(--cf0d6dd)', background:'var(--surface)', color:'var(--cc0143c)', borderRadius:'9px', padding:'9px 11px', cursor:'pointer', display:'flex', alignItems:'center' }} onClick={()=>onArchive(p)}><Ico size={16} sw={1.9}><path d="M3 7h18M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 7l-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7"/></Ico></button>
             </div>
           </div>

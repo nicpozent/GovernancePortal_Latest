@@ -14,7 +14,7 @@ import { useTheme } from './theme.js';
 const { useState, useEffect, useRef, useCallback } = React;
 
 /* ============================================================ */
-import { ConfirmArchive, ImportModal, SharePointPicker, MembersModal, GroupComplianceModal, ConfirmDeleteGroup, ManagerEditModal, ReceiptModal, PolicyHistoryModal } from './components/modals.jsx';
+import { ConfirmArchive, ImportModal, SharePointPicker, MembersModal, GroupComplianceModal, ConfirmDeleteGroup, ManagerEditModal, ReceiptModal, PolicyHistoryModal, PolicyRevisionsModal } from './components/modals.jsx';
 import { Dashboard, ManagerDashboard } from './components/dashboard.jsx';
 import { PolicyLibrary, MyPolicies, Reader, Drawer } from './components/policies.jsx';
 import { Employees, Groups } from './components/people.jsx';
@@ -76,6 +76,7 @@ function App() {
     setMgrReminding(false);
   };
   const [policyHistory, setPolicyHistory] = useState(null);
+  const [policyRevisions, setPolicyRevisions] = useState(null);
   const [approvals, setApprovals] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const { theme, toggle: toggleTheme } = useTheme();
@@ -83,6 +84,11 @@ function App() {
     setPolicyHistory({ policy: p, rows: null });
     try { const rows = await api.policyVersions(p.id); setPolicyHistory({ policy: p, rows }); }
     catch (e) { showToast('Could not load history: ' + e.message, true); setPolicyHistory(null); }
+  };
+  const openPolicyRevisions = async (p) => {
+    setPolicyRevisions({ policy: p, rows: null });
+    try { const rows = await api.policyRevisions(p.id); setPolicyRevisions({ policy: p, rows }); }
+    catch (e) { showToast('Could not load revisions: ' + e.message, true); setPolicyRevisions(null); }
   };
   const [formerEmps, setFormerEmps] = useState([]);
   const [empTab, setEmpTab] = useState('active');
@@ -697,7 +703,7 @@ function App() {
 
         <main style={{ flex:1, overflowY:'auto', padding:'28px 30px 40px' }}>
           {view==='dashboard' && <Dashboard {...{ kpis, polRows, recent, attention, deptRows, groupRows, dashLayout, setDashLayout, onGroup:openGroupDetail, onExport:exportReport, exporting, exportScope, setExportScope, onReminders:sendReminders, sendingReminders }} />}
-          {view==='policies' && <PolicyLibrary {...{ typeTabs, setActiveType, polCards, polTab, switchPolTab, archivedCards, openAddPolicy:()=>openDrawer('policy','add'), openEdit:(p)=>openDrawer('policy','edit',{...p.raw,_groupIds:groupIdsFor(p.raw,grps)}), openReader, onArchive:(p)=>setConfirmArchive(p.raw), onRestore:doRestore, onQuiz:(p)=>openQuizBuilder(p.raw), onHistory:(p)=>openPolicyHistory(p.raw), onApprovals:(p)=>setApprovals({ policy:p.raw }) }} />}
+          {view==='policies' && <PolicyLibrary {...{ typeTabs, setActiveType, polCards, polTab, switchPolTab, archivedCards, openAddPolicy:()=>openDrawer('policy','add'), openEdit:(p)=>openDrawer('policy','edit',{...p.raw,_groupIds:groupIdsFor(p.raw,grps)}), openReader, onArchive:(p)=>setConfirmArchive(p.raw), onRestore:doRestore, onQuiz:(p)=>openQuizBuilder(p.raw), onHistory:(p)=>openPolicyHistory(p.raw), onRevisions:(p)=>openPolicyRevisions(p.raw), onApprovals:(p)=>setApprovals({ policy:p.raw }) }} />}
           {view==='employees' && <Employees {...{ empFilters, empFilter, setEmpFilter, empList, adCount, entraCount, syncing, syncNow, openAdd:()=>openDrawer('employee','add'), onImport:importEmployeesCsv, onEditManager:(e)=>setManagerEdit(e), syncInfo, formerEmps, empTab, setEmpTab }} />}
           {view==='groups' && <Groups {...{ platformCards, groupTab, switchGroupTab, archivedGroups, openAddGroup:()=>openDrawer('group','add'), openImport, removeMapping, onMembers:openMembers, onArchive:doArchiveGroup, onRestore:doRestoreGroup, onDelete:(g)=>setConfirmDeleteGroup(g) }} />}
           {view==='audit' && <AuditLog rows={auditRows} onBackup={downloadBackup} backingUp={backingUp} />}
@@ -717,6 +723,7 @@ function App() {
       {reader && <Reader {...{ reader, onClose:()=>setReader(null), signFirst, signLast, signAgreed, setSignFirst, setSignLast, setSignAgreed, submitSign, quizState, setQuizAnswer, submitQuizAttempt, retryQuiz }} />}
       {receipt && <ReceiptModal receipt={receipt} onClose={()=>setReceipt(null)} />}
       {policyHistory && <PolicyHistoryModal detail={policyHistory} onClose={()=>setPolicyHistory(null)} />}
+      {policyRevisions && <PolicyRevisionsModal detail={policyRevisions} onClose={()=>setPolicyRevisions(null)} onVerify={(revId)=>api.verifyRevision(policyRevisions.policy.id, revId)} />}
       {approvals && <ApprovalsModal policy={approvals.policy} onClose={()=>setApprovals(null)} onChanged={()=>loadView(view)} toast={showToast} />}
       {trainEdit && <TrainingEditor state={trainEdit} groups={trainGroups} onClose={()=>setTrainEdit(null)} onSave={saveTraining} />}
       {importOpen && <ImportModal {...{ onClose:()=>setImportOpen(false), platformGroups, impTarget, setImpTarget, impSearch, setImpSearch, importList, impSel, setImpSel, impTargetName, doImport }} />}

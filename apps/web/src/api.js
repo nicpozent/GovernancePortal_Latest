@@ -157,6 +157,9 @@ export const api = {
   testForward:    ()                  => request('POST', '/api/integrations/test'),
   syncStatus:     ()                  => request('GET',  '/api/sync/status'),
   policyVersions: (id)                => request('GET',  `/api/policies/${id}/versions`),
+  // ── frozen content revisions (ADR-121): the immutable snapshots employees signed ──
+  policyRevisions:(id)                => request('GET',  `/api/policies/${id}/revisions`),
+  verifyRevision: (id, revId)         => request('GET',  `/api/policies/${id}/revisions/${revId}/verify`),
   formerEmployees:()                  => request('GET',  '/api/employees/former'),
   quizAnalytics:  (id)                => request('GET',  `/api/policies/${id}/quiz/analytics`),
   archiveGroup:   (id)                => request('POST', `/api/groups/${id}/archive`),
