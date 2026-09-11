@@ -29,8 +29,15 @@ let testUser = null;
 require.cache[authPath].exports = {
   ...realAuth,
   requireAuth: (req, res, next) => {
-    if (!testUser) return res.status(401).json({ error: 'missing_token' });
-    req.user = testUser;
+    // Per-request identity override (for concurrency tests that need two
+    // different principals in flight at once, which the single global testUser
+    // can't express). Falls back to testUser when the header is absent.
+    const hdrOid = req.headers['x-test-oid'];
+    const u = hdrOid
+      ? { oid: hdrOid, name: 'Test', upn: 'u@x', roles: (req.headers['x-test-roles'] || '').split(',').filter(Boolean), scopes: ['access_as_user'] }
+      : testUser;
+    if (!u) return res.status(401).json({ error: 'missing_token' });
+    req.user = u;
     next();
   },
 };

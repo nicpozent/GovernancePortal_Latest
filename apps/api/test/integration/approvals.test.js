@@ -69,6 +69,32 @@ test('full chain: configure → submit gates visibility → sequential approve �
   assert.equal(await seesPolicy(s.pol), true, 'published again → member sees it');
 });
 
+test('concurrent final-step approvals are serialized (no stuck in_review)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const s = await scenario();
+  h.asAdmin(s.admin);
+  // ONE step, rule 'all', two approvers → the step needs BOTH to approve.
+  assert.equal((await request(h.app).put(`/api/policies/${s.pol}/approvers`)
+    .send({ steps: [{ approverOids: [s.a1, s.a2], rule: 'all' }] })).status, 200);
+  assert.equal((await request(h.app).post(`/api/policies/${s.pol}/submit`)).body.approval_state, 'in_review');
+
+  // Both approvers decide AT THE SAME TIME (distinct per-request identities).
+  // Pre-fix, both handlers read approvedOids=[] and neither flips the step to
+  // approved → the policy is stuck in_review with two decisions. The row lock
+  // serializes them so the second sees the first and the step completes.
+  const [r1, r2] = await Promise.all([
+    request(h.app).post(`/api/policies/${s.pol}/approve`).set('X-Test-Oid', s.a1),
+    request(h.app).post(`/api/policies/${s.pol}/approve`).set('X-Test-Oid', s.a2),
+  ]);
+  assert.equal(r1.status, 200, 'first approval accepted');
+  assert.equal(r2.status, 200, 'second approval accepted');
+
+  h.asAdmin(s.admin);
+  const st = (await request(h.app).get(`/api/policies/${s.pol}/approvals`)).body;
+  assert.equal(st.approval_state, 'approved', 'both approvals recognized → approved, not stuck in_review');
+  assert.equal(st.decisions.filter((d) => d.decision === 'approved').length, 2, 'both decisions recorded once each');
+});
+
 test('an approved/published version cannot be re-submitted without a new version', async (t) => {
   if (!dbUp) return t.skip('no test database');
   const s = await scenario();

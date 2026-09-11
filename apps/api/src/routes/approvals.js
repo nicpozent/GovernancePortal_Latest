@@ -80,23 +80,26 @@ async function expandGroups(policyId) {
 // current version, per-step run approvals, and which step is currently awaiting
 // a decision. The step list is authoritative from policy_approval_steps, unioned
 // with any positions that carry approvers/groups (defensive / pre-2b data).
-async function ctx(policyId) {
-  const p = (await pool.query(
+// `db` is the query executor: the shared pool by default, or a transaction
+// client when the caller has taken a `select ... for update` lock on the policy
+// (see decide/withdraw/publish) so the context is read atomically under the lock.
+async function ctx(policyId, db = pool) {
+  const p = (await db.query(
     'select id, name, version, owner_oid, approval_state, approved_version, submitted_at from policies where id=$1',
     [policyId])).rows[0];
   if (!p) return null;
-  const approverRows = (await pool.query(
+  const approverRows = (await db.query(
     `select pa.position, pa.approver_oid, pa.from_group, e.display_name from policy_approvers pa
        left join employees e on e.oid = pa.approver_oid
       where pa.policy_id=$1 order by pa.position, pa.approver_oid`, [policyId])).rows;
-  const groupRows = (await pool.query(
+  const groupRows = (await db.query(
     `select pg.position, pg.group_id, g.name from policy_approver_groups pg
        left join groups g on g.id = pg.group_id
       where pg.policy_id=$1 order by pg.position, pg.group_id`, [policyId])).rows;
-  const ruleRows = (await pool.query(
+  const ruleRows = (await db.query(
     'select position, rule, required from policy_approval_steps where policy_id=$1', [policyId])).rows;
   const rules = new Map(ruleRows.map((r) => [r.position, r]));
-  const decisions = (await pool.query(
+  const decisions = (await db.query(
     `select step_position, approver_oid, decision, comment, decided_at from policy_approvals
       where policy_id=$1 and policy_version=$2 order by decided_at`, [policyId, p.version])).rows;
 
@@ -214,43 +217,59 @@ module.exports = (r) => {
   });
 
   // ── a step decision (a current-step approver, or admin override) ──
+  // Atomic: one transaction, with the policy row locked `for update` so two
+  // approvers deciding the final step concurrently are serialized — the second
+  // sees the first's decision and the state machine can't get stuck in_review.
   async function decide(req, res, decision) {
-    const c = await ctx(req.params.id);
-    if (!c) return res.status(404).json({ error: 'not_found' });
-    if (c.p.approval_state !== 'in_review' || !c.currentStep) return res.status(409).json({ error: 'bad_state', detail: 'This policy is not awaiting your approval.' });
-    const step = c.currentStep;
-    const isMember = step.approvers.some((a) => a.oid === req.user.oid);
-    if (!isMember && !isAdmin(req)) return res.status(403).json({ error: 'not_pending_approver' });
-    if (decision === 'approved' && step.approvedOids.includes(req.user.oid)) {
-      return res.status(409).json({ error: 'bad_state', detail: 'You have already approved this step.' });
-    }
-    const comment = ((req.body && req.body.comment) || '').trim();
-    if ((decision === 'rejected' || decision === 'changes_requested') && !comment) {
-      return res.status(400).json({ error: 'comment_required', detail: 'A comment is required to reject or request changes.' });
-    }
-    await pool.query(
-      'insert into policy_approvals (policy_id, policy_version, step_position, approver_oid, decision, comment) values ($1,$2,$3,$4,$5,$6)',
-      [c.p.id, c.p.version, step.position, req.user.oid, decision, comment || null]);
-
-    let state = 'in_review', nextStep = null;
-    if (decision === 'rejected') state = 'rejected';
-    else if (decision === 'changes_requested') state = 'changes_requested';
-    else {
-      // Does this approval satisfy the current step?
-      const nowApproved = new Set([...step.approvedOids, req.user.oid]).size;
-      if (nowApproved >= step.required) {
-        const later = c.steps.filter((s) => s.position > step.position);
-        if (!later.length) state = 'approved';
-        else nextStep = later[0];
+    const client = await pool.connect();
+    let c, step, state = 'in_review', nextStep = null, comment;
+    try {
+      await client.query('begin');
+      const locked = (await client.query('select id from policies where id=$1 for update', [req.params.id])).rows[0];
+      if (!locked) { await client.query('rollback'); return res.status(404).json({ error: 'not_found' }); }
+      c = await ctx(req.params.id, client);
+      if (c.p.approval_state !== 'in_review' || !c.currentStep) { await client.query('rollback'); return res.status(409).json({ error: 'bad_state', detail: 'This policy is not awaiting your approval.' }); }
+      step = c.currentStep;
+      const isMember = step.approvers.some((a) => a.oid === req.user.oid);
+      if (!isMember && !isAdmin(req)) { await client.query('rollback'); return res.status(403).json({ error: 'not_pending_approver' }); }
+      if (decision === 'approved' && step.approvedOids.includes(req.user.oid)) {
+        await client.query('rollback'); return res.status(409).json({ error: 'bad_state', detail: 'You have already approved this step.' });
       }
-    }
-    if (state === 'approved') {
-      await pool.query("update policies set approval_state='approved', approved_version=$2, updated_at=now() where id=$1", [c.p.id, c.p.version]);
-    } else if (state !== 'in_review') {
-      await pool.query('update policies set approval_state=$2, updated_at=now() where id=$1', [c.p.id, state]);
-    }
-    await audit(req, 'policy.approval.' + decision, c.p.name, { id: c.p.id, version: c.p.version, step: step.position });
+      comment = ((req.body && req.body.comment) || '').trim();
+      if ((decision === 'rejected' || decision === 'changes_requested') && !comment) {
+        await client.query('rollback'); return res.status(400).json({ error: 'comment_required', detail: 'A comment is required to reject or request changes.' });
+      }
+      await client.query(
+        'insert into policy_approvals (policy_id, policy_version, step_position, approver_oid, decision, comment) values ($1,$2,$3,$4,$5,$6)',
+        [c.p.id, c.p.version, step.position, req.user.oid, decision, comment || null]);
 
+      if (decision === 'rejected') state = 'rejected';
+      else if (decision === 'changes_requested') state = 'changes_requested';
+      else {
+        // Does this approval satisfy the current step? (approvedOids read under the lock.)
+        const nowApproved = new Set([...step.approvedOids, req.user.oid]).size;
+        if (nowApproved >= step.required) {
+          const later = c.steps.filter((s) => s.position > step.position);
+          if (!later.length) state = 'approved';
+          else nextStep = later[0];
+        }
+      }
+      // Conditional update (defence in depth — we hold the lock and validated state).
+      if (state === 'approved') {
+        await client.query("update policies set approval_state='approved', approved_version=$2, updated_at=now() where id=$1 and approval_state='in_review'", [c.p.id, c.p.version]);
+      } else if (state !== 'in_review') {
+        await client.query("update policies set approval_state=$2, updated_at=now() where id=$1 and approval_state='in_review'", [c.p.id, state]);
+      }
+      await client.query('commit');
+    } catch (e) {
+      try { await client.query('rollback'); } catch { /* ignore */ }
+      console.error('[approval.decide]', e.message);
+      return res.status(500).json({ error: 'server_error' });
+    } finally {
+      client.release();
+    }
+    // Reached only on the success path (early returns / errors above return first).
+    await audit(req, 'policy.approval.' + decision, c.p.name, { id: c.p.id, version: c.p.version, step: step.position });
     // Notify: the next step's approvers when the chain advances, else the owner.
     if (decision === 'approved' && nextStep) {
       notifyStep(c.p, nextStep);
@@ -269,25 +288,46 @@ module.exports = (r) => {
   r.post('/policies/:id/request-changes', (req, res) => decide(req, res, 'changes_requested'));
 
   // ── withdraw (owner/admin): in_review -> draft ──
+  // Locked so a withdraw can't race a concurrent final approval into an
+  // inconsistent state — whichever takes the lock first wins; the other sees
+  // the updated state and 409s.
   r.post('/policies/:id/withdraw', async (req, res) => {
-    const c = await ctx(req.params.id);
-    if (!c) return res.status(404).json({ error: 'not_found' });
-    if (!canGovern(req, c.p)) return res.status(403).json({ error: 'forbidden' });
-    if (c.p.approval_state !== 'in_review') return res.status(409).json({ error: 'bad_state' });
-    await pool.query("update policies set approval_state='draft', updated_at=now() where id=$1", [c.p.id]);
-    await audit(req, 'policy.approval.withdraw', c.p.name, { id: c.p.id });
-    res.json({ ok: true, approval_state: 'draft' });
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      const p = (await client.query('select id, name, owner_oid, approval_state from policies where id=$1 for update', [req.params.id])).rows[0];
+      if (!p) { await client.query('rollback'); return res.status(404).json({ error: 'not_found' }); }
+      if (!canGovern(req, p)) { await client.query('rollback'); return res.status(403).json({ error: 'forbidden' }); }
+      if (p.approval_state !== 'in_review') { await client.query('rollback'); return res.status(409).json({ error: 'bad_state' }); }
+      await client.query("update policies set approval_state='draft', updated_at=now() where id=$1 and approval_state='in_review'", [p.id]);
+      await client.query('commit');
+      await audit(req, 'policy.approval.withdraw', p.name, { id: p.id });
+      res.json({ ok: true, approval_state: 'draft' });
+    } catch (e) {
+      try { await client.query('rollback'); } catch { /* ignore */ }
+      console.error('[approval.withdraw]', e.message);
+      res.status(500).json({ error: 'server_error' });
+    } finally { client.release(); }
   });
 
   // ── publish (owner/admin): approved -> published ──
   r.post('/policies/:id/publish', async (req, res) => {
-    const c = await ctx(req.params.id);
-    if (!c) return res.status(404).json({ error: 'not_found' });
-    if (!canGovern(req, c.p)) return res.status(403).json({ error: 'forbidden' });
-    if (c.p.approval_state !== 'approved') return res.status(409).json({ error: 'not_approved', detail: 'Only an approved policy can be published.' });
-    await pool.query("update policies set approval_state='published', updated_at=now() where id=$1", [c.p.id]);
-    await audit(req, 'policy.approval.publish', c.p.name, { id: c.p.id, version: c.p.version });
-    res.json({ ok: true, approval_state: 'published' });
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      const p = (await client.query('select id, name, owner_oid, version, approval_state from policies where id=$1 for update', [req.params.id])).rows[0];
+      if (!p) { await client.query('rollback'); return res.status(404).json({ error: 'not_found' }); }
+      if (!canGovern(req, p)) { await client.query('rollback'); return res.status(403).json({ error: 'forbidden' }); }
+      if (p.approval_state !== 'approved') { await client.query('rollback'); return res.status(409).json({ error: 'not_approved', detail: 'Only an approved policy can be published.' }); }
+      await client.query("update policies set approval_state='published', updated_at=now() where id=$1 and approval_state='approved'", [p.id]);
+      await client.query('commit');
+      await audit(req, 'policy.approval.publish', p.name, { id: p.id, version: p.version });
+      res.json({ ok: true, approval_state: 'published' });
+    } catch (e) {
+      try { await client.query('rollback'); } catch { /* ignore */ }
+      console.error('[approval.publish]', e.message);
+      res.status(500).json({ error: 'server_error' });
+    } finally { client.release(); }
   });
 
   // ── admin escape hatch: mark approved externally (e.g. signed off in SharePoint) ──
