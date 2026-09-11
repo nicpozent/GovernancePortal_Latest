@@ -27,6 +27,10 @@ jobs:
     env:
       TEST_SUPER_DATABASE_URL: postgres://postgres:postgres@localhost:5432/governance
       DATABASE_URL: postgres://governance_app:apppw@localhost:5432/governance
+      # A DB is provided (the postgres service below), so integration tests must
+      # RUN, not skip — if the DB is unreachable the suite fails loudly rather
+      # than passing green with everything skipped (#23).
+      REQUIRE_DB: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

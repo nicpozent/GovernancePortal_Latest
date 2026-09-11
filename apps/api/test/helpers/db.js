@@ -42,9 +42,18 @@ const DATA_TABLES = [
 const superPool = new Pool({ connectionString: SUPER_URL });
 const appPool = new Pool({ connectionString: APP_URL });
 
-// Is a test database reachable? Tests call this and self-skip if false.
+// Is a test database reachable? Tests call this and self-skip if false — which is
+// right for local dev, but DANGEROUS in CI: a DB-service outage would silently
+// skip every integration test and still show green (#23). When REQUIRE_DB is set
+// (CI sets it), an unreachable DB is a hard failure instead of a skip.
 async function available() {
-  try { await superPool.query('select 1'); return true; } catch { return false; }
+  try { await superPool.query('select 1'); return true; }
+  catch (e) {
+    if (/^(1|true|yes|on)$/i.test(process.env.REQUIRE_DB || '')) {
+      throw new Error(`REQUIRE_DB is set but the test database is unreachable — refusing to skip integration tests: ${e.message}`);
+    }
+    return false;
+  }
 }
 
 // Drop & recreate the schema, ensure the app role exists, apply every SQL file.
