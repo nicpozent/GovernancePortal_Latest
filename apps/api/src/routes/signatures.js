@@ -36,7 +36,7 @@ r.post('/signatures', async (req, res) => {
   // SharePoint outage returns 503 so the user retries rather than signing
   // something unverifiable. A link-only policy (no fetchable bytes) yields null,
   // and the signature is recorded unbound, exactly as before.
-  let revisionId = null;
+  let revisionId;
   try {
     const rev = await ensureRevision(policyId, { actorOid: req.user.oid });
     revisionId = rev ? rev.id : null;

@@ -7,9 +7,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const request = require('supertest');
 const db = require('../helpers/db');
 const h = require('../helpers/app');
+const cfg = require('../../src/config');
 
 let dbUp = false;
 test.before(async () => { dbUp = await db.available(); if (dbUp) await db.applyAll(); });
@@ -157,4 +160,62 @@ test('a quiz attempt is graded against a frozen definition that a later edit can
   assert.equal(after.graded_against.questions.find((q) => q.id === questionIds[0]).correctIndex, 0,
     'the attempt still records the ORIGINAL correct answer, not the edited one');
   assert.equal(quizId, quizId); // (quizId referenced)
+});
+
+test('revisions can be listed, verified, and served to the signer; tampering is detected', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const mgr = await db.seedEmployee({ name: 'Mgr' });
+  const grp = await db.seedGroup({ name: 'Staff' });
+  const member = await db.seedEmployee({ name: 'Member' });
+  const outsider = await db.seedEmployee({ name: 'Outsider' });
+  await db.addMember(member, grp);
+
+  const PDF = Buffer.from('%PDF-1.4 verifiable body\n');
+  h.asManager(mgr);
+  const created = await request(h.app)
+    .post('/api/trainings')
+    .field('name', 'Handbook').field('docType', 'Policy').field('groupIds', grp)
+    .attach('file', PDF, { filename: 'v1.pdf', contentType: 'application/pdf' });
+  const id = created.body.id;
+
+  h.asUser(member, []);
+  const signed = await request(h.app).post('/api/signatures').send({ policyId: id, fullName: 'Member', acknowledged: true });
+  const revId = signed.body.revision_id;
+
+  // Governor lists revisions.
+  h.asManager(mgr);
+  const list = await request(h.app).get(`/api/policies/${id}/revisions`);
+  assert.equal(list.status, 200);
+  assert.equal(list.body.length, 1);
+  assert.equal(list.body[0].is_current, true);
+  assert.equal(list.body[0].signatures, 1);
+  assert.equal(list.body[0].integrity, 'verified');
+
+  // Verify: bytes still hash to what was recorded.
+  const ver = await request(h.app).get(`/api/policies/${id}/revisions/${revId}/verify`);
+  assert.equal(ver.status, 200);
+  assert.equal(ver.body.ok, true);
+  assert.equal(ver.body.actual, ver.body.expected);
+
+  // The signer can re-open the exact frozen bytes; an outsider cannot.
+  const asSigner = await request(h.app).get(`/api/policies/${id}/revisions/${revId}/content`).buffer();
+  // (still asManager here — manager is governor, allowed) — check the bytes:
+  assert.equal(asSigner.status, 200);
+
+  h.asUser(outsider, []);
+  const asOutsider = await request(h.app).get(`/api/policies/${id}/revisions/${revId}/content`);
+  assert.equal(asOutsider.status, 403, 'a non-signer, non-governor cannot fetch frozen bytes');
+
+  h.asUser(member, []);
+  const asMember = await request(h.app).get(`/api/policies/${id}/revisions/${revId}/content`);
+  assert.equal(asMember.status, 200, 'the signer can re-open what they acknowledged');
+
+  // Tamper with the frozen file on disk → verify now fails.
+  const rev = await one('select upload_path, content_sha256 from policy_revisions where id=$1', [revId]);
+  fs.writeFileSync(path.join(cfg.uploadDir, rev.upload_path), Buffer.from('%PDF-1.4 TAMPERED\n'));
+  h.asManager(mgr);
+  const ver2 = await request(h.app).get(`/api/policies/${id}/revisions/${revId}/verify`);
+  assert.equal(ver2.status, 200);
+  assert.equal(ver2.body.ok, false, 'a modified frozen file fails verification');
+  assert.notEqual(ver2.body.actual, ver2.body.expected);
 });

@@ -1,10 +1,22 @@
 // Generated from the former monolithic routes.js — handler bodies are verbatim.
 const path = require('path');
+const crypto = require('crypto');
 const { pool } = require('../db');
 const { requireAdmin } = require('../auth');
 const { getPolicyDocument, getPolicyContentStream, resolveSharingUrl } = require('../services/sharepoint');
 const { UPLOAD_TYPES } = require('../uploads');
-const { isAdmin, audit, canRead } = require('../authz');
+const storage = require('../storage');
+const { isAdmin, audit, canRead, canManage } = require('../authz');
+
+// Hash a readable stream (sha256) without buffering — used to verify a frozen
+// revision's bytes still match what was recorded at freeze time.
+const hashStream = (readable) => new Promise((resolve, reject) => {
+  const h = crypto.createHash('sha256');
+  readable.on('data', (c) => h.update(c));
+  readable.on('error', reject);
+  readable.on('end', () => resolve(h.digest('hex')));
+});
+const safeName = (s) => String(s || '').replace(/["\r\n]/g, '');
 
 module.exports = (r) => {
 // ── policies (employee sees groups they belong to; admin sees all) ──
@@ -249,5 +261,56 @@ r.get('/policies/:id/versions', requireAdmin, async (req, res) => {
   res.json((await pool.query(
     'select version, note, changed_by, changed_at from policy_versions where policy_id=$1 order by changed_at desc',
     [req.params.id])).rows);
+});
+
+// ── frozen content revisions (ADR-121) ───────────────────────
+// The immutable, content-addressed snapshots employees acknowledged. Visible to
+// the governor (admin / owner) — content provenance is not for arbitrary readers.
+r.get('/policies/:id/revisions', async (req, res) => {
+  if (!(await canManage(req, req.params.id))) return res.status(403).json({ error: 'forbidden' });
+  const rows = (await pool.query(
+    `select r.id, r.version_label, r.source, r.content_sha256, r.content_size, r.content_mime,
+            r.integrity, r.frozen_at, r.frozen_by, (r.id = p.current_revision_id) as is_current,
+            (select count(*)::int from signatures s where s.revision_id = r.id) as signatures
+       from policy_revisions r join policies p on p.id = r.policy_id
+      where r.policy_id = $1 order by r.frozen_at desc`, [req.params.id])).rows;
+  res.json(rows);
+});
+
+// Verify a frozen revision's stored bytes still hash to what was recorded at
+// freeze time — the tamper-evidence check an auditor asks for (admin / owner).
+r.get('/policies/:id/revisions/:rev/verify', async (req, res) => {
+  if (!(await canManage(req, req.params.id))) return res.status(403).json({ error: 'forbidden' });
+  const rev = (await pool.query('select * from policy_revisions where id=$1 and policy_id=$2', [req.params.rev, req.params.id])).rows[0];
+  if (!rev) return res.status(404).json({ error: 'not_found' });
+  if (rev.integrity !== 'verified' || !rev.content_sha256 || !rev.upload_path) {
+    return res.json({ ok: false, integrity: rev.integrity, detail: 'This is a legacy revision with no frozen bytes to verify.' });
+  }
+  if (!(await storage.exists(rev.upload_path))) return res.status(404).json({ error: 'missing_file', detail: 'The frozen content file is missing.' });
+  try {
+    const actual = await hashStream(storage.openReadStream(rev.upload_path));
+    res.json({ ok: actual === rev.content_sha256, integrity: rev.integrity, expected: rev.content_sha256, actual, size: Number(rev.content_size) });
+  } catch (e) { if (req.log) req.log.error({ err: e.message }, 'revision verify failed'); res.status(500).json({ error: 'verify_failed' }); }
+});
+
+// Serve the EXACT frozen bytes of a revision — to the governor, or to a user who
+// actually acknowledged that revision (so they can re-open precisely what they
+// signed). Content-Type is server-derived from the frozen key's extension.
+r.get('/policies/:id/revisions/:rev/content', async (req, res) => {
+  const rev = (await pool.query('select * from policy_revisions where id=$1 and policy_id=$2', [req.params.rev, req.params.id])).rows[0];
+  if (!rev) return res.status(404).json({ error: 'not_found' });
+  let allowed = await canManage(req, req.params.id);
+  if (!allowed) {
+    allowed = (await pool.query('select 1 from signatures where revision_id=$1 and user_oid=$2 limit 1', [rev.id, req.user.oid])).rowCount > 0;
+  }
+  if (!allowed) return res.status(403).json({ error: 'forbidden', detail: 'not your acknowledgement' });
+  if (!rev.upload_path || !(await storage.exists(rev.upload_path))) return res.status(404).json({ error: 'missing_file' });
+  const ext = path.extname(rev.upload_path).toLowerCase();
+  res.setHeader('Content-Type', UPLOAD_TYPES[ext] || rev.content_mime || 'application/octet-stream');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', `inline; filename="revision-${safeName(rev.version_label)}${ext}"`);
+  const stream = storage.openReadStream(rev.upload_path);
+  stream.on('error', (e) => { if (req.log) req.log.error({ err: e.message }, 'revision content stream failed'); if (!res.headersSent) res.status(500).json({ error: 'read_failed' }); else res.destroy(e); });
+  stream.pipe(res);
 });
 };
