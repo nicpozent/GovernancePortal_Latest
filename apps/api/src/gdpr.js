@@ -26,9 +26,12 @@ async function collectSubject(db, oid) {
         where eg.employee_oid = $1 order by g.name`);
   const signatures = await q(`select policy_id, policy_version, full_name, acknowledged, signed_at, ip_address, user_agent
         from signatures where user_oid = $1 order by signed_at`);
-  const quizAttempts = await q(`select policy_id, quiz_id, attempt_no, score, max_score, pct, passed, at
+  const quizAttempts = await q(`select policy_id, quiz_id, attempt_no, score, max_score, pct, passed, answers, at
         from quiz_attempts where user_oid = $1 order by at`);
   const notifications = await q('select policy_id, milestone, policy_version, sent_at from notifications_sent where user_oid = $1 order by sent_at');
+  // Approval decisions the subject made (they are the approver).
+  const approvalsMade = await q(`select policy_id, policy_version, step_position, decision, comment, decided_at
+        from policy_approvals where approver_oid = $1 order by decided_at`);
   // The subject's OWN actions in the audit log (not actions others took).
   const auditActions = await q('select at, action, target, ip from audit_log where actor_oid = $1 order by at');
   return {
@@ -40,12 +43,14 @@ async function collectSubject(db, oid) {
     signatures,
     quizAttempts,
     notifications,
+    approvalsMade,
     auditActions,
     counts: {
       signatures: signatures.length,
       quizAttempts: quizAttempts.length,
       notifications: notifications.length,
       groupMemberships: memberships.length,
+      approvalsMade: approvalsMade.length,
       auditActions: auditActions.length,
     },
   };
@@ -64,10 +69,18 @@ async function eraseSubject(db, oid) {
     // Detach FKs that would block deleting the employee row.
     await db.query('update employees set functional_manager_oid = null where functional_manager_oid = $1', [oid]);
     await db.query("update policies set owner_oid = null, owner = '[erased]' where owner_oid = $1", [oid]);
-    // Pseudonymise the subject's own audit entries (keep the event, drop the identity).
+    await db.query('update policies set submitted_by = null where submitted_by = $1', [oid]);
+    await db.query('update approval_workflows set created_by = null where created_by = $1', [oid]);
+    // Redact the subject from the append-only APPROVAL DECISION ledger: keep the
+    // decision/comment/timestamp (compliance evidence), null the approver identity.
+    n.approvalsRedacted = (await db.query('update policy_approvals set approver_oid = null where approver_oid = $1', [oid])).rowCount;
+    // Pseudonymise the subject's own audit entries (keep the event, drop the identity incl. IP).
     n.auditPseudonymised = (await db.query(
-      "update audit_log set actor_oid = null, actor_name = '[erased]' where actor_oid = $1", [oid])).rowCount;
-    // Delete the personal records.
+      "update audit_log set actor_oid = null, actor_name = '[erased]', ip = null where actor_oid = $1", [oid])).rowCount;
+    // Delete the personal records — incl. workflow CONFIG rows naming the subject
+    // as a configured approver (config, not evidence).
+    await del('policyApprovers', 'delete from policy_approvers where approver_oid = $1');
+    await del('workflowStepApprovers', 'delete from approval_workflow_step_approvers where approver_oid = $1');
     await del('signatures', 'delete from signatures where user_oid = $1');
     await del('quizAttempts', 'delete from quiz_attempts where user_oid = $1');
     await del('notifications', 'delete from notifications_sent where user_oid = $1');
@@ -92,6 +105,7 @@ async function purgeRetention(db, cutoff) {
     await del('signatures', 'delete from signatures where signed_at < $1');
     await del('quizAttempts', 'delete from quiz_attempts where at < $1');
     await del('notifications', 'delete from notifications_sent where sent_at < $1');
+    await del('approvals', 'delete from policy_approvals where decided_at < $1');
     await del('auditLog', 'delete from audit_log where at < $1');
     await db.query('commit');
     return n;

@@ -27,7 +27,7 @@ const FILES = [
   'migration_017_integrations.sql', 'migration_018_effective_membership.sql',
   'migration_019_approvals.sql', 'migration_020_approval_steps.sql',
   'migration_021_approval_templates.sql', 'migration_022_group_approvers.sql',
-  'migration_023_ledger_fk_restrict.sql', 'migration_024_audit_outbox.sql', 'docker-grants.sql',
+  'migration_023_ledger_fk_restrict.sql', 'migration_024_audit_outbox.sql', 'migration_025_gdpr_approver_nullable.sql', 'docker-grants.sql',
 ];
 
 const DATA_TABLES = [

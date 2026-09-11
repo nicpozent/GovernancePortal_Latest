@@ -49,7 +49,7 @@ test('DSAR export returns the full per-subject package (admin only, audited)', a
   assert.equal(res.status, 200);
   assert.equal(res.body.found, true);
   assert.equal(res.body.employee.display_name, 'Dana Subject');
-  assert.deepEqual(res.body.counts, { signatures: 1, quizAttempts: 1, notifications: 1, groupMemberships: 1, auditActions: 1 });
+  assert.deepEqual(res.body.counts, { signatures: 1, quizAttempts: 1, notifications: 1, groupMemberships: 1, approvalsMade: 0, auditActions: 1 });
   // The signature detail (incl. IP/user-agent we hold) is present for the subject.
   assert.equal(res.body.signatures[0].ip_address, '203.0.113.7');
   // The export itself is recorded in the audit log.
@@ -87,6 +87,32 @@ test('eraseSubject deletes personal records and pseudonymises the audit trail', 
   const a = (await db.superPool.query("select actor_oid, actor_name from audit_log where action='signature.create'")).rows[0];
   assert.equal(a.actor_oid, null);
   assert.equal(a.actor_name, '[erased]');
+});
+
+test('erasing an approver redacts decisions and removes config, without FK failure (#20)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const { subject, pol } = await seedSubject();
+  // Make the subject an approver: a configured-approver row, a decision, submitter.
+  await db.superPool.query('insert into policy_approvers (policy_id, position, approver_oid) values ($1,1,$2)', [pol, subject]);
+  await db.superPool.query(
+    "insert into policy_approvals (policy_id, policy_version, step_position, approver_oid, decision, comment) values ($1,'v1',1,$2,'approved','ok')", [pol, subject]);
+  await db.superPool.query('update policies set submitted_by=$2 where id=$1', [pol, subject]);
+
+  const client = await db.superPool.connect();
+  let removed;
+  try { removed = await eraseSubject(client, subject); } finally { client.release(); }
+
+  // Employee erased despite being an approver — no FK block.
+  assert.equal((await db.superPool.query('select count(*)::int n from employees where oid=$1', [subject])).rows[0].n, 0);
+  assert.equal(removed.approvalsRedacted, 1);
+  assert.equal(removed.policyApprovers, 1);
+  // The DECISION survives; the approver identity is redacted.
+  const dec = (await db.superPool.query('select approver_oid, decision from policy_approvals where policy_id=$1', [pol])).rows[0];
+  assert.equal(dec.approver_oid, null);
+  assert.equal(dec.decision, 'approved');
+  // The configured-approver row (workflow config) is removed; submitted_by detached.
+  assert.equal((await db.superPool.query('select count(*)::int n from policy_approvers where policy_id=$1', [pol])).rows[0].n, 0);
+  assert.equal((await db.superPool.query('select submitted_by from policies where id=$1', [pol])).rows[0].submitted_by, null);
 });
 
 test('purgeRetention removes records older than the cutoff and keeps recent ones', async (t) => {
