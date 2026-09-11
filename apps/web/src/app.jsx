@@ -98,6 +98,20 @@ function App() {
 
   // reader / sign
   const [reader, setReader] = useState(null);       // { policy, doc }
+  const readerIdRef = useRef(null);                 // id of the policy currently open in the reader
+  // Keep the ref in step with the reader for the close paths openReader doesn't
+  // own (submitSign, switchRole, the X button → setReader(null)): once the reader
+  // is closed, any still-in-flight open for the old policy sees the mismatch and
+  // bails instead of resurrecting a stale doc.
+  useEffect(() => { readerIdRef.current = reader ? reader.policy.id : null; }, [reader]);
+  // Revoke blob: object URLs when the reader closes or the blob is replaced.
+  // Without this each preview/download leaks its URL for the tab's lifetime
+  // (the browser pins the underlying Blob until revoke). Keying each effect on
+  // the URL string means cleanup fires exactly when that URL goes away.
+  const readerFileUrl = reader && reader.doc && reader.doc.fileUrl;
+  const readerPreviewUrl = reader && reader.doc && reader.doc.previewUrl;
+  useEffect(() => () => { if (readerFileUrl) URL.revokeObjectURL(readerFileUrl); }, [readerFileUrl]);
+  useEffect(() => () => { if (readerPreviewUrl) URL.revokeObjectURL(readerPreviewUrl); }, [readerPreviewUrl]);
   const [signFirst, setSignFirst] = useState('');
   const [signLast, setSignLast] = useState('');
   const [signAgreed, setSignAgreed] = useState(false);
@@ -209,12 +223,19 @@ function App() {
   const openReader = async (p) => {
     const nm = (me && me.profile && me.profile.display_name) || (me && me.identity && me.identity.name) || '';
     const parts = nm.split(' ');
+    // Guard against a stale in-flight open: if the user opens B while A's fetches
+    // are still resolving, every async continuation below is fenced by openId so
+    // a late A response can't overwrite B's reader (or leak a blob URL into it).
+    const openId = p.id;
+    readerIdRef.current = openId;
     setReader({ policy: p, doc: null });
     setSignFirst(parts[0] || ''); setSignLast(parts.slice(1).join(' ') || ''); setSignAgreed(false);
     setQuizState(null);
+    const current = () => readerIdRef.current === openId;
+    const patch = (fn) => setReader((r) => (r && r.policy.id === openId ? fn(r) : r));
     try {
       const out = await api.getQuiz(p.id);
-      if (out && out.quiz) {
+      if (current() && out && out.quiz) {
         setQuizState({ loading:false, questions: out.questions || [], passPct: out.quiz.passPct || 80, attemptsUsed: out.attemptsUsed || 0, maxAttempts: out.maxAttempts || 3, passed: !!out.passed, answers: {}, result: null });
       }
     } catch (e) { /* no quiz / load error → no gate */ }
@@ -225,16 +246,19 @@ function App() {
         const res = await fetch(API_BASE + '/api/policies/' + p.id + '/file', { headers: { Authorization: 'Bearer ' + token } });
         if (res.ok) {
           const blob = await res.blob();
+          // Superseded before the blob resolved: don't create a URL that would
+          // otherwise leak (patch() is a no-op, so nothing would ever revoke it).
+          if (!current()) return;
           const fileUrl = URL.createObjectURL(blob);
-          setReader((r) => r ? { ...r, doc: { training: true, fileUrl, mime: blob.type, name: p.upload_name } } : r);
-        } else { setReader((r) => r ? { ...r, doc: { training: true, error: true } } : r); }
-      } catch (_) { setReader((r) => r ? { ...r, doc: { training: true, error: true } } : r); }
+          patch((r) => ({ ...r, doc: { training: true, fileUrl, mime: blob.type, name: p.upload_name } }));
+        } else { patch((r) => ({ ...r, doc: { training: true, error: true } })); }
+      } catch (_) { patch((r) => ({ ...r, doc: { training: true, error: true } })); }
       return;
     }
     // Document metadata (SharePoint webUrl + version) — independent of the preview.
     let doc = {};
     try { doc = await api.document(p.id); } catch (_) { /* fall back to p.sharepoint_url */ }
-    setReader((r) => r ? { ...r, doc } : r);
+    patch((r) => ({ ...r, doc }));
     // Inline preview streamed through our own origin (CSP-safe blob). Attempted
     // independently so a metadata hiccup never suppresses it; falls back silently
     // to the SharePoint link if the document can't be proxied.
@@ -245,8 +269,9 @@ function App() {
         const blob = await res.blob();
         const mime = blob.type || '';
         if (/pdf|image|video/.test(mime)) {
+          if (!current()) return;
           const previewUrl = URL.createObjectURL(blob);
-          setReader((r) => r ? { ...r, doc: { ...(r.doc || {}), previewUrl, previewMime: mime } } : r);
+          patch((r) => ({ ...r, doc: { ...(r.doc || {}), previewUrl, previewMime: mime } }));
         }
       }
     } catch (_) { /* keep the link-only view */ }
