@@ -11,6 +11,7 @@
     "dev": "nodemon src/server.js",
     "test": "node --test 'test/unit/**/*.test.js'",
     "test:integration": "node --test --test-concurrency=1 'test/integration/**/*.test.js'",
+    "test:smoke": "node --test 'test/smoke/**/*.test.js'",
     "test:all": "node --test --test-concurrency=1 'test/**/*.test.js'",
     "test:coverage": "node --test --experimental-test-coverage 'test/unit/**/*.test.js'",
     "test:coverage:gate": "node --test --experimental-test-coverage --test-coverage-lines=70 --test-coverage-branches=60 --test-coverage-functions=65 --test-concurrency=1 'test/**/*.test.js'",

@@ -12,8 +12,11 @@ module.exports = {
   tenantId,
   apiClientId: process.env.API_CLIENT_ID,
   apiAudience: process.env.API_AUDIENCE || `api://${process.env.API_CLIENT_ID}`,
-  issuer: `https://login.microsoftonline.com/${tenantId}/v2.0`,
-  jwksUri: `https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`,
+  // Default to the public Entra endpoints, but allow explicit overrides so the
+  // API can run against a sovereign/national cloud — and so an authenticated
+  // smoke test can point token validation at a local mock issuer/JWKS.
+  issuer: process.env.TOKEN_ISSUER || `https://login.microsoftonline.com/${tenantId}/v2.0`,
+  jwksUri: process.env.JWKS_URI || `https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`,
   adminAppRole: process.env.ADMIN_APP_ROLE || 'Governance.Admin',
   managerAppRole: process.env.MANAGER_APP_ROLE || 'Governance.Manager',
 

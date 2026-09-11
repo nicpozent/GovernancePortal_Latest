@@ -45,6 +45,10 @@ jobs:
         run: npm test
       - name: Integration tests (unit + DB + API against Postgres)
         run: npm run test:all
+      - name: Authenticated smoke journey (real JWT/JWKS validation)
+        # Signs a real RS256 token against a local mock JWKS and drives the REAL
+        # auth path end to end (not the test stub) — #23.
+        run: npm run test:smoke
       - name: Coverage gate (lines>=70, branches>=60, functions>=65)
         run: npm run test:coverage:gate
       - name: Audit production dependencies
