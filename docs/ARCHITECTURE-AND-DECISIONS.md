@@ -729,6 +729,45 @@ Azure-independent.
 
 ---
 
+## ADR-122 — Confidential documents & share-request approval
+**Status: Accepted — implemented.** Addresses external-review finding #17.
+**Context.** Managers can assign a training/policy to any group, imposing
+obligations on people outside their team; ownership checks protect the *document*,
+not the *recipients*. Restricting every manager to their own org unit was a
+larger product change; the review flagged the gap as a governance/authorization
+concern (auditable, not a data leak).
+**Decision.** Keep flexible assignment as the default (now with the recipient
+group ids recorded in the audit log for attribution), and add an opt-in lock:
+an owner or admin can mark a document **confidential** and becomes its
+**gatekeeper** (`policies.confidential` / `confidential_by`). Once confidential,
+**expanding** the recipient set (adding groups) by anyone other than the
+gatekeeper or an admin is refused and must go through a **share request**
+(`share_requests`) the gatekeeper approves — a light request/approve flow modelled
+on ADR-120. Approval applies the assignment atomically under a row lock; every
+decision is audited; removing recipients and any change by the gatekeeper/admin
+are unaffected. The client turns a blocked edit into a share request
+transparently and gives the gatekeeper a pending-requests queue.
+**Alternatives considered.** (a) *Confine each manager to their own org scope* —
+a bigger product/permission change with no manager→scope model yet; deferred in
+favour of the opt-in lock. (b) *Marker-only lock without an approval flow* — the
+simpler option offered at design time; the reviewer chose the request/approve
+flow for an explicit human decision. (c) *Freeze the recipient list entirely* —
+too coarse.
+**Trade-offs.** Confidentiality is opt-in, so it hardens the sensitive documents
+without changing the default posture; a manager who marks their own document
+remains its gatekeeper (so #17's broad-assignment default is unchanged for
+non-confidential docs — a conscious product choice). Azure-independent.
+
+**Also landed alongside (external-review closeout):** idempotent acknowledgement
+— one signature per (policy, user, revision), enforced by a partial unique index
+plus an app-level check, with the affected rollups switched to `count(distinct
+user)` (#15); and CI/runtime assurance hardening — integration tests fail rather
+than silently skip when a DB is expected (`REQUIRE_DB`), SAST (semgrep) is now
+blocking after triage, and an authenticated smoke journey exercises the real
+JWT/JWKS validation path (#23).
+
+---
+
 # Part III — Cross-cutting trade-off themes
 
 - **Single-instance simplicity vs. horizontal scale.** The system was originally
