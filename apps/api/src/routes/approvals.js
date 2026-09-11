@@ -12,6 +12,7 @@
 const { pool } = require('../db');
 const cfg = require('../config');
 const { isAdmin, audit } = require('../authz');
+const { ensureRevision } = require('../services/revisions');
 const { sendMail } = require('../services/reminders');
 const { escapeHtml } = require('../util');
 
@@ -328,6 +329,10 @@ module.exports = (r) => {
       await client.query("update policies set approval_state='published', updated_at=now() where id=$1 and approval_state='approved'", [p.id]);
       await audit(req, 'policy.approval.publish', p.name, { id: p.id, version: p.version }, client);
       await client.query('commit');
+      // Pre-freeze the now-live content revision (ADR-121) so the first employee
+      // to acknowledge doesn't pay the freeze latency. Best-effort: a failure
+      // here just defers the freeze to first-acknowledgement.
+      notify(() => ensureRevision(p.id, { actorOid: req.user.oid }));
       res.json({ ok: true, approval_state: 'published' });
     } catch (e) {
       try { await client.query('rollback'); } catch { /* ignore */ }

@@ -4,6 +4,7 @@ const cfg = require('../config');
 const { sendMail } = require('../services/reminders');
 const { escapeHtml } = require('../util');
 const { isAdmin, canAcknowledge } = require('../authz');
+const { ensureRevision } = require('../services/revisions');
 
 module.exports = (r) => {
 // ── SIGN (the read-and-acknowledge flow) ─────────────────────
@@ -29,10 +30,25 @@ r.post('/signatures', async (req, res) => {
     if (!passed) return res.status(403).json({ error: 'quiz_required', detail: 'You must pass the knowledge check before signing.' });
   }
 
+  // Freeze (or reuse) the immutable content revision the user is acknowledging,
+  // and bind the signature to it (ADR-121 / #4). For a real document we REFUSE to
+  // record an acknowledgement we can't tie to reproducible content — a transient
+  // SharePoint outage returns 503 so the user retries rather than signing
+  // something unverifiable. A link-only policy (no fetchable bytes) yields null,
+  // and the signature is recorded unbound, exactly as before.
+  let revisionId = null;
+  try {
+    const rev = await ensureRevision(policyId, { actorOid: req.user.oid });
+    revisionId = rev ? rev.id : null;
+  } catch (e) {
+    console.error('[sign] could not freeze content revision:', e.message);
+    return res.status(503).json({ error: 'content_unavailable', detail: 'Could not capture the document for your records. Please try again in a moment.' });
+  }
+
   const ins = await pool.query(
-    `insert into signatures (policy_id, policy_version, user_oid, full_name, acknowledged, ip_address, user_agent)
-     values ($1, $2, $3, $4, true, $5, $6) returning *`,
-    [policyId, p.version, req.user.oid, fullName.trim(), req.ip, req.headers['user-agent'] || null]
+    `insert into signatures (policy_id, policy_version, user_oid, full_name, acknowledged, ip_address, user_agent, revision_id)
+     values ($1, $2, $3, $4, true, $5, $6, $7) returning *`,
+    [policyId, p.version, req.user.oid, fullName.trim(), req.ip, req.headers['user-agent'] || null, revisionId]
   );
   // Fire-and-forget confirmation email to the signer (no-op if mail isn't configured).
   (async () => {

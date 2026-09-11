@@ -192,6 +192,13 @@ r.put('/policies/:id', requireAdmin, async (req, res) => {
       p.sharepoint_url !== prev.sharepoint_url
       || p.sharepoint_drive_id !== prev.sharepoint_drive_id
       || p.sharepoint_item_id !== prev.sharepoint_item_id);
+    // A content change invalidates the cached frozen revision: the next
+    // acknowledgement must freeze the NEW content, and a same-label pointer swap
+    // must not silently reuse the old revision (ADR-121 / #4).
+    if (prev && (prev.version !== p.version || pointerChanged)) {
+      await client.query('update policies set current_revision_id=null where id=$1', [p.id]);
+      p.current_revision_id = null;
+    }
     if (prev && (prev.version !== p.version || pointerChanged) && prev.approved_externally === false
         && ['published', 'approved'].includes(prev.approval_state)) {
       await client.query("update policies set approval_state='draft', updated_at=now() where id=$1", [p.id]);

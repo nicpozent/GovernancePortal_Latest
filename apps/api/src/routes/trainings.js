@@ -97,6 +97,9 @@ r.put('/trainings/:id', requireManager, withUpload, async (req, res) => {
     [req.params.id, name, docType, version, dueDate || null, (dueDays!==undefined && dueDays!=='') ? parseInt(dueDays,10) : null, reviewDate || null,
      newKey, newFile ? newFile.originalname : null, newFile ? newFile.mimetype : null, approvalReset ? 'draft' : null]
   )).rows[0];
+  // A content change (new file or new version) invalidates the cached frozen
+  // revision so the next acknowledgement freezes the new content (ADR-121 / #4).
+  if (contentChanged) { await pool.query('update policies set current_revision_id=null where id=$1', [p.id]); p.current_revision_id = null; }
   if (Array.isArray(groupIds) || typeof groupIds === 'string') {
     const gids = Array.isArray(groupIds) ? groupIds : String(groupIds).split(',').filter(Boolean);
     await pool.query('delete from policy_groups where policy_id=$1', [p.id]);

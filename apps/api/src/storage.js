@@ -21,9 +21,32 @@
 // ============================================================
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const cfg = require('./config');
 
 const UPLOAD_DIR = cfg.uploadDir;
+
+// Stream `readable` to a local file while computing its sha256 and byte size in
+// one pass (never buffering the whole file). Used to freeze immutable content
+// revisions (ADR-121). Cleans up the partial file on error.
+function streamToFileHashing(readable, dest) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256');
+    let size = 0;
+    const out = fs.createWriteStream(dest);
+    const fail = (e) => { out.destroy(); fs.unlink(dest, () => {}); reject(e); };
+    readable.on('error', fail);
+    out.on('error', fail);
+    readable.on('data', (c) => { hash.update(c); size += c.length; });
+    out.on('finish', () => resolve({ sha256: hash.digest('hex'), size }));
+    readable.pipe(out);
+  });
+}
+
+// A frozen-revision key is namespaced so it is never confused with a live
+// upload and is easy to spot in the store. Extension is preserved so the serve
+// path can derive a Content-Type from it, exactly like live uploads.
+const frozenKey = (ext) => 'rev-' + crypto.randomUUID() + (ext || '');
 
 // ── local disk (default) ─────────────────────────────────────
 function localDriver() {
@@ -31,6 +54,13 @@ function localDriver() {
   return {
     driver: 'local',
     async finalize(file) { return file.filename; },     // multer already wrote it here
+    // Persist an immutable, content-addressed copy of `readable`; returns the
+    // storage key plus the sha256/size of the exact bytes written.
+    async finalizeFrozen(readable, ext) {
+      const key = frozenKey(ext);
+      const { sha256, size } = await streamToFileHashing(readable, full(key));
+      return { key, sha256, size };
+    },
     async exists(key) { try { return fs.existsSync(full(key)); } catch { return false; } },
     openReadStream(key) { return fs.createReadStream(full(key)); },
     async remove(key) { try { fs.unlinkSync(full(key)); } catch (_) { /* best-effort */ } },
@@ -60,6 +90,17 @@ function blobDriver() {
       await container.getBlockBlobClient(key).uploadFile(local);
       try { fs.unlinkSync(local); } catch (_) { /* drop the staging copy */ }
       return key;
+    },
+    // Stage to a local temp file (hashing in one pass), upload it to the frozen
+    // key, then drop the temp copy — the sha256 is of the exact stored bytes.
+    async finalizeFrozen(readable, ext) {
+      const key = frozenKey(ext);
+      const local = stagingPath(key);
+      const { sha256, size } = await streamToFileHashing(readable, local);
+      try {
+        await container.getBlockBlobClient(key).uploadFile(local);
+      } finally { try { fs.unlinkSync(local); } catch (_) { /* drop the staging copy */ } }
+      return { key, sha256, size };
     },
     async exists(key) { return container.getBlockBlobClient(path.basename(key)).exists(); },
     openReadStream(key) {
