@@ -5,6 +5,7 @@
   "description": "Birgma Governance Portal — backend API (Entra ID SSO, Microsoft Graph sync, SharePoint, PostgreSQL)",
   "main": "src/server.js",
   "type": "commonjs",
+  "packageManager": "npm@12.0.2",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
