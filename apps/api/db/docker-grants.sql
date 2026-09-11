@@ -24,3 +24,6 @@ revoke update, delete on signatures    from governance_app;
 revoke update, delete on audit_log     from governance_app;
 revoke update, delete on quiz_attempts from governance_app;
 revoke update, delete on policy_approvals from governance_app;
+-- Frozen content snapshots are immutable evidence (ADR-121): a revision, once
+-- frozen, is never edited or removed while any signature references it.
+revoke update, delete on policy_revisions from governance_app;
