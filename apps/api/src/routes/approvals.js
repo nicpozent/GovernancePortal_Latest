@@ -304,6 +304,12 @@ module.exports = (r) => {
   r.get('/policies/:id/approvals', async (req, res) => {
     const c = await ctx(req.params.id);
     if (!c) return res.status(404).json({ error: 'not_found' });
+    // Approver identities, decisions and comments are private to the people who
+    // run or take part in the workflow — governors (admin/owner) and any
+    // configured approver. An unrelated employee who merely knows the policy id
+    // must not be able to read the approval history.
+    const isApprover = c.steps.some((s) => s.approvers.some((a) => a.oid === req.user.oid));
+    if (!canGovern(req, c.p) && !isApprover) return res.status(403).json({ error: 'forbidden' });
     const alreadyApproved = c.currentStep && c.currentStep.approvedOids.includes(req.user.oid);
     const isCurrentMember = c.currentStep && c.currentStep.approvers.some((a) => a.oid === req.user.oid);
     res.json({

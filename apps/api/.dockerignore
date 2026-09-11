@@ -1,0 +1,17 @@
+# Keep secrets, dependencies, local artifacts, tests and docs OUT of the Docker
+# build context — .gitignore does NOT apply to Docker builds, and the Dockerfile
+# uses `COPY . .`. Runtime configuration is injected via env_file at run time
+# (see deploy/docker-compose.yml), never baked into an image layer.
+.env
+.env.*
+*.local
+node_modules
+.git
+.gitignore
+.dockerignore
+test
+coverage
+*.md
+backups
+uploads
+npm-debug.log*

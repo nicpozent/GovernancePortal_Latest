@@ -89,4 +89,32 @@ async function canRead(req, policyId) {
   return r.rowCount > 0;
 }
 
-module.exports = { isAdmin, isManager, audit, teamOids, canManage, canRead };
+// Can the caller ACKNOWLEDGE (sign) this policy? This is STRICTER than canRead
+// on purpose: a signature is a personal compliance record, so the signer must be
+// an obligation-holder — an ACTIVE employee, for a PUBLISHED, non-archived policy
+// that is actually ASSIGNED to them via an effective group membership. It does not
+// grant the owner/admin/approver shortcuts canRead has (they only apply if they
+// are also an assigned, active member). Returns { ok:true } or
+// { ok:false, status, error, detail? }.
+async function canAcknowledge(req, policyId) {
+  const p = (await pool.query(
+    'select approval_state, approved_externally, archived_at from policies where id=$1', [policyId])).rows[0];
+  if (!p) return { ok: false, status: 404, error: 'policy_not_found' };
+  if (p.archived_at) return { ok: false, status: 409, error: 'policy_unavailable', detail: 'This policy is archived.' };
+  if (!(p.approved_externally || p.approval_state === 'published')) {
+    return { ok: false, status: 409, error: 'policy_not_published', detail: 'This policy is not published for acknowledgement.' };
+  }
+  const active = await pool.query(
+    "select 1 from employees where oid=$1 and coalesce(status,'Active') <> 'Inactive' limit 1", [req.user.oid]);
+  if (active.rowCount === 0) return { ok: false, status: 403, error: 'not_eligible', detail: 'Only an active employee can acknowledge.' };
+  const assigned = await pool.query(`
+    select 1 where exists (
+        select 1 from policy_groups x
+          join effective_group_membership em on em.group_id = x.group_id
+         where x.policy_id = $1 and em.employee_oid = $2
+      ) limit 1`, [policyId, req.user.oid]);
+  if (assigned.rowCount === 0) return { ok: false, status: 403, error: 'not_assigned', detail: 'This policy is not assigned to you.' };
+  return { ok: true };
+}
+
+module.exports = { isAdmin, isManager, audit, teamOids, canManage, canRead, canAcknowledge };

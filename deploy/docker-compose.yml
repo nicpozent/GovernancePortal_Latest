@@ -77,8 +77,12 @@ services:
     volumes:
       - ./backups:/backups
       - ./uploads:/uploads
+    # Loopback-only publish: the API is NOT exposed on the VM/host network — the
+    # browser reaches it only through the nginx TLS edge (web → http://api:8080 on
+    # the compose network). This keeps plaintext HTTP off external interfaces and
+    # stops a direct client spoofing X-Forwarded-For past `trust proxy`.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       db:
         condition: service_healthy

@@ -3,7 +3,7 @@ const { pool } = require('../db');
 const cfg = require('../config');
 const { sendMail } = require('../services/reminders');
 const { escapeHtml } = require('../util');
-const { isAdmin } = require('../authz');
+const { isAdmin, canAcknowledge } = require('../authz');
 
 module.exports = (r) => {
 // ── SIGN (the read-and-acknowledge flow) ─────────────────────
@@ -12,6 +12,11 @@ r.post('/signatures', async (req, res) => {
   const { policyId, fullName, acknowledged } = req.body || {};
   if (acknowledged !== true) return res.status(400).json({ error: 'must_acknowledge' });
   if (!fullName || !fullName.trim()) return res.status(400).json({ error: 'name_required' });
+
+  // Eligibility: only an active employee may sign a published, non-archived policy
+  // that is actually assigned to them — not any authenticated user with a policy id.
+  const elig = await canAcknowledge(req, policyId);
+  if (!elig.ok) return res.status(elig.status).json({ error: elig.error, ...(elig.detail ? { detail: elig.detail } : {}) });
 
   const p = (await pool.query('select version from policies where id = $1', [policyId])).rows[0];
   if (!p) return res.status(404).json({ error: 'policy_not_found' });

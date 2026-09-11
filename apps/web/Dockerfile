@@ -15,6 +15,7 @@ RUN npm run build
 # Stage 2: serve the built bundle with nginx.
 FROM nginx:alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /app/dist/ /usr/share/nginx/html/
 # Regenerate config.js from env at container start (overwrites the build's placeholder).
 COPY 40-envconfig.sh /docker-entrypoint.d/40-envconfig.sh
