@@ -50,7 +50,9 @@ r.get('/dashboard/by-department', requireAdmin, async (_req, res) => {
         join employees e on e.oid = em.oid and e.status = 'Active'
     ),
     signed as (
-      select r.department, r.policy_id, r.oid
+      -- distinct: a user with more than one signature row for the same version
+      -- must count once, or the "signed" tally can exceed "assigned" (#15).
+      select distinct r.department, r.policy_id, r.oid
         from required r
         join policies p on p.id = r.policy_id
         join signatures s on s.policy_id = r.policy_id

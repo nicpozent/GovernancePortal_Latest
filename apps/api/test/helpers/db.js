@@ -28,7 +28,7 @@ const FILES = [
   'migration_019_approvals.sql', 'migration_020_approval_steps.sql',
   'migration_021_approval_templates.sql', 'migration_022_group_approvers.sql',
   'migration_023_ledger_fk_restrict.sql', 'migration_024_audit_outbox.sql', 'migration_025_gdpr_approver_nullable.sql',
-  'migration_026_immutable_revisions.sql', 'docker-grants.sql',
+  'migration_026_immutable_revisions.sql', 'migration_027_signature_idempotent.sql', 'docker-grants.sql',
 ];
 
 const DATA_TABLES = [

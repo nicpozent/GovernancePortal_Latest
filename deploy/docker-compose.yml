@@ -54,6 +54,7 @@ services:
       - ../apps/api/db/migration_024_audit_outbox.sql:/docker-entrypoint-initdb.d/200-audit-outbox.sql:ro
       - ../apps/api/db/migration_025_gdpr_approver_nullable.sql:/docker-entrypoint-initdb.d/201-gdpr-approver.sql:ro
       - ../apps/api/db/migration_026_immutable_revisions.sql:/docker-entrypoint-initdb.d/202-revisions.sql:ro
+      - ../apps/api/db/migration_027_signature_idempotent.sql:/docker-entrypoint-initdb.d/203-sig-idempotent.sql:ro
       - ../apps/api/db/docker-grants.sql:/docker-entrypoint-initdb.d/900-grants.sql:ro
     # Loopback-only publish: DB not exposed on the VM network. Remove for prod.
     ports:

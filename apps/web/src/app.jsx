@@ -301,7 +301,16 @@ function App() {
       setReceipt({ name: fullName, policy: p.name, version: p.version || '', type: p.doc_type, at: new Date(), quizPct: p.has_quiz || (quizState && quizState.questions && quizState.questions.length) ? bestPct : null });
       loadView(view);
     }
-    catch (e) { showToast('Could not sign: ' + e.message, true); }
+    catch (e) {
+      // #15: they already acknowledged this version (a double-submit / stale tab).
+      // Not an error — tell them plainly, close the reader, and refresh so the
+      // signed state shows.
+      if (e.code === 'already_signed') {
+        showToast(e.message || 'You’ve already acknowledged this version.');
+        setReader(null); loadView(view); return;
+      }
+      showToast('Could not sign: ' + e.message, true);
+    }
   };
 
   const syncNow = async () => {

@@ -23,7 +23,9 @@ r.get('/manager/dashboard', requireManager, async (req, res) => {
         join team t on t.oid=em.oid
     ),
     signed as (
-      select r.policy_id, r.oid from required r join policies p on p.id=r.policy_id
+      -- distinct: count a user once even if the ledger holds more than one
+      -- signature row for the same version, so signed can't exceed assigned (#15).
+      select distinct r.policy_id, r.oid from required r join policies p on p.id=r.policy_id
         join signatures s on s.policy_id=r.policy_id and s.user_oid=r.oid and s.policy_version=p.version
     )
     select 'item' as kind, p.id, p.name, p.doc_type, null::uuid as oid, null as display_name, null as department, null as email,

@@ -45,11 +45,36 @@ r.post('/signatures', async (req, res) => {
     return res.status(503).json({ error: 'content_unavailable', detail: 'Could not capture the document for your records. Please try again in a moment.' });
   }
 
-  const ins = await pool.query(
-    `insert into signatures (policy_id, policy_version, user_oid, full_name, acknowledged, ip_address, user_agent, revision_id)
-     values ($1, $2, $3, $4, true, $5, $6, $7) returning *`,
-    [policyId, p.version, req.user.oid, fullName.trim(), req.ip, req.headers['user-agent'] || null, revisionId]
-  );
+  // Idempotent acknowledgement (#15): don't record a second signature for content
+  // the user has already signed. Re-signing is allowed only when there is
+  // something new to attest — i.e. a NEW frozen revision. So we block when the
+  // user already has a signature for the current revision (or, for a link-only
+  // policy with no revision, for the current version). A double-click / retry /
+  // second tab therefore no longer inflates the ledger or the rollups.
+  const dup = revisionId
+    ? (await pool.query('select signed_at from signatures where policy_id=$1 and user_oid=$2 and revision_id=$3 order by signed_at limit 1', [policyId, req.user.oid, revisionId])).rows[0]
+    : (await pool.query('select signed_at from signatures where policy_id=$1 and user_oid=$2 and policy_version=$3 order by signed_at limit 1', [policyId, req.user.oid, p.version])).rows[0];
+  if (dup) {
+    return res.status(409).json({ error: 'already_signed', signed_at: dup.signed_at,
+      detail: 'You have already acknowledged this version of the document. No further action is needed unless a new version is published.' });
+  }
+
+  let ins;
+  try {
+    ins = await pool.query(
+      `insert into signatures (policy_id, policy_version, user_oid, full_name, acknowledged, ip_address, user_agent, revision_id)
+       values ($1, $2, $3, $4, true, $5, $6, $7) returning *`,
+      [policyId, p.version, req.user.oid, fullName.trim(), req.ip, req.headers['user-agent'] || null, revisionId]
+    );
+  } catch (e) {
+    // Race-safe backstop for #15: a concurrent second submission that slipped
+    // past the check above trips the partial unique index (one signature per
+    // user per revision) — report it as already-signed, not a 500.
+    if (e && e.code === '23505') {
+      return res.status(409).json({ error: 'already_signed', detail: 'You have already acknowledged this version of the document.' });
+    }
+    throw e;
+  }
   // Fire-and-forget confirmation email to the signer (no-op if mail isn't configured).
   (async () => {
     try {

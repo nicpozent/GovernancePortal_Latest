@@ -40,6 +40,7 @@ const MIGRATIONS = [
   'migration_024_audit_outbox.sql',
   'migration_025_gdpr_approver_nullable.sql',
   'migration_026_immutable_revisions.sql',
+  'migration_027_signature_idempotent.sql',
 ];
 const GRANTS = 'docker-grants.sql';
 

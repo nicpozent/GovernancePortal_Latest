@@ -219,3 +219,45 @@ test('revisions can be listed, verified, and served to the signer; tampering is 
   assert.equal(ver2.body.ok, false, 'a modified frozen file fails verification');
   assert.notEqual(ver2.body.actual, ver2.body.expected);
 });
+
+test('acknowledgement is idempotent: a second sign is refused until a new revision exists (#15)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const mgr = await db.seedEmployee({ name: 'Mgr' });
+  const grp = await db.seedGroup({ name: 'Staff' });
+  const member = await db.seedEmployee({ name: 'Member' });
+  await db.addMember(member, grp);
+
+  const V1 = Buffer.from('%PDF-1.4 one\n');
+  h.asManager(mgr);
+  const created = await request(h.app)
+    .post('/api/trainings')
+    .field('name', 'Handbook').field('docType', 'Policy').field('groupIds', grp)
+    .attach('file', V1, { filename: 'v1.pdf', contentType: 'application/pdf' });
+  const id = created.body.id;
+  // #17: the assignment's recipient groups are recorded in the audit detail.
+  const auditRow = await one("select detail from audit_log where action='training.create' order by at desc limit 1", []);
+  assert.ok(auditRow && Array.isArray(auditRow.detail.groups) && auditRow.detail.groups.includes(grp), 'recipient group ids are audited');
+
+  h.asUser(member, []);
+  const first = await request(h.app).post('/api/signatures').send({ policyId: id, fullName: 'Member', acknowledged: true });
+  assert.equal(first.status, 201);
+
+  // Second acknowledgement of the SAME content is refused.
+  const second = await request(h.app).post('/api/signatures').send({ policyId: id, fullName: 'Member', acknowledged: true });
+  assert.equal(second.status, 409);
+  assert.equal(second.body.error, 'already_signed');
+  // The ledger still holds exactly one signature for this user+policy.
+  const n = await one('select count(*)::int as n from signatures where policy_id=$1 and user_oid=$2', [id, member]);
+  assert.equal(n.n, 1);
+
+  // After a NEW version (new frozen revision), re-signing is allowed again.
+  h.asManager(mgr);
+  const V2 = Buffer.from('%PDF-1.4 two\n');
+  await request(h.app).put(`/api/trainings/${id}`).field('name', 'Handbook').field('version', 'v2.0')
+    .attach('file', V2, { filename: 'v2.pdf', contentType: 'application/pdf' });
+  h.asUser(member, []);
+  const third = await request(h.app).post('/api/signatures').send({ policyId: id, fullName: 'Member', acknowledged: true });
+  assert.equal(third.status, 201, 'a new revision means there is something new to acknowledge');
+  const n2 = await one('select count(*)::int as n from signatures where policy_id=$1 and user_oid=$2', [id, member]);
+  assert.equal(n2.n, 2, 'one signature per revision');
+});
