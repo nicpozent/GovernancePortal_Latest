@@ -145,7 +145,7 @@ r.post('/policies', requireAdmin, async (req, res) => {
 
 r.put('/policies/:id', requireAdmin, async (req, res) => {
   const { name, docType, version, sharepointUrl, sharepointDriveId, sharepointItemId, owner, ownerOid, groupIds, dueDate, dueDays, reviewDate, versionNote } = req.body || {};
-  const prev = (await pool.query('select version, approval_state, approved_externally from policies where id=$1', [req.params.id])).rows[0];
+  const prev = (await pool.query('select version, approval_state, approved_externally, sharepoint_url, sharepoint_drive_id, sharepoint_item_id from policies where id=$1', [req.params.id])).rows[0];
   // Same owner_oid FK guard as create: keep the oid only when it is a known employee.
   let ownerName = owner;
   let oOid = ownerOid || null;
@@ -181,11 +181,18 @@ r.put('/policies/:id', requireAdmin, async (req, res) => {
         await client.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
       }
     }
-    // A new version of a workflow-governed policy must be re-approved before it is
-    // visible again: reset a live (published/approved) policy back to draft so the
-    // new version re-enters the approval chain. Policies not under the workflow
-    // (approved_externally = true — the default / break-glass) are left published.
-    if (prev && prev.version !== p.version && prev.approved_externally === false
+    // Changing the governed CONTENT of a workflow-governed policy must force
+    // re-approval, so it can't be published without an approval that covers what
+    // it now points at. Content changes either the version string OR the
+    // SharePoint document pointer (url / drive / item). Reset a live
+    // (published/approved) policy back to draft in either case. Policies not under
+    // the workflow (approved_externally = true — the default / break-glass) are
+    // left published.
+    const pointerChanged = !!prev && (
+      p.sharepoint_url !== prev.sharepoint_url
+      || p.sharepoint_drive_id !== prev.sharepoint_drive_id
+      || p.sharepoint_item_id !== prev.sharepoint_item_id);
+    if (prev && (prev.version !== p.version || pointerChanged) && prev.approved_externally === false
         && ['published', 'approved'].includes(prev.approval_state)) {
       await client.query("update policies set approval_state='draft', updated_at=now() where id=$1", [p.id]);
       p.approval_state = 'draft';

@@ -72,18 +72,30 @@ r.put('/trainings/:id', requireManager, withUpload, async (req, res) => {
   if (!(await canManage(req, req.params.id))) return res.status(403).json({ error: 'forbidden', detail: 'not your training' });
   const { name, version, groupIds, dueDate, dueDays, reviewDate, versionNote } = req.body || {};
   let { docType } = req.body || {};
-  const prev = (await pool.query('select version, upload_path, doc_type from policies where id=$1', [req.params.id])).rows[0];
+  const prev = (await pool.query('select version, upload_path, doc_type, source, approval_state, approved_externally from policies where id=$1', [req.params.id])).rows[0];
   if (!prev) return res.status(404).json({ error: 'not_found' });
+  // This route manages UPLOADED documents only. A SharePoint-sourced policy must
+  // be edited through the policy editor (PUT /policies/:id), which resets approval
+  // on a content change — otherwise this route would be a way to change an
+  // approved policy's content while keeping its approval.
+  if (prev.source !== 'Upload') return res.status(400).json({ error: 'not_upload', detail: 'Use the policy editor for SharePoint-sourced documents.' });
   docType = MGR_DOC_TYPES.includes(docType) ? docType : prev.doc_type;
   const newFile = req.file || null;
   const newKey = newFile ? await storage.finalize(newFile) : null;
+  // A content change (new file or new version) on a workflow-governed upload
+  // must force re-approval: reset a live (published/approved) upload to draft,
+  // atomically with the content update.
+  const versionChanged = version !== undefined && version !== null && version !== prev.version;
+  const contentChanged = !!newFile || versionChanged;
+  const approvalReset = prev.approved_externally === false && ['published', 'approved'].includes(prev.approval_state) && contentChanged;
   const p = (await pool.query(
     `update policies set name=$2, doc_type=$3, version=$4, due_date=$5, due_days=$6, review_date=$7,
         upload_path=coalesce($8, upload_path), upload_name=coalesce($9, upload_name), upload_mime=coalesce($10, upload_mime),
+        approval_state=coalesce($11, approval_state),
         updated_at=now()
       where id=$1 returning *`,
     [req.params.id, name, docType, version, dueDate || null, (dueDays!==undefined && dueDays!=='') ? parseInt(dueDays,10) : null, reviewDate || null,
-     newKey, newFile ? newFile.originalname : null, newFile ? newFile.mimetype : null]
+     newKey, newFile ? newFile.originalname : null, newFile ? newFile.mimetype : null, approvalReset ? 'draft' : null]
   )).rows[0];
   if (Array.isArray(groupIds) || typeof groupIds === 'string') {
     const gids = Array.isArray(groupIds) ? groupIds : String(groupIds).split(',').filter(Boolean);
@@ -93,8 +105,9 @@ r.put('/trainings/:id', requireManager, withUpload, async (req, res) => {
   if (prev.version !== p.version) await pool.query('insert into policy_versions (policy_id, version, note, changed_by) values ($1,$2,$3,$4)', [p.id, p.version, versionNote || ('Updated from ' + prev.version), req.user.name]);
   // delete the superseded file from the storage backend
   if (newFile && prev.upload_path && prev.upload_path !== p.upload_path) { await storage.remove(prev.upload_path); }
+  if (approvalReset) await audit(req, 'policy.approval.reset_on_version', p.name, { id: p.id, version: p.version, from: prev.approval_state, via: 'training.update' });
   await audit(req, 'training.update', p.name, { id: p.id });
-  res.json(p);
+  res.json({ ...p, approvalReset });
 });
 
 // Archive a training (own only).

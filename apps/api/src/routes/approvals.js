@@ -315,10 +315,14 @@ module.exports = (r) => {
     const client = await pool.connect();
     try {
       await client.query('begin');
-      const p = (await client.query('select id, name, owner_oid, version, approval_state from policies where id=$1 for update', [req.params.id])).rows[0];
+      const p = (await client.query('select id, name, owner_oid, version, approved_version, approval_state from policies where id=$1 for update', [req.params.id])).rows[0];
       if (!p) { await client.query('rollback'); return res.status(404).json({ error: 'not_found' }); }
       if (!canGovern(req, p)) { await client.query('rollback'); return res.status(403).json({ error: 'forbidden' }); }
       if (p.approval_state !== 'approved') { await client.query('rollback'); return res.status(409).json({ error: 'not_approved', detail: 'Only an approved policy can be published.' }); }
+      // The approval must belong to the CURRENT version — otherwise a version
+      // bumped after approval (e.g. via a content update) could be published
+      // without ever being approved.
+      if (p.approved_version !== p.version) { await client.query('rollback'); return res.status(409).json({ error: 'version_mismatch', detail: 'The approved version differs from the current version. Re-submit this version for approval before publishing.' }); }
       await client.query("update policies set approval_state='published', updated_at=now() where id=$1 and approval_state='approved'", [p.id]);
       await client.query('commit');
       await audit(req, 'policy.approval.publish', p.name, { id: p.id, version: p.version });

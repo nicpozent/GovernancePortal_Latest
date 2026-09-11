@@ -95,6 +95,68 @@ test('concurrent final-step approvals are serialized (no stuck in_review)', asyn
   assert.equal(st.decisions.filter((d) => d.decision === 'approved').length, 2, 'both decisions recorded once each');
 });
 
+// ── #7 approval-bypass closures ─────────────────────────────────────────────
+async function approveAndPublish(s) {
+  h.asAdmin(s.admin);
+  await request(h.app).put(`/api/policies/${s.pol}/approvers`).send({ approverOids: [s.a1] });
+  await request(h.app).post(`/api/policies/${s.pol}/submit`);
+  h.asUser(s.a1, []);
+  await request(h.app).post(`/api/policies/${s.pol}/approve`); // single 'all' step → approved
+  h.asAdmin(s.admin);
+  await request(h.app).post(`/api/policies/${s.pol}/publish`);
+}
+
+test('changing the document pointer of an approved policy forces re-approval (#7a)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const s = await scenario();
+  await approveAndPublish(s);
+  // Repoint the SharePoint document WITHOUT changing the version string.
+  h.asAdmin(s.admin);
+  const upd = await request(h.app).put(`/api/policies/${s.pol}`)
+    .send({ name: 'Access Policy', docType: 'Policy', version: 'v1', sharepointUrl: 'https://sp/swapped-doc' });
+  assert.equal(upd.body.approvalReset, true, 'pointer change reset approval');
+  assert.equal(upd.body.approval_state, 'draft');
+  // A member can no longer see it until it is re-approved and re-published.
+  h.asUser(s.member, []);
+  assert.equal(await seesPolicy(s.pol), false);
+});
+
+test('publish is refused when the approved version is not the current version (#7c)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const s = await scenario();
+  // Force the inconsistent state a bypass would produce: approved for v1, now v2.
+  await db.superPool.query(
+    "update policies set approval_state='approved', approved_externally=false, approved_version='v1', version='v2' where id=$1", [s.pol]);
+  h.asAdmin(s.admin);
+  const res = await request(h.app).post(`/api/policies/${s.pol}/publish`);
+  assert.equal(res.status, 409);
+  assert.equal(res.body.error, 'version_mismatch');
+});
+
+test('PUT /trainings refuses a SharePoint-sourced policy (#7b)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const admin = await db.seedEmployee({ name: 'Admin' });
+  const pol = await db.seedPolicy({ version: 'v1' }); // source defaults to SharePoint
+  h.asAdmin(admin);
+  const res = await request(h.app).put(`/api/trainings/${pol}`).send({ name: 'X', version: 'v1' });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'not_upload');
+});
+
+test('updating a workflow-governed upload resets its approval (#7b)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const admin = await db.seedEmployee({ name: 'Admin' });
+  const pol = db.uuid();
+  await db.superPool.query(
+    `insert into policies (id, name, doc_type, version, sharepoint_url, source, owner, owner_oid, approval_state, approved_externally, approved_version)
+     values ($1,'T','Training','v1','','Upload','Admin',$2,'published',false,'v1')`, [pol, admin]);
+  h.asAdmin(admin);
+  const res = await request(h.app).put(`/api/trainings/${pol}`).send({ name: 'T', version: 'v2' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.approvalReset, true, 'new version of a governed upload re-enters approval');
+  assert.equal(res.body.approval_state, 'draft');
+});
+
 test('an approved/published version cannot be re-submitted without a new version', async (t) => {
   if (!dbUp) return t.skip('no test database');
   const s = await scenario();
