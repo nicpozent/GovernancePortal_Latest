@@ -1,4 +1,5 @@
 // Generated from the former monolithic routes.js — handler bodies are verbatim.
+const crypto = require('crypto');
 const { pool } = require('../db');
 const cfg = require('../config');
 const { requireManager } = require('../auth');
@@ -106,7 +107,7 @@ r.post('/policies/:id/quiz/attempt', async (req, res) => {
   if (!quiz) return res.status(404).json({ error: 'no_quiz' });
 
   // Grading is a pure read of the question set — do it before the lock.
-  const qs = (await pool.query('select id, prompt, correct_index, points from quiz_questions where quiz_id = $1', [quiz.id])).rows;
+  const qs = (await pool.query('select id, position, prompt, options, correct_index, points from quiz_questions where quiz_id = $1 order by position, id', [quiz.id])).rows;
   let score = 0, max = 0; const review = [];
   for (const q of qs) {
     max += q.points;
@@ -117,6 +118,16 @@ r.post('/policies/:id/quiz/attempt', async (req, res) => {
   }
   const pct = max ? Math.round((score / max) * 100) : 0;
   const passed = pct >= quiz.pass_pct;
+
+  // Snapshot the EXACT definition this attempt was graded against, so a later
+  // quiz edit cannot change what a past pass meant (ADR-121 / #9). The attempt
+  // is then self-describing and independently reproducible; definition_sha256
+  // is a fingerprint an auditor can compare across attempts.
+  const gradedAgainst = {
+    passPct: quiz.pass_pct,
+    questions: qs.map((q) => ({ id: q.id, prompt: q.prompt, options: q.options, correctIndex: q.correct_index, points: q.points })),
+  };
+  const definitionSha = crypto.createHash('sha256').update(JSON.stringify(gradedAgainst)).digest('hex');
 
   // The "already-passed / attempts-left" check and the insert must be atomic,
   // or concurrent submissions could exceed the cap. Serialize per (user, policy)
@@ -132,9 +143,9 @@ r.post('/policies/:id/quiz/attempt', async (req, res) => {
     if (prior.length >= cfg.quizMaxAttempts) { await client.query('rollback'); return res.status(403).json({ error: 'no_attempts_left', detail: 'No attempts remaining. Contact your administrator.' }); }
     const attemptNo = prior.length + 1;
     await client.query(
-      `insert into quiz_attempts (quiz_id, policy_id, user_oid, attempt_no, score, max_score, pct, passed, answers)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [quiz.id, req.params.id, req.user.oid, attemptNo, score, max, pct, passed, JSON.stringify(answers)]);
+      `insert into quiz_attempts (quiz_id, policy_id, user_oid, attempt_no, score, max_score, pct, passed, answers, graded_against, definition_sha256)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [quiz.id, req.params.id, req.user.oid, attemptNo, score, max, pct, passed, JSON.stringify(answers), JSON.stringify(gradedAgainst), definitionSha]);
     await client.query('commit');
     await audit(req, 'quiz.attempt', req.params.id, { attemptNo, pct, passed });
     res.json({ score, maxScore: max, pct, passed, attemptNo, remaining: Math.max(0, cfg.quizMaxAttempts - attemptNo), passPct: quiz.pass_pct, review });

@@ -111,3 +111,50 @@ test('replacing the file freezes a NEW revision; the earlier signature keeps its
   const count = await one('select count(*)::int as n from policy_revisions where policy_id=$1', [id]);
   assert.equal(count.n, 2);
 });
+
+test('a quiz attempt is graded against a frozen definition that a later edit cannot change (#9)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const grp = await db.seedGroup({ name: 'Staff' });
+  const member = await db.seedEmployee({ name: 'Member' });
+  await db.addMember(member, grp);
+  const pol = await db.seedPolicy({ version: 'v1', groupIds: [grp] }); // link-only: no Graph
+  const { quizId, questionIds } = await db.seedQuiz(pol, {
+    passPct: 50,
+    questions: [
+      { prompt: 'Q1', options: ['a', 'b'], correctIndex: 0, points: 1 },
+      { prompt: 'Q2', options: ['x', 'y'], correctIndex: 1, points: 1 },
+    ],
+  });
+
+  // Member answers both correctly → passes.
+  h.asUser(member, []);
+  const attempt = await request(h.app)
+    .post(`/api/policies/${pol}/quiz/attempt`)
+    .send({ answers: { [questionIds[0]]: 0, [questionIds[1]]: 1 } });
+  assert.equal(attempt.status, 200);
+  assert.equal(attempt.body.passed, true);
+  assert.equal(attempt.body.pct, 100);
+
+  // The attempt captured the exact graded definition + its fingerprint.
+  const row = await one('select pct, passed, graded_against, definition_sha256 from quiz_attempts where policy_id=$1 and user_oid=$2', [pol, member]);
+  assert.ok(row.graded_against, 'graded_against snapshot stored');
+  assert.equal(row.graded_against.questions.length, 2);
+  assert.equal(row.graded_against.passPct, 50);
+  assert.ok(/^[0-9a-f]{64}$/.test(row.definition_sha256), 'definition fingerprint stored');
+  const originalSha = row.definition_sha256;
+  const originalGraded = JSON.stringify(row.graded_against);
+
+  // Admin edits the quiz AFTER the pass: flip Q1's correct answer.
+  await db.superPool.query('update quiz_questions set correct_index=1 where id=$1', [questionIds[0]]);
+
+  // The recorded attempt is unchanged — its graded definition and result still
+  // reflect what was actually in force when the member passed.
+  const after = await one('select pct, passed, graded_against, definition_sha256 from quiz_attempts where policy_id=$1 and user_oid=$2', [pol, member]);
+  assert.equal(after.pct, 100, 'past pct is immutable');
+  assert.equal(after.passed, true);
+  assert.equal(after.definition_sha256, originalSha, 'fingerprint unchanged by the later edit');
+  assert.equal(JSON.stringify(after.graded_against), originalGraded, 'graded definition unchanged');
+  assert.equal(after.graded_against.questions.find((q) => q.id === questionIds[0]).correctIndex, 0,
+    'the attempt still records the ORIGINAL correct answer, not the edited one');
+  assert.equal(quizId, quizId); // (quizId referenced)
+});
