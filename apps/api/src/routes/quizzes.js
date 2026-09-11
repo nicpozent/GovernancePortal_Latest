@@ -67,10 +67,22 @@ r.post('/policies/:id/quiz/restore', requireManager, async (req, res) => {
 });
 
 // Delete the quiz for a policy (admin, or manager who owns it).
+// If the quiz has recorded attempts, those are tamper-evident compliance
+// evidence (append-only quiz_attempts), so we ARCHIVE the quiz instead of
+// hard-deleting it — a hard delete would cascade the attempt ledger away.
+// A never-attempted quiz has no evidence to protect and is removed outright.
 r.delete('/policies/:id/quiz', requireManager, async (req, res) => {
   if (!(await canManage(req, req.params.id))) return res.status(403).json({ error: 'forbidden' });
+  const quiz = (await pool.query('select id from quizzes where policy_id = $1', [req.params.id])).rows[0];
+  if (!quiz) return res.status(204).end();
+  const hasAttempts = (await pool.query('select 1 from quiz_attempts where quiz_id = $1 limit 1', [quiz.id])).rowCount > 0;
+  if (hasAttempts) {
+    await pool.query('update quizzes set archived_at = now() where policy_id = $1', [req.params.id]);
+    await audit(req, 'quiz.delete', req.params.id, { archived: true, reason: 'has_attempts' });
+    return res.status(200).json({ ok: true, archived: true, detail: 'This quiz has recorded attempts and was archived to preserve the evidence ledger instead of being deleted.' });
+  }
   await pool.query('delete from quizzes where policy_id = $1', [req.params.id]);
-  await audit(req, 'quiz.delete', req.params.id);
+  await audit(req, 'quiz.delete', req.params.id, { deleted: true });
   res.status(204).end();
 });
 

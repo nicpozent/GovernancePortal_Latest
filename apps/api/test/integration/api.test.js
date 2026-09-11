@@ -138,6 +138,32 @@ test('quiz gate: cannot sign until the knowledge check is passed', async (t) => 
   assert.equal(ok.status, 201);
 });
 
+test('deleting a quiz with recorded attempts archives it and preserves the ledger (#8)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const admin = await db.seedEmployee({ name: 'Admin' });
+  const member = await db.seedEmployee({});
+  const grp = await db.seedGroup({ kind: 'Local' });
+  await db.addMember(member, grp);
+  const pol = await db.seedPolicy({ version: 'v1', groupIds: [grp] });
+  const { questionIds } = await db.seedQuiz(pol, { passPct: 50, questions: [{ prompt: 'Q', options: ['right', 'wrong'], correctIndex: 0, points: 1 }] });
+
+  // A member records a (passing) attempt → one evidence row exists.
+  h.asUser(member, []);
+  assert.equal((await request(h.app).post(`/api/policies/${pol}/quiz/attempt`).send({ answers: { [questionIds[0]]: 0 } })).status, 200);
+  const before = (await db.superPool.query('select count(*)::int n from quiz_attempts where policy_id=$1', [pol])).rows[0].n;
+  assert.equal(before, 1);
+
+  // Admin "deletes" the quiz → it is ARCHIVED, not hard-deleted, so the
+  // append-only attempt ledger is preserved (pre-fix, ON DELETE CASCADE erased it).
+  h.asAdmin(admin);
+  const del = await request(h.app).delete(`/api/policies/${pol}/quiz`);
+  assert.equal(del.status, 200);
+  assert.equal(del.body.archived, true);
+  assert.equal((await db.superPool.query('select count(*)::int n from quiz_attempts where policy_id=$1', [pol])).rows[0].n, 1, 'attempt ledger survives');
+  const q = (await db.superPool.query('select archived_at from quizzes where policy_id=$1', [pol])).rows[0];
+  assert.ok(q && q.archived_at, 'the quiz is archived, not removed');
+});
+
 test('quiz attempt cap is race-safe: concurrent submissions never exceed the limit', async (t) => {
   if (!dbUp) return t.skip('no test database');
   const member = await db.seedEmployee({});
