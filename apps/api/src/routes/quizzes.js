@@ -32,21 +32,33 @@ r.post('/policies/:id/quiz', requireManager, async (req, res) => {
   if (!(await canManage(req, req.params.id))) return res.status(403).json({ error: 'forbidden' });
   const { title, passPct, questions } = req.body || {};
   if (!Array.isArray(questions) || !questions.length) return res.status(400).json({ error: 'no_questions' });
-  const quiz = (await pool.query(
-    `insert into quizzes (policy_id, title, pass_pct) values ($1, $2, $3)
-     on conflict (policy_id) do update set title = excluded.title, pass_pct = excluded.pass_pct, archived_at = null, updated_at = now()
-     returning *`,
-    [req.params.id, (title || 'Knowledge check').trim(), Math.min(100, Math.max(1, parseInt(passPct, 10) || 80))])).rows[0];
-  await pool.query('delete from quiz_questions where quiz_id = $1', [quiz.id]);
-  let pos = 0;
-  for (const q of questions) {
-    const opts = Array.isArray(q.options) ? q.options.filter((o) => String(o).trim().length) : [];
-    if (!q.prompt || !q.prompt.trim() || opts.length < 2) continue;
-    await pool.query(
-      `insert into quiz_questions (quiz_id, position, prompt, options, correct_index, points)
-       values ($1,$2,$3,$4,$5,$6)`,
-      [quiz.id, pos++, q.prompt.trim(), JSON.stringify(opts), Math.min(opts.length - 1, Math.max(0, parseInt(q.correctIndex, 10) || 0)), Math.max(1, parseInt(q.points, 10) || 1)]);
-  }
+  // One transaction: upsert the quiz, clear its old questions and insert the new
+  // set together — a failure mid-way must not leave the quiz with zero / partial
+  // questions.
+  const client = await pool.connect();
+  let quiz, pos = 0;
+  try {
+    await client.query('begin');
+    quiz = (await client.query(
+      `insert into quizzes (policy_id, title, pass_pct) values ($1, $2, $3)
+       on conflict (policy_id) do update set title = excluded.title, pass_pct = excluded.pass_pct, archived_at = null, updated_at = now()
+       returning *`,
+      [req.params.id, (title || 'Knowledge check').trim(), Math.min(100, Math.max(1, parseInt(passPct, 10) || 80))])).rows[0];
+    await client.query('delete from quiz_questions where quiz_id = $1', [quiz.id]);
+    for (const q of questions) {
+      const opts = Array.isArray(q.options) ? q.options.filter((o) => String(o).trim().length) : [];
+      if (!q.prompt || !q.prompt.trim() || opts.length < 2) continue;
+      await client.query(
+        `insert into quiz_questions (quiz_id, position, prompt, options, correct_index, points)
+         values ($1,$2,$3,$4,$5,$6)`,
+        [quiz.id, pos++, q.prompt.trim(), JSON.stringify(opts), Math.min(opts.length - 1, Math.max(0, parseInt(q.correctIndex, 10) || 0)), Math.max(1, parseInt(q.points, 10) || 1)]);
+    }
+    await client.query('commit');
+  } catch (e) {
+    try { await client.query('rollback'); } catch { /* ignore */ }
+    if (req.log) req.log.error({ err: e.message }, 'quiz save failed');
+    return res.status(500).json({ error: 'server_error' });
+  } finally { client.release(); }
   await audit(req, 'quiz.save', req.params.id, { questions: pos, passPct: quiz.pass_pct });
   res.status(201).json({ ok: true, questions: pos });
 });

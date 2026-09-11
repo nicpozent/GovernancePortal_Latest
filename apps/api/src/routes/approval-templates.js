@@ -24,16 +24,19 @@ function normalizeSteps(body) {
 const quorumOf = (s) => (s.rule === 'quorum' ? Math.max(s.required || 1, 1) : null);
 
 // Persist a template's steps (delete-then-insert; cascades approvers + groups).
-async function writeWorkflowSteps(wfId, steps) {
-  await pool.query('delete from approval_workflow_steps where workflow_id=$1', [wfId]);
+// `db` is the query executor — pass a transaction client so the delete + all
+// inserts commit together (a failure mid-way must not leave the template with
+// its steps deleted and only partially rebuilt).
+async function writeWorkflowSteps(db, wfId, steps) {
+  await db.query('delete from approval_workflow_steps where workflow_id=$1', [wfId]);
   let pos = 1;
   for (const s of steps) {
-    await pool.query('insert into approval_workflow_steps (workflow_id, position, rule, required) values ($1,$2,$3,$4)', [wfId, pos, s.rule, quorumOf(s)]);
+    await db.query('insert into approval_workflow_steps (workflow_id, position, rule, required) values ($1,$2,$3,$4)', [wfId, pos, s.rule, quorumOf(s)]);
     for (const oid of s.approverOids) {
-      await pool.query('insert into approval_workflow_step_approvers (workflow_id, position, approver_oid) values ($1,$2,$3)', [wfId, pos, oid]);
+      await db.query('insert into approval_workflow_step_approvers (workflow_id, position, approver_oid) values ($1,$2,$3)', [wfId, pos, oid]);
     }
     for (const gid of s.groupIds) {
-      await pool.query('insert into approval_workflow_step_groups (workflow_id, position, group_id) values ($1,$2,$3)', [wfId, pos, gid]);
+      await db.query('insert into approval_workflow_step_groups (workflow_id, position, group_id) values ($1,$2,$3)', [wfId, pos, gid]);
     }
     pos++;
   }
@@ -84,10 +87,20 @@ module.exports = (r) => {
     const name = ((req.body && req.body.name) || '').trim();
     if (!name) return res.status(400).json({ error: 'name_required', detail: 'A template name is required.' });
     const steps = normalizeSteps(req.body);
-    const w = (await pool.query(
-      'insert into approval_workflows (name, description, created_by) values ($1,$2,$3) returning id',
-      [name, (req.body.description || '').trim() || null, req.user.oid])).rows[0];
-    await writeWorkflowSteps(w.id, steps);
+    const client = await pool.connect();
+    let w;
+    try {
+      await client.query('begin');
+      w = (await client.query(
+        'insert into approval_workflows (name, description, created_by) values ($1,$2,$3) returning id',
+        [name, (req.body.description || '').trim() || null, req.user.oid])).rows[0];
+      await writeWorkflowSteps(client, w.id, steps);
+      await client.query('commit');
+    } catch (e) {
+      try { await client.query('rollback'); } catch { /* ignore */ }
+      if (req.log) req.log.error({ err: e.message }, 'workflow template create failed');
+      return res.status(500).json({ error: 'server_error' });
+    } finally { client.release(); }
     await audit(req, 'approval.workflow.create', name, { id: w.id, steps: steps.length });
     res.status(201).json(await loadWorkflow(w.id));
   });
@@ -98,9 +111,18 @@ module.exports = (r) => {
     if (!w) return res.status(404).json({ error: 'not_found' });
     const name = ((req.body && req.body.name) || '').trim();
     if (!name) return res.status(400).json({ error: 'name_required', detail: 'A template name is required.' });
-    await pool.query('update approval_workflows set name=$2, description=$3, active=coalesce($4, active), updated_at=now() where id=$1',
-      [w.id, name, (req.body.description || '').trim() || null, typeof req.body.active === 'boolean' ? req.body.active : null]);
-    if (Array.isArray(req.body && req.body.steps)) await writeWorkflowSteps(w.id, normalizeSteps(req.body));
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      await client.query('update approval_workflows set name=$2, description=$3, active=coalesce($4, active), updated_at=now() where id=$1',
+        [w.id, name, (req.body.description || '').trim() || null, typeof req.body.active === 'boolean' ? req.body.active : null]);
+      if (Array.isArray(req.body && req.body.steps)) await writeWorkflowSteps(client, w.id, normalizeSteps(req.body));
+      await client.query('commit');
+    } catch (e) {
+      try { await client.query('rollback'); } catch { /* ignore */ }
+      if (req.log) req.log.error({ err: e.message }, 'workflow template update failed');
+      return res.status(500).json({ error: 'server_error' });
+    } finally { client.release(); }
     await audit(req, 'approval.workflow.update', name, { id: w.id });
     res.json(await loadWorkflow(w.id));
   });
@@ -124,18 +146,30 @@ module.exports = (r) => {
     if (!w) return res.status(404).json({ error: 'not_found', detail: 'Unknown workflow template.' });
     if (!w.steps.length) return res.status(400).json({ error: 'no_approvers', detail: 'This template has no approvers.' });
 
-    await pool.query('delete from policy_approvers where policy_id=$1', [p.id]);
-    await pool.query('delete from policy_approval_steps where policy_id=$1', [p.id]);
-    await pool.query('delete from policy_approver_groups where policy_id=$1', [p.id]);
-    for (const s of w.steps) {
-      await pool.query('insert into policy_approval_steps (policy_id, position, rule, required) values ($1,$2,$3,$4)', [p.id, s.position, s.rule, s.required]);
-      for (const a of s.approvers) {
-        await pool.query('insert into policy_approvers (policy_id, position, approver_oid) values ($1,$2,$3)', [p.id, s.position, a.oid]);
+    // One transaction: clearing the policy's existing approver config and copying
+    // in the template's steps must be all-or-nothing, or a failure leaves the
+    // policy with its approvers wiped and only partially rebuilt.
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      await client.query('delete from policy_approvers where policy_id=$1', [p.id]);
+      await client.query('delete from policy_approval_steps where policy_id=$1', [p.id]);
+      await client.query('delete from policy_approver_groups where policy_id=$1', [p.id]);
+      for (const s of w.steps) {
+        await client.query('insert into policy_approval_steps (policy_id, position, rule, required) values ($1,$2,$3,$4)', [p.id, s.position, s.rule, s.required]);
+        for (const a of s.approvers) {
+          await client.query('insert into policy_approvers (policy_id, position, approver_oid) values ($1,$2,$3)', [p.id, s.position, a.oid]);
+        }
+        for (const g of s.groups) {
+          await client.query('insert into policy_approver_groups (policy_id, position, group_id) values ($1,$2,$3)', [p.id, s.position, g.id]);
+        }
       }
-      for (const g of s.groups) {
-        await pool.query('insert into policy_approver_groups (policy_id, position, group_id) values ($1,$2,$3)', [p.id, s.position, g.id]);
-      }
-    }
+      await client.query('commit');
+    } catch (e) {
+      try { await client.query('rollback'); } catch { /* ignore */ }
+      if (req.log) req.log.error({ err: e.message }, 'apply-workflow failed');
+      return res.status(500).json({ error: 'server_error' });
+    } finally { client.release(); }
     await audit(req, 'policy.approvers.apply-template', p.name, { id: p.id, workflow: w.id, steps: w.steps.length });
     res.json({ ok: true, steps: w.steps.length, approvers: w.steps.reduce((n, s) => n + s.approvers.length, 0), groups: w.steps.reduce((n, s) => n + s.groups.length, 0) });
   });

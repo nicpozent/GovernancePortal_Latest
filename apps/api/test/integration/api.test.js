@@ -138,6 +138,21 @@ test('quiz gate: cannot sign until the knowledge check is passed', async (t) => 
   assert.equal(ok.status, 201);
 });
 
+test('policy create is transactional: a bad group id leaves no half-written policy (#22)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const admin = await db.seedEmployee({ name: 'Admin' });
+  const grp = await db.seedGroup({ kind: 'Local' });
+  h.asAdmin(admin);
+  const bogus = db.uuid(); // not a real group id → policy_groups FK violation mid-loop
+  const before = (await db.superPool.query('select count(*)::int n from policies')).rows[0].n;
+  const res = await request(h.app).post('/api/policies')
+    .send({ name: 'Half', docType: 'Policy', version: 'v1', groupIds: [grp, bogus] });
+  assert.equal(res.status, 500, 'the FK violation fails the request');
+  const after = (await db.superPool.query('select count(*)::int n from policies')).rows[0].n;
+  assert.equal(after, before, 'no policy row persisted — the whole create rolled back');
+  assert.equal((await db.superPool.query('select count(*)::int n from policies where name=$1', ['Half'])).rows[0].n, 0);
+});
+
 test('deleting a quiz with recorded attempts archives it and preserves the ledger (#8)', async (t) => {
   if (!dbUp) return t.skip('no test database');
   const admin = await db.seedEmployee({ name: 'Admin' });

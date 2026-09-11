@@ -117,15 +117,28 @@ r.post('/policies', requireAdmin, async (req, res) => {
     const e = (await pool.query('select display_name from employees where oid=$1', [oOid])).rows[0];
     if (e) ownerName = e.display_name; else oOid = null;
   }
-  const p = (await pool.query(
-    `insert into policies (name, doc_type, version, sharepoint_url, sharepoint_drive_id, sharepoint_item_id, owner, owner_oid, due_date, due_days, review_date)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning *`,
-    [name, docType, version, sharepointUrl, sharepointDriveId || null, sharepointItemId || null, ownerName, oOid || null, dueDate || null, (dueDays || dueDays === 0) ? dueDays : null, reviewDate || null]
-  )).rows[0];
-  await pool.query('insert into policy_versions (policy_id, version, note, changed_by) values ($1,$2,$3,$4)', [p.id, p.version, 'Policy created', req.user.name]);
-  for (const gid of groupIds || []) {
-    await pool.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
-  }
+  // One transaction: the policy, its first version row and its group assignments
+  // are written together, or not at all (a bad group id must not leave a
+  // half-written policy with no version / partial assignment).
+  const client = await pool.connect();
+  let p;
+  try {
+    await client.query('begin');
+    p = (await client.query(
+      `insert into policies (name, doc_type, version, sharepoint_url, sharepoint_drive_id, sharepoint_item_id, owner, owner_oid, due_date, due_days, review_date)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning *`,
+      [name, docType, version, sharepointUrl, sharepointDriveId || null, sharepointItemId || null, ownerName, oOid || null, dueDate || null, (dueDays || dueDays === 0) ? dueDays : null, reviewDate || null]
+    )).rows[0];
+    await client.query('insert into policy_versions (policy_id, version, note, changed_by) values ($1,$2,$3,$4)', [p.id, p.version, 'Policy created', req.user.name]);
+    for (const gid of groupIds || []) {
+      await client.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
+    }
+    await client.query('commit');
+  } catch (e) {
+    try { await client.query('rollback'); } catch { /* ignore */ }
+    if (req.log) req.log.error({ err: e.message }, 'policy create failed');
+    return res.status(500).json({ error: 'server_error' });
+  } finally { client.release(); }
   await audit(req, 'policy.create', p.name, { id: p.id, version: p.version });
   res.status(201).json(p);
 });
@@ -140,38 +153,51 @@ r.put('/policies/:id', requireAdmin, async (req, res) => {
     const e = (await pool.query('select display_name from employees where oid=$1', [oOid])).rows[0];
     if (e) ownerName = e.display_name; else oOid = null;
   }
-  const p = (await pool.query(
-    `update policies set name=$2, doc_type=$3, version=$4, sharepoint_url=$5, owner=$6,
-            sharepoint_drive_id=coalesce($7, sharepoint_drive_id),
-            sharepoint_item_id=coalesce($8, sharepoint_item_id),
-            due_date=$9, due_days=$10, review_date=$11, owner_oid=$12, updated_at=now()
-       where id=$1 returning *`,
-    [req.params.id, name, docType, version, sharepointUrl, ownerName, sharepointDriveId || null, sharepointItemId || null, dueDate || null, (dueDays || dueDays === 0) ? dueDays : null, reviewDate || null, oOid]
-  )).rows[0];
-  if (!p) return res.status(404).json({ error: 'not_found' });
-  if (prev && prev.version !== p.version) {
-    await pool.query('insert into policy_versions (policy_id, version, note, changed_by) values ($1,$2,$3,$4)', [p.id, p.version, versionNote || ('Updated from ' + prev.version), req.user.name]);
-  } else if (versionNote) {
-    await pool.query('insert into policy_versions (policy_id, version, note, changed_by) values ($1,$2,$3,$4)', [p.id, p.version, versionNote, req.user.name]);
-  }
-  if (Array.isArray(groupIds)) {
-    await pool.query('delete from policy_groups where policy_id=$1', [p.id]);
-    for (const gid of groupIds) {
-      await pool.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
+  // One transaction: the policy update, any new version row, the group
+  // reassignment (delete + re-insert) and the workflow reset apply atomically —
+  // a failure part-way can't leave the policy with emptied groups or a stray
+  // version row.
+  const client = await pool.connect();
+  let p, approvalReset = false;
+  try {
+    await client.query('begin');
+    p = (await client.query(
+      `update policies set name=$2, doc_type=$3, version=$4, sharepoint_url=$5, owner=$6,
+              sharepoint_drive_id=coalesce($7, sharepoint_drive_id),
+              sharepoint_item_id=coalesce($8, sharepoint_item_id),
+              due_date=$9, due_days=$10, review_date=$11, owner_oid=$12, updated_at=now()
+         where id=$1 returning *`,
+      [req.params.id, name, docType, version, sharepointUrl, ownerName, sharepointDriveId || null, sharepointItemId || null, dueDate || null, (dueDays || dueDays === 0) ? dueDays : null, reviewDate || null, oOid]
+    )).rows[0];
+    if (!p) { await client.query('rollback'); return res.status(404).json({ error: 'not_found' }); }
+    if (prev && prev.version !== p.version) {
+      await client.query('insert into policy_versions (policy_id, version, note, changed_by) values ($1,$2,$3,$4)', [p.id, p.version, versionNote || ('Updated from ' + prev.version), req.user.name]);
+    } else if (versionNote) {
+      await client.query('insert into policy_versions (policy_id, version, note, changed_by) values ($1,$2,$3,$4)', [p.id, p.version, versionNote, req.user.name]);
     }
-  }
-  // A new version of a workflow-governed policy must be re-approved before it is
-  // visible again: reset a live (published/approved) policy back to draft so the
-  // new version re-enters the approval chain. Policies not under the workflow
-  // (approved_externally = true — the default / break-glass) are left published.
-  let approvalReset = false;
-  if (prev && prev.version !== p.version && prev.approved_externally === false
-      && ['published', 'approved'].includes(prev.approval_state)) {
-    await pool.query("update policies set approval_state='draft', updated_at=now() where id=$1", [p.id]);
-    p.approval_state = 'draft';
-    approvalReset = true;
-    await audit(req, 'policy.approval.reset_on_version', p.name, { id: p.id, version: p.version, from: prev.approval_state });
-  }
+    if (Array.isArray(groupIds)) {
+      await client.query('delete from policy_groups where policy_id=$1', [p.id]);
+      for (const gid of groupIds) {
+        await client.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
+      }
+    }
+    // A new version of a workflow-governed policy must be re-approved before it is
+    // visible again: reset a live (published/approved) policy back to draft so the
+    // new version re-enters the approval chain. Policies not under the workflow
+    // (approved_externally = true — the default / break-glass) are left published.
+    if (prev && prev.version !== p.version && prev.approved_externally === false
+        && ['published', 'approved'].includes(prev.approval_state)) {
+      await client.query("update policies set approval_state='draft', updated_at=now() where id=$1", [p.id]);
+      p.approval_state = 'draft';
+      approvalReset = true;
+    }
+    await client.query('commit');
+  } catch (e) {
+    try { await client.query('rollback'); } catch { /* ignore */ }
+    if (req.log) req.log.error({ err: e.message }, 'policy update failed');
+    return res.status(500).json({ error: 'server_error' });
+  } finally { client.release(); }
+  if (approvalReset) await audit(req, 'policy.approval.reset_on_version', p.name, { id: p.id, version: p.version, from: prev.approval_state });
   await audit(req, 'policy.update', p.name, { id: p.id, version: p.version });
   res.json({ ...p, approvalReset });
 });
