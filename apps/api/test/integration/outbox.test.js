@@ -6,6 +6,7 @@ const request = require('supertest');
 const db = require('../helpers/db');
 const h = require('../helpers/app');
 const { drainOutbox } = require('../../src/services/outbox');
+const { audit } = require('../../src/authz');
 
 let dbUp = false;
 test.before(async () => { dbUp = await db.available(); if (dbUp) await db.applyAll(); });
@@ -46,6 +47,20 @@ test('drain forwards pending events to the configured target when enabled', asyn
   assert.ok(got.body && /group\.create/.test(got.body), 'the audit event was the payload');
   const cfg = (await db.superPool.query('select last_forward_status from integration_config where id=1')).rows[0];
   assert.equal(cfg.last_forward_status, 'ok');
+});
+
+test('audit() inside a transaction throws on failure, so the mutation can roll back (#13)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const client = await db.superPool.connect();
+  const fakeReq = { user: { oid: null, name: 'x' }, ip: '127.0.0.1', id: 'test' };
+  try {
+    await client.query('begin');
+    // action is NOT NULL — a null action makes the audit_log insert fail. Passing
+    // a client (a transaction) means audit() must THROW rather than swallow, so
+    // the caller's transaction aborts and its mutation rolls back with it.
+    await assert.rejects(() => audit(fakeReq, null, 'target', null, client));
+    await client.query('rollback');
+  } finally { client.release(); }
 });
 
 test('a failed delivery is retried with backoff, not dropped', async (t) => {

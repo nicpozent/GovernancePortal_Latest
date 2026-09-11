@@ -133,13 +133,13 @@ r.post('/policies', requireAdmin, async (req, res) => {
     for (const gid of groupIds || []) {
       await client.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
     }
+    await audit(req, 'policy.create', p.name, { id: p.id, version: p.version }, client);
     await client.query('commit');
   } catch (e) {
     try { await client.query('rollback'); } catch { /* ignore */ }
     if (req.log) req.log.error({ err: e.message }, 'policy create failed');
     return res.status(500).json({ error: 'server_error' });
   } finally { client.release(); }
-  await audit(req, 'policy.create', p.name, { id: p.id, version: p.version });
   res.status(201).json(p);
 });
 
@@ -198,14 +198,14 @@ r.put('/policies/:id', requireAdmin, async (req, res) => {
       p.approval_state = 'draft';
       approvalReset = true;
     }
+    if (approvalReset) await audit(req, 'policy.approval.reset_on_version', p.name, { id: p.id, version: p.version, from: prev.approval_state }, client);
+    await audit(req, 'policy.update', p.name, { id: p.id, version: p.version }, client);
     await client.query('commit');
   } catch (e) {
     try { await client.query('rollback'); } catch { /* ignore */ }
     if (req.log) req.log.error({ err: e.message }, 'policy update failed');
     return res.status(500).json({ error: 'server_error' });
   } finally { client.release(); }
-  if (approvalReset) await audit(req, 'policy.approval.reset_on_version', p.name, { id: p.id, version: p.version, from: prev.approval_state });
-  await audit(req, 'policy.update', p.name, { id: p.id, version: p.version });
   res.json({ ...p, approvalReset });
 });
 

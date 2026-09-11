@@ -260,6 +260,9 @@ module.exports = (r) => {
       } else if (state !== 'in_review') {
         await client.query("update policies set approval_state=$2, updated_at=now() where id=$1 and approval_state='in_review'", [c.p.id, state]);
       }
+      // Audit inside the transaction so the decision and its audit row commit
+      // together (an audit-write failure rolls the whole decision back).
+      await audit(req, 'policy.approval.' + decision, c.p.name, { id: c.p.id, version: c.p.version, step: step.position }, client);
       await client.query('commit');
     } catch (e) {
       try { await client.query('rollback'); } catch { /* ignore */ }
@@ -269,7 +272,6 @@ module.exports = (r) => {
       client.release();
     }
     // Reached only on the success path (early returns / errors above return first).
-    await audit(req, 'policy.approval.' + decision, c.p.name, { id: c.p.id, version: c.p.version, step: step.position });
     // Notify: the next step's approvers when the chain advances, else the owner.
     if (decision === 'approved' && nextStep) {
       notifyStep(c.p, nextStep);
@@ -300,8 +302,8 @@ module.exports = (r) => {
       if (!canGovern(req, p)) { await client.query('rollback'); return res.status(403).json({ error: 'forbidden' }); }
       if (p.approval_state !== 'in_review') { await client.query('rollback'); return res.status(409).json({ error: 'bad_state' }); }
       await client.query("update policies set approval_state='draft', updated_at=now() where id=$1 and approval_state='in_review'", [p.id]);
+      await audit(req, 'policy.approval.withdraw', p.name, { id: p.id }, client);
       await client.query('commit');
-      await audit(req, 'policy.approval.withdraw', p.name, { id: p.id });
       res.json({ ok: true, approval_state: 'draft' });
     } catch (e) {
       try { await client.query('rollback'); } catch { /* ignore */ }
@@ -324,8 +326,8 @@ module.exports = (r) => {
       // without ever being approved.
       if (p.approved_version !== p.version) { await client.query('rollback'); return res.status(409).json({ error: 'version_mismatch', detail: 'The approved version differs from the current version. Re-submit this version for approval before publishing.' }); }
       await client.query("update policies set approval_state='published', updated_at=now() where id=$1 and approval_state='approved'", [p.id]);
+      await audit(req, 'policy.approval.publish', p.name, { id: p.id, version: p.version }, client);
       await client.query('commit');
-      await audit(req, 'policy.approval.publish', p.name, { id: p.id, version: p.version });
       res.json({ ok: true, approval_state: 'published' });
     } catch (e) {
       try { await client.query('rollback'); } catch { /* ignore */ }
