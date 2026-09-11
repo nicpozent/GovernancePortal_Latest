@@ -35,7 +35,14 @@ const uploadMw = multer({
     destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
     filename: (_req, file, cb) => { const ext = path.extname(file.originalname || '').toLowerCase().slice(0, 12); cb(null, crypto.randomUUID() + ext); },
   }),
-  limits: { fileSize: 250 * 1024 * 1024 },   // 250 MB cap
+  limits: {
+    fileSize: 250 * 1024 * 1024,   // 250 MB cap
+    files: 1,                       // exactly one uploaded file
+    parts: 25,                      // the file + a handful of text fields
+    fields: 24,                     // bound text field COUNT (blunts crafted-field DoS)
+    fieldSize: 100 * 1024,          // 100 KB per text field
+    fieldNameSize: 200,             // bound field NAME length
+  },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
     if (UPLOAD_TYPES[ext]) return cb(null, true);
@@ -45,6 +52,15 @@ const uploadMw = multer({
 // Wrap multer so its errors return JSON instead of crashing the handler.
 const withUpload = (req, res, next) => uploadMw(req, res, (err) => {
   if (err) return res.status(400).json({ error: 'upload_failed', detail: err.message });
+  // Clean up the staged file if the request does NOT complete successfully —
+  // the handler rejecting after multer already wrote the file (ownership /
+  // validation failure), or the client aborting mid-request, would otherwise
+  // leave an orphaned file on the /uploads volume. On a 2xx the file has been
+  // finalized by the handler, so it is kept.
+  res.on('close', () => {
+    const ok = res.writableFinished && res.statusCode < 400;
+    if (!ok && req.file && req.file.path) fs.unlink(req.file.path, () => {});
+  });
   next();
 });
 

@@ -116,9 +116,13 @@ test('non-owner manager cannot update another manager\'s training', async (t) =>
   const id = created.body.id;
 
   h.asManager(other);
+  const before = fs.readdirSync(cfg.uploadDir).length;
   const res = await request(h.app)
     .put(`/api/trainings/${id}`)
     .field('name', 'Hijack')
     .attach('file', PDF, { filename: 'b.pdf', contentType: 'application/pdf' });
   assert.equal(res.status, 403);
+  // #18: the rejected upload's staged file must be cleaned up, not orphaned.
+  await new Promise((r) => setTimeout(r, 120));
+  assert.equal(fs.readdirSync(cfg.uploadDir).length, before, 'no orphaned staged file left behind');
 });
