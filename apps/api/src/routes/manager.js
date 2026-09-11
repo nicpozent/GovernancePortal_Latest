@@ -18,6 +18,7 @@ r.get('/manager/dashboard', requireManager, async (req, res) => {
       select distinct pg.policy_id, t.oid
         from policy_groups pg
         join policies p on p.id=pg.policy_id and p.archived_at is null
+                       and (p.approved_externally or p.approval_state='published')
         join eff em on em.group_id=pg.group_id
         join team t on t.oid=em.oid
     ),

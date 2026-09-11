@@ -61,6 +61,7 @@ async function runReminders(opts) {
       select distinct pg.policy_id, em.oid
         from policy_groups pg
         join policies p on p.id=pg.policy_id and p.archived_at is null
+                       and (p.approved_externally or p.approval_state='published')
         join eff em on em.group_id=pg.group_id
         join employees e on e.oid=em.oid and e.status='Active'
     )

@@ -234,3 +234,25 @@ test('admin dashboard reflects required vs signed at the current version', async
   assert.equal(row.assigned, 1);
   assert.equal(row.signed, 1);
 });
+
+test('an unpublished (in-review) policy generates no obligation on the dashboard (#16)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const admin = await db.seedEmployee({ name: 'Admin' });
+  const member = await db.seedEmployee({});
+  const grp = await db.seedGroup({ kind: 'Local' });
+  await db.addMember(member, grp);
+  const pol = await db.seedPolicy({ version: 'v1', groupIds: [grp] });
+
+  // Put it under review → not published, not externally approved. The member
+  // can't see it, so it must not count them as assigned/non-compliant.
+  await db.superPool.query("update policies set approval_state='in_review', approved_externally=false where id=$1", [pol]);
+  h.asAdmin(admin);
+  const row = (await request(h.app).get('/api/dashboard')).body.find((r) => r.id === pol);
+  assert.ok(row, 'the policy still appears on the dashboard');
+  assert.equal(row.assigned, 0, 'but generates no obligation while unpublished');
+
+  // Publishing it restores the obligation.
+  await db.superPool.query("update policies set approval_state='published', approved_externally=true where id=$1", [pol]);
+  const row2 = (await request(h.app).get('/api/dashboard')).body.find((r) => r.id === pol);
+  assert.equal(row2.assigned, 1, 'published → the obligation returns');
+});

@@ -16,6 +16,7 @@ r.get('/dashboard', requireAdmin, async (_req, res) => {
       select distinct pg.policy_id, em.oid
         from policy_groups pg
         join policies pp on pp.id = pg.policy_id and pp.archived_at is null
+                         and (pp.approved_externally or pp.approval_state = 'published')
         join eff_members em on em.group_id = pg.group_id
         join employees e on e.oid = em.oid and e.status = 'Active'
     ),
@@ -44,6 +45,7 @@ r.get('/dashboard/by-department', requireAdmin, async (_req, res) => {
       select distinct pg.policy_id, em.oid, e.department
         from policy_groups pg
         join policies pp on pp.id = pg.policy_id and pp.archived_at is null
+                         and (pp.approved_externally or pp.approval_state = 'published')
         join eff_members em on em.group_id = pg.group_id
         join employees e on e.oid = em.oid and e.status = 'Active'
     ),
@@ -75,6 +77,7 @@ r.get('/dashboard/by-group', requireAdmin, async (_req, res) => {
       select pg.group_id, pg.policy_id, em.oid, p.version
         from policy_groups pg
         join policies p on p.id = pg.policy_id and p.archived_at is null
+                        and (p.approved_externally or p.approval_state = 'published')
         join eff em on em.group_id = pg.group_id
         join employees e on e.oid = em.oid and e.status = 'Active'
     )
@@ -104,6 +107,7 @@ r.get('/dashboard/group/:id', requireAdmin, async (req, res) => {
     pols as (
       select pg.policy_id, p.version from policy_groups pg
         join policies p on p.id = pg.policy_id and p.archived_at is null
+                        and (p.approved_externally or p.approval_state = 'published')
        where pg.group_id = $1
     )
     select e.oid, e.display_name, e.email, e.upn, e.department,
@@ -140,6 +144,7 @@ r.get('/reports/compliance', requireAdmin, async (req, res) => {
       select distinct pg.policy_id, em.oid
         from policy_groups pg
         join policies p on p.id = pg.policy_id and p.archived_at is null
+                        and (p.approved_externally or p.approval_state = 'published')
         join eff em on em.group_id = pg.group_id
         join employees e on e.oid = em.oid and e.status = 'Active'
     )
