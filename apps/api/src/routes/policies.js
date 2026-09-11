@@ -145,7 +145,7 @@ r.post('/policies', requireAdmin, async (req, res) => {
     for (const gid of groupIds || []) {
       await client.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
     }
-    await audit(req, 'policy.create', p.name, { id: p.id, version: p.version }, client);
+    await audit(req, 'policy.create', p.name, { id: p.id, version: p.version, groups: groupIds || [] }, client);
     await client.query('commit');
   } catch (e) {
     try { await client.query('rollback'); } catch { /* ignore */ }
@@ -218,7 +218,7 @@ r.put('/policies/:id', requireAdmin, async (req, res) => {
       approvalReset = true;
     }
     if (approvalReset) await audit(req, 'policy.approval.reset_on_version', p.name, { id: p.id, version: p.version, from: prev.approval_state }, client);
-    await audit(req, 'policy.update', p.name, { id: p.id, version: p.version }, client);
+    await audit(req, 'policy.update', p.name, { id: p.id, version: p.version, ...(Array.isArray(groupIds) ? { groups: groupIds } : {}) }, client);
     await client.query('commit');
   } catch (e) {
     try { await client.query('rollback'); } catch { /* ignore */ }

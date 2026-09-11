@@ -63,7 +63,7 @@ r.post('/trainings', requireManager, withUpload, async (req, res) => {
   )).rows[0];
   for (const gid of gids) await pool.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
   await pool.query('insert into policy_versions (policy_id, version, note, changed_by) values ($1,$2,$3,$4)', [p.id, p.version, docType + ' created', req.user.name]);
-  await audit(req, 'training.create', p.name, { id: p.id, docType });
+  await audit(req, 'training.create', p.name, { id: p.id, docType, groups: gids });
   res.status(201).json(p);
 });
 
@@ -100,8 +100,10 @@ r.put('/trainings/:id', requireManager, withUpload, async (req, res) => {
   // A content change (new file or new version) invalidates the cached frozen
   // revision so the next acknowledgement freezes the new content (ADR-121 / #4).
   if (contentChanged) { await pool.query('update policies set current_revision_id=null where id=$1', [p.id]); p.current_revision_id = null; }
+  let assignedGroups;
   if (Array.isArray(groupIds) || typeof groupIds === 'string') {
     const gids = Array.isArray(groupIds) ? groupIds : String(groupIds).split(',').filter(Boolean);
+    assignedGroups = gids;
     await pool.query('delete from policy_groups where policy_id=$1', [p.id]);
     for (const gid of gids) await pool.query('insert into policy_groups (policy_id, group_id) values ($1,$2) on conflict do nothing', [p.id, gid]);
   }
@@ -109,7 +111,7 @@ r.put('/trainings/:id', requireManager, withUpload, async (req, res) => {
   // delete the superseded file from the storage backend
   if (newFile && prev.upload_path && prev.upload_path !== p.upload_path) { await storage.remove(prev.upload_path); }
   if (approvalReset) await audit(req, 'policy.approval.reset_on_version', p.name, { id: p.id, version: p.version, from: prev.approval_state, via: 'training.update' });
-  await audit(req, 'training.update', p.name, { id: p.id });
+  await audit(req, 'training.update', p.name, { id: p.id, ...(assignedGroups ? { groups: assignedGroups } : {}) });
   res.json({ ...p, approvalReset });
 });
 
