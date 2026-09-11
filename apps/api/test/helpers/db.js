@@ -50,7 +50,7 @@ async function available() {
   try { await superPool.query('select 1'); return true; }
   catch (e) {
     if (/^(1|true|yes|on)$/i.test(process.env.REQUIRE_DB || '')) {
-      throw new Error(`REQUIRE_DB is set but the test database is unreachable — refusing to skip integration tests: ${e.message}`);
+      throw new Error(`REQUIRE_DB is set but the test database is unreachable — refusing to skip integration tests: ${e.message}`, { cause: e });
     }
     return false;
   }
