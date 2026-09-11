@@ -51,6 +51,7 @@ services:
       - ../apps/api/db/migration_021_approval_templates.sql:/docker-entrypoint-initdb.d/197-approval-templates.sql:ro
       - ../apps/api/db/migration_022_group_approvers.sql:/docker-entrypoint-initdb.d/198-group-approvers.sql:ro
       - ../apps/api/db/migration_023_ledger_fk_restrict.sql:/docker-entrypoint-initdb.d/199-ledger-fk.sql:ro
+      - ../apps/api/db/migration_024_audit_outbox.sql:/docker-entrypoint-initdb.d/200-audit-outbox.sql:ro
       - ../apps/api/db/docker-grants.sql:/docker-entrypoint-initdb.d/900-grants.sql:ro
     # Loopback-only publish: DB not exposed on the VM network. Remove for prod.
     ports:

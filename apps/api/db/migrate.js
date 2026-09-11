@@ -37,6 +37,7 @@ const MIGRATIONS = [
   'migration_019_approvals.sql', 'migration_020_approval_steps.sql',
   'migration_021_approval_templates.sql', 'migration_022_group_approvers.sql',
   'migration_023_ledger_fk_restrict.sql',
+  'migration_024_audit_outbox.sql',
 ];
 const GRANTS = 'docker-grants.sql';
 

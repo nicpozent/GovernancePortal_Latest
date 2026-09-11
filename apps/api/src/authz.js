@@ -7,38 +7,41 @@
 // ============================================================
 const { pool } = require('./db');
 const cfg = require('./config');
-const { logger, forwardEvent } = require('./logger');
+const { logger } = require('./logger');
+const { enqueue } = require('./services/outbox');
 
 const isAdmin = (req) => req.user.roles.includes(cfg.adminAppRole);
 const isManager = (req) => req.user.roles.includes(cfg.managerAppRole);
 
-// Append an admin audit entry (best-effort; never blocks the request).
-// Also forwards the event to an external consumer if log-forwarding is enabled.
-async function audit(req, action, target, detail) {
+// Append an admin audit entry and enqueue it for durable external forwarding.
+// `db` is the executor: pass a transaction client to write the audit row (and its
+// outbox row) ATOMICALLY with the mutation being audited — then an audit-write
+// failure rolls the mutation back (in a transaction) instead of leaving a
+// governed change with no audit record. Called on the shared pool it stays
+// best-effort (a post-commit audit can't roll anything back, so it is logged).
+async function audit(req, action, target, detail, db = pool) {
   const event = {
+    type: 'audit',
     at: new Date().toISOString(),
     actorOid: req.user && req.user.oid,
     actorName: req.user && req.user.name,
     action, target: target || null, detail: detail || null,
     ip: req.ip, requestId: req.id,
   };
+  const inTx = db !== pool;
   try {
-    await pool.query(
+    await db.query(
       `insert into audit_log (actor_oid, actor_name, action, target, detail, ip)
        values ($1,$2,$3,$4,$5,$6)`,
       [event.actorOid, event.actorName, action, target || null, detail ? JSON.stringify(detail) : null, req.ip]
     );
-  } catch (e) { (req.log || logger).error({ err: e.message }, 'audit insert failed'); }
-  // Fire-and-forget outbound forward (never affects the request).
-  (async () => {
-    try {
-      const cfgRow = (await pool.query('select forward_enabled, forward_url, forward_token from integration_config where id=1')).rows[0];
-      if (!cfgRow || !cfgRow.forward_enabled) return;
-      const out = await forwardEvent(cfgRow, { type: 'audit', ...event });
-      await pool.query('update integration_config set last_forward_at=now(), last_forward_status=$1 where id=1',
-        [out.ok ? 'ok' : (out.error || ('http ' + out.status))]);
-    } catch (e) { (req.log || logger).warn({ err: e.message }, 'audit forward failed'); }
-  })();
+    // Durable forwarding: enqueue for the retrying outbox worker (replaces the
+    // old fire-and-forget forward that was lost on a crash).
+    await enqueue(db, event);
+  } catch (e) {
+    if (inTx) throw e;   // fail the mutation together with its audit
+    (req.log || logger).error({ err: e.message }, 'audit write failed');
+  }
 }
 
 // ── MANAGER: team scope (only their own reports) ─────────────

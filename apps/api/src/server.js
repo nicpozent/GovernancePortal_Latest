@@ -72,3 +72,15 @@ const { withLeaderLock } = require('./leader');
   setInterval(tick, 24 * 60 * 60 * 1000);  // daily
   setTimeout(tick, 3 * 60 * 1000);         // once, 3 min after startup
 })();
+
+// ── Audit outbox drain: forward audit/business events with retry ────────────
+// Runs frequently (not daily) so external forwarding is near-real-time; a
+// Postgres advisory lock keeps exactly one instance draining when scaled out.
+(function scheduleOutbox() {
+  if (!cfg.schedulersEnabled) { logger.info('schedulers disabled; skipping audit-outbox drain'); return; }
+  const { drainOutbox } = require('./services/outbox');
+  const run = () => withLeaderLock('outbox', drainOutbox)
+    .catch((e) => logger.error({ err: e.message }, 'audit-outbox drain leader lock'));
+  setInterval(run, 60 * 1000);   // every minute
+  setTimeout(run, 15 * 1000);    // shortly after startup
+})();

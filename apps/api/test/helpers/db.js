@@ -27,7 +27,7 @@ const FILES = [
   'migration_017_integrations.sql', 'migration_018_effective_membership.sql',
   'migration_019_approvals.sql', 'migration_020_approval_steps.sql',
   'migration_021_approval_templates.sql', 'migration_022_group_approvers.sql',
-  'migration_023_ledger_fk_restrict.sql', 'docker-grants.sql',
+  'migration_023_ledger_fk_restrict.sql', 'migration_024_audit_outbox.sql', 'docker-grants.sql',
 ];
 
 const DATA_TABLES = [
@@ -35,7 +35,7 @@ const DATA_TABLES = [
   'policy_approvals', 'policy_approvers', 'policy_approval_steps', 'policy_approver_groups',
   'approval_workflow_step_approvers', 'approval_workflow_step_groups', 'approval_workflow_steps', 'approval_workflows',
   'policy_groups', 'signatures', 'policies', 'employee_groups', 'group_mappings', 'groups',
-  'employees', 'sync_runs', 'audit_log', 'integration_config',
+  'employees', 'sync_runs', 'audit_log', 'audit_outbox', 'integration_config',
 ];
 
 const superPool = new Pool({ connectionString: SUPER_URL });

@@ -29,6 +29,7 @@ const { logger } = require('./logger');
 const LOCK_KEYS = {
   backup: 720240001,
   daily: 720240002,
+  outbox: 720240003,
 };
 
 // Run `fn` only if this instance can acquire the named advisory lock. Returns
