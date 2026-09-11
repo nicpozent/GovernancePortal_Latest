@@ -686,6 +686,49 @@ before implementation. Entirely Azure-independent.
 
 ---
 
+## ADR-121 — Immutable content & quiz revisions
+**Status: Accepted — implemented** (see
+[`IMMUTABLE-REVISIONS-PROPOSAL.md`](IMMUTABLE-REVISIONS-PROPOSAL.md) for the full
+design & decision record). Closes external-review findings #4 and #9.
+**Context.** Acknowledgements and quiz passes are stored append-only (ADR-109),
+but what they *pointed at* was mutable: a `signature` snapshotted only a free-text
+version label while the content behind it (the SharePoint pointer, or the
+replaceable upload) could change in place — and a `quiz_attempt` was graded
+against a `quiz_questions` set that could be edited or deleted afterwards. So an
+acknowledgement could resolve to different bytes (or none), and a past "pass" was
+neither reproducible nor auditable.
+**Decision.** Freeze content into **append-only, content-addressed revisions**
+(sha256 of the exact bytes), frozen **locally** for both uploads and
+SharePoint-hosted documents (Decision 2a — an acknowledgement survives
+independently of the source system, air-gap/DR friendly). `signatures.revision_id`
+binds each acknowledgement to its exact frozen revision (FK ⇒ the bytes can never
+be removed while referenced); `policies.current_revision_id` caches the live
+revision so signing need not re-hash, and is cleared on any content change so the
+next acknowledgement freezes fresh content. On a content change a **new revision +
+new obligation** is created and old signatures stay valid as historical truth,
+never carried forward (Decision A). Quiz attempts become **self-describing**
+(`graded_against` + `definition_sha256`), so a later quiz edit can't change what a
+past pass meant. Serve/verify endpoints let a governor re-hash frozen bytes
+(tamper evidence) and let the original signer re-open exactly what they signed.
+Append-only integrity is enforced at the DB level (revoke update/delete on
+`policy_revisions`), same as the other ledgers.
+**Alternatives considered.** (a) *Bind to a version label only* — the status quo
+that #4 flags; insufficient. (b) *Trust the SharePoint etag instead of freezing
+bytes* (Decision 2b) — cheaper, but not self-contained and not air-gap-verifiable;
+rejected. (c) *"Minor edit" carry-forward of signatures* (Decision B) — rejected:
+"material?" is a gameable human judgment in a compliance system. (d) *A separate
+`quiz_revisions` table* — heavier than needed; a self-describing attempt closes #9
+with one migration.
+**Trade-offs.** Storage cost of one frozen copy per distinct content state
+(bounded, and deduped by content hash) is accepted for genuine reproducibility.
+Obligation/dashboard state is deliberately left version-based for now (a
+documented boundary): a same-label in-place content swap on a non-workflow policy
+preserves old bytes and freezes a new revision but does not itself raise a new
+dashboard obligation — bump the version, which the workflow enforces. Entirely
+Azure-independent.
+
+---
+
 # Part III — Cross-cutting trade-off themes
 
 - **Single-instance simplicity vs. horizontal scale.** The system was originally

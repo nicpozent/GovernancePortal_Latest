@@ -1,6 +1,26 @@
-# Immutable content & quiz revisions — design proposal
+# Immutable content & quiz revisions — design & decision record
 
-**Status: Proposed — awaiting sign-off on two decisions (see §6).**
+**Status: Accepted & implemented (ADR-121).** Both §6 decisions were signed off:
+**Decision 1 = Option A** (every content change freezes a new immutable revision
+and raises a new acknowledgement obligation; old revisions and their signatures
+are immutable and never carried forward) and **Decision 2 = 2a** (SharePoint
+bytes are frozen locally at acknowledgement). Shipped across five phases —
+migration_026, freeze-on-acknowledgement, self-describing quiz attempts, the
+serve/verify endpoints, and the admin revisions viewer. The original proposal is
+retained below for the rationale.
+
+> **Known boundary (documented, not a defect).** Obligation/dashboard state
+> remains *version-based* (the existing new-version ⇒ re-sign flow), now backed
+> by immutable frozen bytes. A same-label, in-place content swap on a
+> non-workflow policy freezes a new revision and preserves the old bytes, but
+> does not by itself raise a new dashboard obligation — the guidance is to bump
+> the version on a content change, which the approval workflow enforces
+> automatically (PUT resets a workflow-governed policy to draft on any
+> pointer/version change).
+
+---
+
+**Status (original proposal): Proposed — awaiting sign-off on two decisions (see §6).**
 Prepared in response to external security review findings **#4** (a signature can
 attest to content that later changed) and **#9** (a passed quiz attempt can be
 graded against a definition that later changed). This is the one remaining
