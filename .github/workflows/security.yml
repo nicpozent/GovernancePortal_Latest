@@ -45,15 +45,35 @@ jobs:
           "$RUNNER_TEMP/bin/trivy" fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 .
 
   sast:
-    name: semgrep (SAST, informational)
+    name: semgrep (SAST, blocking)
     runs-on: ubuntu-latest
     container: semgrep/semgrep
     steps:
       - uses: actions/checkout@v7
       - name: Semgrep scan
-        # No --error: findings are reported in the log for triage but don't fail
-        # the build yet. Add --error here to enforce once findings are addressed.
-        run: semgrep scan --config p/owasp-top-ten --config p/javascript --config p/secrets --skip-unknown-extensions
+        # BLOCKING (--error): a new SAST finding fails the build. The existing
+        # findings were triaged; a small set of rules is excluded here with a
+        # documented rationale (accepted risk / verified false positive), so
+        # every OTHER rule is enforced:
+        #   raw-html-format ....... server-side transactional EMAIL html only;
+        #        every interpolation is escapeHtml()'d and there is no browser
+        #        DOM sink in the API — no XSS vector.
+        #   request-host-used ..... nginx is the single-domain TLS edge; $host in
+        #        the http→https redirect and Host pass-through is the intended
+        #        pattern (the API sets `trust proxy` for exactly one hop).
+        #   github-actions-mutable-action-tag / gha-curl-pipe-shell .. first-party
+        #        actions/* at major tags and the official Trivy installer over
+        #        HTTPS; full SHA-pinning is tracked as a separate supply-chain task.
+        # The one path-join finding (admin.js backup download) is suppressed
+        # inline where it is proven safe (basename + strict allowlist).
+        run: >-
+          semgrep scan --error
+          --config p/owasp-top-ten --config p/javascript --config p/secrets
+          --skip-unknown-extensions
+          --exclude-rule javascript.express.security.injection.raw-html-format.raw-html-format
+          --exclude-rule generic.nginx.security.request-host-used.request-host-used
+          --exclude-rule yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
+          --exclude-rule yaml.github-actions.security.gha-curl-pipe-shell.gha-curl-pipe-shell
 
   compliance:
     name: compliance catalogue (controls-as-code)

@@ -87,6 +87,7 @@ r.post('/admin/backups', requireAdmin, async (req, res) => {
 r.get('/admin/backups/:name', requireAdmin, async (req, res) => {
   const name = path.basename(req.params.name);   // prevent path traversal
   if (!/^[\w.-]+\.sql$/.test(name)) return res.status(400).json({ error: 'bad_name' });
+  // nosemgrep: javascript.express.security.audit.express-path-join-resolve-traversal.express-path-join-resolve-traversal -- name is basename()'d and allowlisted to ^[\w.-]+\.sql$ above (no separators / traversal possible)
   const file = path.join(BACKUP_DIR, name);
   if (!fs.existsSync(file)) return res.status(404).json({ error: 'not_found' });
   res.setHeader('Content-Type', 'application/sql');
