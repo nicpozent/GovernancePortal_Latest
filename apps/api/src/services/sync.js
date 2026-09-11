@@ -61,7 +61,11 @@ async function upsertUser(u, department) {
        department   = excluded.department,
        manager_name = excluded.manager_name,
        manager_email= excluded.manager_email,
-       synced_at    = now()
+       synced_at    = now(),
+       -- A user returned by this sync is a current, assigned principal — so a
+       -- previously-deactivated leaver who rejoins is reactivated (was a gap).
+       status       = 'Active',
+       deactivated_at = null
      returning (xmax = 0) as inserted`,
     [u.id, u.userPrincipalName, u.mail || null, u.displayName, u.jobTitle || null, department || 'Unassigned',
      mgr && mgr.displayName || null, mgr && mgr.mail || null]
@@ -76,6 +80,9 @@ async function runSync() {
   const runId = run.rows[0].id;
   let added = 0, updated = 0;
   const seen = new Set();
+  // groupRowId -> Set of member oids seen this run (authoritative membership for
+  // that directory group), used to reconcile revoked memberships below.
+  const seenMembers = new Map();
 
   try {
     // 1) Everything assigned to the Governance enterprise app.
@@ -98,6 +105,9 @@ async function runSync() {
     for (const gid of groupIds) {
       const g = await graph.api(`/groups/${gid}`).select('id,displayName,description').get();
       const groupRowId = await upsertGroup(g);
+      // Seen even with zero members, so an emptied group reconciles to no members.
+      const members = seenMembers.get(groupRowId) || new Set();
+      seenMembers.set(groupRowId, members);
       let mpath = `/groups/${gid}/members/microsoft.graph.user?$select=${SELECT}&$expand=manager($select=displayName,mail)&$top=999`;
       while (mpath) {
         const page = await graph.api(mpath).get();
@@ -105,6 +115,7 @@ async function runSync() {
           if (u['@odata.type'] && !u['@odata.type'].toLowerCase().endsWith('user')) continue;
           const ins = await upsertUser(u, u.department || g.displayName);
           await addMembership(u.id, groupRowId);          // record membership regardless of dedup
+          members.add(u.id);
           if (!seen.has(u.id)) { seen.add(u.id); ins ? added++ : updated++; }
         }
         mpath = nextPath(page);
@@ -120,7 +131,24 @@ async function runSync() {
       ins ? added++ : updated++;
     }
 
-    // 4) Leavers: any Entra-sourced employee NOT seen in this run is now
+    // 4) Revoke directory memberships no longer returned by Graph. Only groups
+    //    actually processed in THIS run are reconciled (their member list is
+    //    authoritative), and only their directory-owned employee_groups rows —
+    //    LOCAL group memberships (admin-managed) are never touched because their
+    //    group ids are not in seenMembers. Skipped on a suspicious EMPTY snapshot
+    //    (seen.size === 0) so a transient zero-result can't wipe access.
+    let membershipsRevoked = 0;
+    if (seen.size > 0) {
+      for (const [groupRowId, members] of seenMembers) {
+        const r = await pool.query(
+          `delete from employee_groups
+             where group_id = $1 and employee_oid <> all($2::uuid[])
+           returning employee_oid`, [groupRowId, Array.from(members)]);
+        membershipsRevoked += r.rowCount;
+      }
+    }
+
+    // 5) Leavers: any Entra-sourced employee NOT seen in this run is now
     //    inactive. We never delete — signatures and history are retained;
     //    they simply drop out of "required" and move to Former employees.
     let deactivated = 0;
@@ -139,7 +167,7 @@ async function runSync() {
       `update sync_runs set finished_at = now(), status = 'success', added = $2, updated = $3 where id = $1`,
       [runId, added, updated]
     );
-    return { added, updated, deactivated, total: seen.size };
+    return { added, updated, deactivated, membershipsRevoked, total: seen.size };
   } catch (e) {
     await pool.query(
       `update sync_runs set finished_at = now(), status = 'error', error = $2 where id = $1`,

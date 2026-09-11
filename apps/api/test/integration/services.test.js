@@ -84,6 +84,53 @@ test('runSync marks unseen Entra employees as leavers (never deletes)', async (t
   assert.equal(l.status, 'Inactive', 'the leaver is retained but inactivated, not deleted');
 });
 
+test('sync revokes a membership the directory no longer returns, keeps others, stays active (#5)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const gidA = uuid(120), gidB = uuid(121), userOid = uuid(122);
+  let userInA = true;
+  const user = { id: userOid, displayName: 'U', userPrincipalName: 'u@x', mail: 'u@x' };
+  setGraphHandlers({
+    onGet: (path) => {
+      if (path.includes('/appRoleAssignedTo')) return { value: [
+        { principalType: 'Group', principalId: gidA }, { principalType: 'Group', principalId: gidB } ] };
+      if (path === `/groups/${gidA}`) return { id: gidA, displayName: 'GroupA' };
+      if (path === `/groups/${gidB}`) return { id: gidB, displayName: 'GroupB' };
+      if (path.includes(`/groups/${gidA}/members`)) return { value: userInA ? [user] : [] };
+      if (path.includes(`/groups/${gidB}/members`)) return { value: [user] };
+      return {};
+    },
+  });
+
+  await runSync();                       // user in both A and B
+  const gA = (await db.superPool.query('select id from groups where entra_group_id=$1', [gidA])).rows[0].id;
+  const gB = (await db.superPool.query('select id from groups where entra_group_id=$1', [gidB])).rows[0].id;
+  assert.equal((await db.superPool.query('select count(*)::int n from employee_groups where employee_oid=$1', [userOid])).rows[0].n, 2, 'starts in both groups');
+
+  userInA = false;                       // removed from A in the directory
+  await runSync();
+  const rows = (await db.superPool.query('select group_id from employee_groups where employee_oid=$1', [userOid])).rows.map((x) => x.group_id);
+  assert.deepEqual(rows, [gB], 'membership A revoked, B kept');
+  assert.ok(!rows.includes(gA), 'no longer a member of group A');
+  assert.equal((await db.superPool.query('select status from employees where oid=$1', [userOid])).rows[0].status, 'Active', 'still active — present in B');
+});
+
+test('sync never touches local (admin-managed) group memberships (#5)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const local = await db.seedGroup({ kind: 'Local' });
+  const person = await db.seedEmployee({});
+  await db.addMember(person, local);     // an admin-managed membership
+  const other = uuid(130);
+  setGraphHandlers({
+    onGet: (path) => {
+      if (path.includes('/appRoleAssignedTo')) return { value: [{ principalType: 'User', principalId: other }] };
+      if (path === `/users/${other}`) return { id: other, displayName: 'Other', userPrincipalName: 'o@x', mail: 'o@x' };
+      return {};
+    },
+  });
+  await runSync();
+  assert.equal((await db.superPool.query('select count(*)::int n from employee_groups where employee_oid=$1 and group_id=$2', [person, local])).rows[0].n, 1, 'local membership preserved');
+});
+
 test('runReminders emails the first milestone for an unsigned requirement and is idempotent', async (t) => {
   if (!dbUp) return t.skip('no test database');
   const emp = await db.seedEmployee({ name: 'Reminder Target', email: 'target@x' });
