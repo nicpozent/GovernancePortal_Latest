@@ -83,9 +83,15 @@ app.get('/healthz', (_req, res) => res.json({ ok: true }));
 // it cannot serve without (the database). 503 when not ready so a load balancer
 // drains it instead of sending failing requests.
 app.get('/readyz', async (_req, res) => {
+  // Config the API cannot validate a single token without.
+  if (!cfg.tenantId || !cfg.apiClientId) {
+    return res.status(503).json({ ok: false, config: 'incomplete' });
+  }
   try {
     const { pool } = require('./db');
-    await pool.query('select 1');
+    // Touch a core table, not a bare `select 1`: an un-migrated / half-applied
+    // schema would pass `select 1` but can't actually serve requests.
+    await pool.query('select 1 from policies limit 1');
     res.json({ ok: true, db: 'up' });
   } catch (e) {
     logger.warn({ err: e.message }, 'readiness check failed');

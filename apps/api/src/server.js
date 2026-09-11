@@ -17,7 +17,10 @@ process.on('uncaughtException', (err) => {
   setTimeout(() => process.exit(1), 100).unref();   // brief delay to flush the log
 });
 
-app.listen(cfg.port, () => logger.info({ port: cfg.port }, 'Governance API listening'));
+const server = app.listen(cfg.port, () => logger.info({ port: cfg.port }, 'Governance API listening'));
+
+// Scheduler interval handles, collected so a graceful shutdown can stop them.
+const timers = [];
 
 const { withLeaderLock } = require('./leader');
 
@@ -56,7 +59,7 @@ const { withLeaderLock } = require('./leader');
   });
   const run = () => withLeaderLock('backup', doBackup)
     .catch((e) => logger.error({ err: e.message }, 'auto-backup leader lock'));
-  setInterval(run, 24 * 60 * 60 * 1000);   // every 24h
+  timers.push(setInterval(run, 24 * 60 * 60 * 1000));   // every 24h
   setTimeout(run, 60 * 1000);              // once, a minute after startup
 })();
 
@@ -69,7 +72,7 @@ const { withLeaderLock } = require('./leader');
     try { await runSync(); } catch (e) { console.error('[auto-sync]', e.message); }
     if (cfg.remindersEnabled) { try { await runReminders(); } catch (e) { console.error('[auto-reminders]', e.message); } }
   }).catch((e) => logger.error({ err: e.message }, 'auto-sync/reminders leader lock'));
-  setInterval(tick, 24 * 60 * 60 * 1000);  // daily
+  timers.push(setInterval(tick, 24 * 60 * 60 * 1000));  // daily
   setTimeout(tick, 3 * 60 * 1000);         // once, 3 min after startup
 })();
 
@@ -81,6 +84,30 @@ const { withLeaderLock } = require('./leader');
   const { drainOutbox } = require('./services/outbox');
   const run = () => withLeaderLock('outbox', drainOutbox)
     .catch((e) => logger.error({ err: e.message }, 'audit-outbox drain leader lock'));
-  setInterval(run, 60 * 1000);   // every minute
+  timers.push(setInterval(run, 60 * 1000));   // every minute
   setTimeout(run, 15 * 1000);    // shortly after startup
 })();
+
+// ── Graceful shutdown ───────────────────────────────────────────────────────
+// On SIGTERM/SIGINT (a rolling deploy, `docker compose down`, Ctrl-C): stop the
+// schedulers, stop accepting new connections and let in-flight requests finish,
+// then close the DB pool — so a restart loses no committed work. A hard timeout
+// forces exit if something hangs.
+let shuttingDown = false;
+async function shutdown(sig) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ sig }, 'shutting down gracefully');
+  for (const t of timers) clearInterval(t);
+  const force = setTimeout(() => { logger.warn('graceful shutdown timed out; forcing exit'); process.exit(0); }, 10000);
+  force.unref();
+  server.close(async () => {
+    try { const { pool } = require('./db'); await pool.end(); }
+    catch (e) { logger.warn({ err: e.message }, 'pool end failed during shutdown'); }
+    clearTimeout(force);
+    logger.info('shutdown complete');
+    process.exit(0);
+  });
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

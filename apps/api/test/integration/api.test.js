@@ -256,3 +256,10 @@ test('an unpublished (in-review) policy generates no obligation on the dashboard
   const row2 = (await request(h.app).get('/api/dashboard')).body.find((r) => r.id === pol);
   assert.equal(row2.assigned, 1, 'published → the obligation returns');
 });
+
+test('/readyz verifies the schema and config, not just connectivity (#23)', async (t) => {
+  if (!dbUp) return t.skip('no test database');
+  const res = await request(h.app).get('/readyz');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.db, 'up');
+});
