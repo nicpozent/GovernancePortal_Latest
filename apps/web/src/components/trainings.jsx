@@ -4,7 +4,7 @@ const { useState } = React;
 import { Ico } from '../ui.jsx';
 import { Empty } from './common.jsx';
 
-export function Trainings({ trainings, onNew, onEdit, onArchive, onQuiz, onHistory }) {
+export function Trainings({ trainings, onNew, onEdit, onArchive, onQuiz, onHistory, onToggleConfidential }) {
   const fmtPct = (s, a) => a ? Math.round(s/a*100) : 0;
   return (
     <div>
@@ -24,6 +24,7 @@ export function Trainings({ trainings, onNew, onEdit, onArchive, onQuiz, onHisto
                   <span style={{ font:'600 16px/1.2 "IBM Plex Sans"', color:'var(--c161a26)' }}>{t.name}</span>
                   <span style={{ font:'600 10px/1.3 "IBM Plex Mono",monospace', letterSpacing:'.04em', textTransform:'uppercase', color: t.doc_type==='Training'?'var(--c6d4bd1)':'var(--c213a9e)', background: t.doc_type==='Training'?'var(--cf6f3fd)':'var(--ceef1fb)', padding:'2px 8px', borderRadius:'999px' }}>{t.doc_type}</span>
                   <span style={{ font:'400 12px/1 "IBM Plex Mono",monospace', color:'var(--caab0c0)' }}>{t.version}</span>
+                  {t.confidential && <span title="Confidential — sharing with new groups needs the owner's approval" style={{ display:'inline-flex', alignItems:'center', gap:'4px', font:'600 10px/1.3 "IBM Plex Mono",monospace', letterSpacing:'.04em', textTransform:'uppercase', color:'var(--cc0143c)', background:'var(--cfdf0f3)', padding:'2px 8px', borderRadius:'999px' }}><Ico size={11} sw={2}><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></Ico>Confidential</span>}
                 </div>
                 <div style={{ font:'400 12.5px/1.5 "IBM Plex Sans"', color:'var(--c7b8294)', marginTop:'5px' }}>
                   {t.upload_name ? t.upload_name : 'No file'} · Assigned: {(t.groups&&t.groups.length)?t.groups.join(', '):'—'}
@@ -38,6 +39,7 @@ export function Trainings({ trainings, onNew, onEdit, onArchive, onQuiz, onHisto
                 <button style={{ border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c213a9e)', borderRadius:'9px', padding:'9px 14px', font:'600 13px/1 "IBM Plex Sans"', cursor:'pointer' }} onClick={()=>onEdit(t)}>Edit</button>
                 <button title="Knowledge check" style={{ border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c6d4bd1)', borderRadius:'9px', padding:'9px 12px', cursor:'pointer', display:'flex', alignItems:'center', gap:'6px', font:'600 13px/1 "IBM Plex Sans"' }} onClick={()=>onQuiz(t)}><Ico size={15} sw={1.9}><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 1 1 4 2.8c-.8.3-1.1.9-1.1 1.7v.5"/><path d="M12 17h.01"/></Ico>Quiz</button>
                 <button title="Version history" style={{ border:'1px solid var(--ce6e8ee)', background:'var(--surface)', color:'var(--c54607a)', borderRadius:'9px', padding:'9px 11px', cursor:'pointer', display:'flex', alignItems:'center' }} onClick={()=>onHistory(t)}><Ico size={16} sw={1.9}><path d="M3 3v5h5"/><path d="M3 8a9 9 0 1 0 2.5-5.3L3 8"/><path d="M12 8v5l3 2"/></Ico></button>
+                <button title={t.confidential ? 'Remove confidential mark' : 'Mark confidential (gate who it’s shared with)'} style={{ border:'1px solid var(--ce6e8ee)', background: t.confidential?'var(--cfdf0f3)':'var(--surface)', color: t.confidential?'var(--cc0143c)':'var(--c54607a)', borderRadius:'9px', padding:'9px 11px', cursor:'pointer', display:'flex', alignItems:'center' }} onClick={()=>onToggleConfidential(t)}><Ico size={16} sw={1.9}>{t.confidential ? <><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></> : <><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></>}</Ico></button>
                 <button title="Archive" style={{ border:'1px solid var(--cf0d6dd)', background:'var(--surface)', color:'var(--cc0143c)', borderRadius:'9px', padding:'9px 11px', cursor:'pointer', display:'flex', alignItems:'center' }} onClick={()=>onArchive(t)}><Ico size={16} sw={1.9}><path d="M3 7h18M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 7l-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7"/></Ico></button>
               </div>
             </div>

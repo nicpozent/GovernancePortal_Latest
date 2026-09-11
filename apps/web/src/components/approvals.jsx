@@ -132,6 +132,36 @@ export function MyApprovals({ pending, onOpen }) {
   );
 }
 
+// Confidential share requests awaiting the gatekeeper's decision (#17).
+export function ShareRequests({ pending, onApprove, onDeny }) {
+  const card = { background: 'var(--surface)', border: '1px solid var(--ce6e8ee)', borderRadius: '12px', boxShadow: '0 1px 3px rgba(20,30,80,.06)' };
+  const list = pending || [];
+  const [busy, setBusy] = useState(null);
+  const act = async (fn, id) => { setBusy(id); try { await fn(); } finally { setBusy(null); } };
+  return (
+    <div style={{ maxWidth: '820px' }}>
+      {!list.length && <div style={{ ...card, padding: '30px', textAlign: 'center', color: 'var(--c8a92a6)', font: '400 13.5px/1.5 "IBM Plex Sans"' }}>No confidential-document share requests are awaiting your approval.</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {list.map((s) => (
+          <div key={s.id} style={{ ...card, padding: '18px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ font: '600 15px/1.3 "IBM Plex Sans"', color: 'var(--c161a26)' }}>{s.policy_name}</div>
+                <div style={{ font: '400 12.5px/1.4 "IBM Plex Sans"', color: 'var(--c54607a)', marginTop: '4px' }}>
+                  {s.requested_by_name || 'A manager'} wants to share with: {(s.group_names || []).join(', ') || '—'}
+                </div>
+                {s.comment && <div style={{ font: '400 12.5px/1.4 "IBM Plex Sans"', color: 'var(--c8a92a6)', marginTop: '3px' }}>“{s.comment}”</div>}
+              </div>
+              <button disabled={busy === s.id} onClick={() => act(() => onDeny(s.id), s.id)} style={{ border: '1px solid var(--cf0d6dd)', background: 'var(--surface)', color: 'var(--cc0143c)', borderRadius: '9px', padding: '9px 15px', font: '600 13px/1 "IBM Plex Sans"', cursor: 'pointer' }}>Decline</button>
+              <button disabled={busy === s.id} onClick={() => act(() => onApprove(s.id), s.id)} style={{ border: 'none', background: 'var(--c213a9e)', color: '#fff', borderRadius: '9px', padding: '10px 17px', font: '600 13px/1 "IBM Plex Sans"', cursor: 'pointer' }}>Approve</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ApprovalsModal({ policy, onClose, onChanged, toast }) {
   const [data, setData] = useState(null);
   const [emps, setEmps] = useState([]);

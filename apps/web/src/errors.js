@@ -16,6 +16,9 @@ export const ERROR_MESSAGES = {
   group_in_use: 'This group is still in use. Remove its policy assignments and mappings, or archive it instead.',
   already_passed: 'You’ve already passed this knowledge check.',
   already_signed: 'You’ve already acknowledged this version — no further action is needed unless a new version is published.',
+  confidential_share_request_required: 'This document is confidential — sharing it with new groups needs approval.',
+  not_confidential: 'This document isn’t confidential — you can assign groups directly.',
+  no_request_needed: 'You can change who this is shared with directly.',
   // Validation
   must_acknowledge: 'Please tick the acknowledgement box before signing.',
   name_required: 'Please enter a name.',

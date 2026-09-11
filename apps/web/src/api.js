@@ -86,10 +86,10 @@ async function request(method, path, body) {
 // Build an Error with a user-friendly message, keeping the machine code + detail
 // on the object so callers can branch or deep-link if they want.
 async function apiError(res) {
-  let code = null, detail = null;
-  try { const j = await res.json(); code = j.error || null; detail = j.detail || null; } catch (_) { /* non-JSON body */ }
+  let code = null, detail = null, j = null;
+  try { j = await res.json(); code = j.error || null; detail = j.detail || null; } catch (_) { /* non-JSON body */ }
   const err = new Error(friendlyError(code, detail) || String(res.status));
-  err.code = code; err.detail = detail; err.status = res.status;
+  err.code = code; err.detail = detail; err.status = res.status; err.body = j;
   return err;
 }
 async function uploadRequest(method, path, fields, file) {
@@ -160,6 +160,12 @@ export const api = {
   // ── frozen content revisions (ADR-121): the immutable snapshots employees signed ──
   policyRevisions:(id)                => request('GET',  `/api/policies/${id}/revisions`),
   verifyRevision: (id, revId)         => request('GET',  `/api/policies/${id}/revisions/${revId}/verify`),
+  // ── confidential documents + share requests (#17) ──
+  markConfidential:  (id, confidential) => request('POST', `/api/policies/${id}/confidential`, { confidential }),
+  createShareRequest:(id, groupIds, comment) => request('POST', `/api/policies/${id}/share-requests`, { groupIds, comment }),
+  pendingShareRequests:()             => request('GET',  '/api/share-requests/pending'),
+  approveShareRequest:(reqId)         => request('POST', `/api/share-requests/${reqId}/approve`),
+  denyShareRequest:  (reqId, note)    => request('POST', `/api/share-requests/${reqId}/deny`, { note }),
   formerEmployees:()                  => request('GET',  '/api/employees/former'),
   quizAnalytics:  (id)                => request('GET',  `/api/policies/${id}/quiz/analytics`),
   archiveGroup:   (id)                => request('POST', `/api/groups/${id}/archive`),

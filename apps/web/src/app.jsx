@@ -23,7 +23,7 @@ import { IdleWarning, Toast, Splash, SignIn } from './components/common.jsx';
 import { QuizBuilder } from './components/quiz.jsx';
 import { Trainings, TrainingEditor } from './components/trainings.jsx';
 import { AppEvaluation } from './components/evaluation.jsx';
-import { ApprovalsModal, MyApprovals } from './components/approvals.jsx';
+import { ApprovalsModal, MyApprovals, ShareRequests } from './components/approvals.jsx';
 import { WorkflowTemplates } from './components/workflows.jsx';
 
 function App() {
@@ -79,6 +79,7 @@ function App() {
   const [policyRevisions, setPolicyRevisions] = useState(null);
   const [approvals, setApprovals] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState([]);
+  const [pendingShares, setPendingShares] = useState([]);
   const { theme, toggle: toggleTheme } = useTheme();
   const openPolicyHistory = async (p) => {
     setPolicyHistory({ policy: p, rows: null });
@@ -183,6 +184,8 @@ function App() {
         setPlatformGroups(pg); setDirGroups(dg); setEmps(e);
       } else if (v === 'myapprovals') {
         setPendingApprovals(await api.pendingApprovals());
+      } else if (v === 'sharerequests') {
+        setPendingShares(await api.pendingShareRequests());
       } else if (v === 'audit') {
         setAuditRows(await api.audit());
       } else if (v === 'backups') {
@@ -413,7 +416,33 @@ function App() {
       if (fields.id) { await api.updateTraining(fields.id, fields, file); showToast('Training updated'); }
       else { await api.createTraining(fields, file); showToast('Training created'); }
       setTrainEdit(null); loadView('trainings');
-    } catch (e) { showToast('Save failed: ' + e.message, true); }
+    } catch (e) {
+      // #17: the doc is confidential and this change would share it with new
+      // groups — turn the blocked save into a share request the gatekeeper can
+      // approve, rather than just failing.
+      if (e.code === 'confidential_share_request_required' && fields.id && e.body && Array.isArray(e.body.groups) && e.body.groups.length) {
+        try {
+          await api.createShareRequest(fields.id, e.body.groups, fields.versionNote || '');
+          showToast('This document is confidential — your change was sent to its owner for approval.');
+          setTrainEdit(null); loadView('trainings'); return;
+        } catch (e2) { showToast('Could not request sharing: ' + e2.message, true); return; }
+      }
+      showToast('Save failed: ' + e.message, true);
+    }
+  };
+  const toggleConfidential = async (t) => {
+    try {
+      const out = await api.markConfidential(t.id, !t.confidential);
+      showToast(out.confidential ? 'Marked confidential — you control who it’s shared with' : 'Confidential mark removed');
+      loadView('trainings');
+    } catch (e) { showToast(e.message, true); }
+  };
+  const decideShare = async (reqId, approve) => {
+    try {
+      if (approve) { await api.approveShareRequest(reqId); showToast('Share approved — the groups now have access'); }
+      else { await api.denyShareRequest(reqId); showToast('Share request declined'); }
+      setPendingShares(await api.pendingShareRequests());
+    } catch (e) { showToast(e.message, true); }
   };
 
   const openQuizBuilder = async (p) => {
@@ -644,6 +673,7 @@ function App() {
             {navBtn('integrations','Integrations', <Ico><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="8" cy="7" r="1.6" fill="currentColor"/><circle cx="16" cy="12" r="1.6" fill="currentColor"/><circle cx="9" cy="17" r="1.6" fill="currentColor"/></Ico>)}
             {navBtn('backups','Backups', <Ico><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></Ico>)}
             {navBtn('myapprovals','My approvals', <Ico><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></Ico>)}
+            {navBtn('sharerequests','Share requests', <Ico><path d="M12 2l7 4v6c0 4.5-3 7.3-7 8-4-.7-7-3.5-7-8V6z"/><path d="M9 12l2 2 4-4"/></Ico>)}
             {navBtn('workflows','Approval workflows', <Ico><path d="M4 5h6v4H4zM14 15h6v4h-6zM7 9v4a2 2 0 0 0 2 2h5"/></Ico>)}
             {navBtn('help','Help & guides', <Ico><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 1 1 4 2.8c-.8.3-1.1.9-1.1 1.7v.3"/><path d="M12 17h.01"/></Ico>)}
             {navBtn('evaluation','Application evaluation', <Ico><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></Ico>)}
@@ -655,6 +685,7 @@ function App() {
             {navBtn('mdashboard','Team dashboard', <Ico><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></Ico>)}
             {navBtn('trainings','Documents', <Ico><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 2 6 2s6-1 6-2v-5"/></Ico>)}
             {navBtn('myapprovals','My approvals', <Ico><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></Ico>)}
+            {navBtn('sharerequests','Share requests', <Ico><path d="M12 2l7 4v6c0 4.5-3 7.3-7 8-4-.7-7-3.5-7-8V6z"/><path d="M9 12l2 2 4-4"/></Ico>)}
             <div style={{ font:'600 11px/1 "IBM Plex Mono",monospace', letterSpacing:'.1em', color:'var(--c9aa1b2)', textTransform:'uppercase', padding:'18px 12px 10px' }}>My governance</div>
             {navBtn('mypolicies','My policies', <Ico><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6M9 14l2 2 4-4"/></Ico>)}
             {navBtn('mysignatures','My signatures', <Ico><path d="M3 17l4 4 6-10M14 7l3-3 3 3-9 9"/><path d="M3 21h6"/></Ico>)}
@@ -720,7 +751,8 @@ function App() {
           {view==='backups' && <Backups {...{ backups, backingUp, onCreate:createServerBackup, onDownloadLive:downloadBackup, onDownloadStored:downloadStoredBackup }} />}
           {view==='mypolicies' && <MyPolicies {...{ myTypeTabs, activeType, setActiveType, myList, myPending, mySignedN, openReader }} />}
           {view==='mysignatures' && <MySignatures rows={mySigRows} />}
-          {view==='trainings' && <Trainings {...{ trainings, onNew:()=>setTrainEdit({ mode:'new' }), onEdit:(t)=>setTrainEdit({ mode:'edit', data:t }), onArchive:archiveTraining, onQuiz:(t)=>openQuizBuilder(t), onHistory:(t)=>openPolicyHistory(t) }} />}
+          {view==='trainings' && <Trainings {...{ trainings, onNew:()=>setTrainEdit({ mode:'new' }), onEdit:(t)=>setTrainEdit({ mode:'edit', data:t }), onArchive:archiveTraining, onQuiz:(t)=>openQuizBuilder(t), onHistory:(t)=>openPolicyHistory(t), onToggleConfidential:toggleConfidential }} />}
+          {view==='sharerequests' && <ShareRequests pending={pendingShares} onApprove={(id)=>decideShare(id, true)} onDeny={(id)=>decideShare(id, false)} />}
           {view==='mdashboard' && <ManagerDashboard data={managerData} onReminders={sendTeamReminders} reminding={mgrReminding} />}
           {view==='help' && <Help isAdmin={role==='admin'} />}
           {view==='evaluation' && <AppEvaluation />}
